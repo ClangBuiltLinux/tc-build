@@ -1,0 +1,20 @@
+Usage: ./build-binutils.sh [options]
+
+Description: Fetchs and builds binutils
+
+Parameters:
+    -I | --install-folder:
+        By default, the script will create a "usr" folder in the same folder as this script
+        and install binutils there. If you'd like to have it installed somewhere else, pass
+        it to this parameter. This can either be an absolute or relative path.
+
+        For example: -I ~/binutils
+
+    -t | --target:
+        The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
+        powerpc-linux-gnu, powerpc64le-linux-gnu, and x86_64-linux-gnu (host if on x86_64).
+
+        You can either pass the full target or just the first part (arm, aarch64, etc) or all
+        if you want to build all targets.
+
+        Example: -t all, -t aarch64, -t arm-linux-gnueabi
