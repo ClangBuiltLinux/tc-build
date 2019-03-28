@@ -1,0 +1,16 @@
+language: minimal
+
+os: linux
+
+dist: trusty
+
+services:
+    - docker
+
+script:
+    - |
+      docker run \
+             --rm \
+             --workdir /travis \
+             --volume ${TRAVIS_BUILD_DIR}:/travis:ro \
+             r.j3ss.co/shellcheck shellcheck *.sh
