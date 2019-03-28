@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2191
+# shellcheck disable=SC1117,SC2028,SC2191
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2019 The ClangBuiltLinux Authors
 # Description: Builds an LLVM toolchain suitable for kernel development
@@ -182,7 +182,7 @@ function fetch_llvm_binutils() {
     dwnld_binutils
 
     # Auto create .gitignore
-    echo -e ".gitignore\n${BINUTILS}/\nbuild/*\nllvm-project/" > .gitignore
+    echo ".gitignore\n${BINUTILS}/\nbuild/*\nllvm-project/" > .gitignore
     # If INSTALL_FOLDER is within the repository, ignore it
     INSTALL_FOLDER=$(readlink -f "${INSTALL_FOLDER:=${ROOT}/usr}")
     [[ ${INSTALL_FOLDER} =~ ${ROOT} ]] && echo "${INSTALL_FOLDER/${ROOT//\//\\/}\//}/" >> "${ROOT}"/.gitignore

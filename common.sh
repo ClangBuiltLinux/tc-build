@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC1117
 # SPDX-License-Identifier: Apache-2.0
 # Copyright (C) 2019 The ClangBuiltLinux Authors
 # Description: Common helper functions
