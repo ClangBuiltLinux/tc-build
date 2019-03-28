@@ -202,21 +202,36 @@ function cleanup() {
 function invoke_cmake() {
     header "Configuring LLVM"
 
-    # Base cmake defintions, which don't depend on any options
-    CMAKE_DEFINES=( -DCLANG_ENABLE_ARCMT=OFF
+    # Base cmake defintions, which don't depend on any user supplied options
+    CMAKE_DEFINES=( # Objective-C Automatic Reference Counting (we don't use Objective-C)
+                    -DCLANG_ENABLE_ARCMT=OFF
+                    # We don't (currently) use the static analyzer
                     -DCLANG_ENABLE_STATIC_ANALYZER=OFF
+                    # We don't use the plugin system and this saves cycles according to Chromium OS
                     -DCLANG_PLUGIN_SUPPORT=OFF
+                    # The C compiler to use
                     -DCMAKE_C_COMPILER="${CC:?}"
+                    # The C++ compiler to use
                     -DCMAKE_CXX_COMPILER="${CXX:?}"
+                    # Where the toolchain should be installed (default is set two functions up)
                     -DCMAKE_INSTALL_PREFIX="${INSTALL_FOLDER:?}"
+                    # for LLVMgold.so, which is used for LTO with ld.gold
                     -DLLVM_BINUTILS_INCDIR="${ROOT}/${BINUTILS}/include"
+                    # we include compiler-rt for the sanitizers, which are currently being developed/used on Android
                     -DLLVM_ENABLE_PROJECTS="${PROJECTS:=clang;lld;compiler-rt}"
+                    # Don't build bindings; they are for other languages that the kernel does not use
                     -DLLVM_ENABLE_BINDINGS=OFF
+                    # Don't build Ocaml documentation
                     -DLLVM_ENABLE_OCAMLDOC=OFF
+                    # Removes system dependency on terminfo and almost every major clang provider turns this off
                     -DLLVM_ENABLE_TERMINFO=OFF
+                    # Don't build clang-tools-extras to cut down on build targets (about 400 files or so)
                     -DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR=""
+                    # Don't include documentation build targets because it is available on the web
                     -DLLVM_INCLUDE_DOCS=OFF
+                    # Don't include example build targets to save on cmake cycles
                     -DLLVM_INCLUDE_EXAMPLES=OFF
+                    # The architectures to build backends for
                     -DLLVM_TARGETS_TO_BUILD="${TARGETS:=AArch64;ARM;PowerPC;X86}" )
 
     # If a debug build was requested
@@ -234,7 +249,7 @@ function invoke_cmake() {
                          -DLLVM_ENABLE_WARNINGS=OFF )
     fi
 
-    # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again
+    # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
     [[ ${PROJECTS} =~ compiler-rt ]] && CMAKE_DEFINES+=( -DCOMPILER_RT_BUILD_LIBFUZZER=OFF )
 
     # Use ccache if it is available for faster incremental builds
