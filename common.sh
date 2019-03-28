@@ -19,7 +19,15 @@ function dwnld_binutils() {
     if [[ ! -d ${BINUTILS} ]]; then
         # Remove any previous copies of binutils
         rm -rf binutils*
-        curl -LSs https://ftp.gnu.org/gnu/binutils/${BINUTILS}.tar.gz | tar -xzf - || die "Error downloading binutils!"
+        curl -LSsO https://ftp.gnu.org/gnu/binutils/${BINUTILS}.tar.gz || die "Error downloading binutils!"
+        # Check the sha256sum of the downloaded package with a known good one
+        # To regenerate the sha256sum, download the .tar.gz and .tar.gz.sig files
+        # $ gpg --verify *.tar.gz.sig *.tar.gz
+        # $ sha256sum *.tar.gz
+        SHA256SUM=9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e
+        [[ $(sha256sum ${BINUTILS}.tar.gz | awk '{print $1}') != "${SHA256SUM}" ]] && die "binutils sha256sum does not match known good one!"
+        tar -xzf ${BINUTILS}.tar.gz || die "Extracting binutils failed!"
+        rm -rf ${BINUTILS}.tar.gz
     fi
 }
 
