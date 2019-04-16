@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import argparse
+import subprocess
+import shutil
 
 
 def parse_parameters():
@@ -60,8 +62,18 @@ def parse_parameters():
     return parser.parse_args()
 
 
+def check_dependencies():
+    required_commands = ["cmake", "curl", "git", "ninja"]
+    for command in required_commands:
+        output = shutil.which(command)
+        if output is None:
+            raise RuntimeError(command + " could not be found, please install it!")
+        print(output)
+
+
 def main():
     args = parse_parameters()
+    check_dependencies()
     pass
 
 
