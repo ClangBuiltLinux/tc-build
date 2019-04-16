@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 import argparse
+import datetime
 import errno
 import pathlib
 import os
 import subprocess
 import shutil
+import time
 import utils
 
 
@@ -218,6 +220,22 @@ def invoke_cmake(cc, cxx, debug, install_folder, ld, projects, root, targets):
     subprocess.run(cmake, check=True)
 
 
+def invoke_ninja(install_folder):
+    utils.header("Building LLVM")
+
+    timeStarted = time.time()
+
+    subprocess.run('ninja', check=True)
+
+    print()
+    print("LLVM build duration: " + str(datetime.timedelta(seconds=int(time.time() - timeStarted))))
+
+    subprocess.run(['ninja', 'install'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    with open(install_folder + "/.gitignore", "w") as gitignore:
+        gitignore.write("*")
+
+
 def main():
     root = os.path.dirname(os.path.realpath(__file__))
     os.chdir(root)
@@ -227,6 +245,7 @@ def main():
     fetch_llvm_binutils(root, not args.no_pull, args.branch)
     cleanup(root, args.incremental)
     invoke_cmake(cc, cxx, args.debug, args.install_folder, ld, args.projects, root, args.targets)
+    invoke_ninja(args.install_folder)
     pass
 
 
