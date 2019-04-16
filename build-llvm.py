@@ -2,7 +2,7 @@
 import argparse
 
 
-def main():
+def parse_parameters():
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--branch",
                         help="""
@@ -10,7 +10,7 @@ def main():
                         like to build an older branch, use this parameter. This may be helpful in tracking
                         down an older bug to properly bisect. This value is just passed along to 'git checkout'
                         so it can be a branch name, tag name, or hash.
-                        """, type=str)
+                        """, type=str, default="master")
     parser.add_argument("-d", "--debug",
                         help="""
                         By default, the script builds LLVM in the release configuration with all of
@@ -23,7 +23,7 @@ def main():
                         help="""
                         By default, the script removes all build artifacts from previous compiles. This
                         prevents that, allowing for dirty builds and faster compiles.
-                        """, type=str)
+                        """, action="store_true")
     parser.add_argument("-I", "--install-folder",
                         help="""
                         By default, the script will create a "usr" folder in the same folder as this script
@@ -31,7 +31,7 @@ def main():
                         else, pass it to this parameter. This can either be an absolute or relative path.
 
                         Example: ~/llvm
-                        """, type=str)
+                        """, type=str, default=os.getcwd() + "/usr")
     parser.add_argument("-n", "--no-pull",
                         help="""
                         By default, the script always updates the LLVM repo before building. This prevents
@@ -47,7 +47,7 @@ def main():
                         See step #5 here: https://llvm.org/docs/GettingStarted.html#getting-started-quickly-a-summary
 
                         Example: -p \"clang;lld;libcxx\"
-                        """, type=str)
+                        """, type=str, default="clang;lld;compiler-rt")
     parser.add_argument("-t", "--targets",
                         help="""
                         LLVM is multitargeted by default. Currently, this script only enables the arm32, aarch64,
@@ -56,14 +56,12 @@ def main():
                         supported by LLVM_TARGETS_TO_BUILD: https://llvm.org/docs/CMake.html#llvm-specific-variables
 
                         Example: -t "AArch64;X86"
-                        """, type=str)
-    args = parser.parse_args()
-    if args.debug:
-        print("Debug enabled")
-    if args.no_pull:
-        print("Not pulling")
-    if args.targets:
-        print(f"Targets: {args.targets}")
+                        """, type=str, default="AArch64;ARM;PowerPC;X86")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_parameters()
     pass
 
 
