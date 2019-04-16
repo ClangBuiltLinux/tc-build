@@ -183,13 +183,14 @@ def check_dependencies():
 
 
 def fetch_llvm_binutils(root, update, branch):
-    utils.header("Updating LLVM")
     p = root.joinpath("llvm-project")
     if p.is_dir():
         if update:
+            utils.header("Updating LLVM")
             subprocess.run(["git", "-C", p.as_posix(), "checkout", branch], check=True)
             subprocess.run(["git", "-C", p.as_posix(), "pull", "--rebase"], check=True)
     else:
+        utils.header("Downloading LLVM")
         subprocess.run(["git", "clone", "-b", branch, "git://github.com/llvm/llvm-project", p.as_posix()], check=True)
 
     utils.download_binutils(root)
