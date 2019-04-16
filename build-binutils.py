@@ -2,6 +2,14 @@
 
 import argparse
 import os
+import platform
+
+
+def x86_64_target():
+    if platform.machine() == "x86_64":
+        return "host"
+    else:
+        return "x86_64-linux-gnu"
 
 
 def parse_parameters():
@@ -27,10 +35,30 @@ def parse_parameters():
     return parser.parse_args()
 
 
+def create_tuples(targets):
+    tuples_dict = {
+        "arm": "arm-linux-gnueabi",
+        "aarch64": "aarch64-linux-gnu",
+        "powerpc64le": "powerpc64-linux-gnu",
+        "powerpc": "powerpc-linux-gnu",
+        "x86": x86_64_target()
+    }
+    tuples = []
+
+    if ''.join(targets) == "all":
+        for key in tuples_dict:
+            tuples.append(tuples_dict[key])
+    else:
+        for target in targets:
+            tuples.append(tuples_dict[target.split("-")[0]])
+
+    return tuples
+
 def main():
     root = os.path.dirname(os.path.realpath(__file__))
     os.chdir(root)
     args = parse_parameters()
+    tuples = create_tuples(args.targets)
 
 
 if __name__ == '__main__':
