@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import pathlib
 import platform
 
 
@@ -12,7 +13,7 @@ def x86_64_target():
         return "x86_64-linux-gnu"
 
 
-def parse_parameters():
+def parse_parameters(root):
     parser = argparse.ArgumentParser()
     parser.add_argument("-I", "--install-folder",
                         help="""
@@ -21,7 +22,7 @@ def parse_parameters():
                         it to this parameter. This can either be an absolute or relative path.
 
                         Example: ~/binutils
-                        """, type=str, default=os.getcwd() + "/usr")
+                        """, type=str, default=os.path.join(root.as_posix(), "usr"))
     parser.add_argument("-t", "--targets",
                         help="""
                         The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
@@ -55,9 +56,15 @@ def create_tuples(targets):
     return tuples
 
 def main():
-    root = os.path.dirname(os.path.realpath(__file__))
-    os.chdir(root)
-    args = parse_parameters()
+    root = pathlib.Path(__file__).resolve().parent
+    build = root.joinpath("build", "binutils")
+
+    args = parse_parameters(root)
+
+    install_folder = pathlib.Path(args.install_folder)
+    if not install_folder.is_absolute():
+        install_folder = root.joinpath(install_folder)
+
     tuples = create_tuples(args.targets)
 
 
