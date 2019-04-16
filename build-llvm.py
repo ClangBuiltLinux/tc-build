@@ -2,6 +2,7 @@
 import argparse
 import subprocess
 import shutil
+import utils
 
 
 def parse_parameters():
@@ -63,6 +64,7 @@ def parse_parameters():
 
 
 def check_dependencies():
+    utils.header("Checking dependencies")
     required_commands = ["cmake", "curl", "git", "ninja"]
     for command in required_commands:
         output = shutil.which(command)
