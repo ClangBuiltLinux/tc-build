@@ -168,6 +168,56 @@ def cleanup(root, incremental):
     os.chdir(build)
 
 
+def invoke_cmake(cc, cxx, debug, install_folder, ld, projects, root, targets):
+    utils.header("Configuring LLVM")
+
+    defines = {}
+    defines['CLANG_ENABLE_ARCMT'] = 'OFF'
+    defines['CLANG_ENABLE_STATIC_ANALYZER'] = 'OFF'
+    defines['CLANG_PLUGIN_SUPPORT'] = 'OFF'
+    defines['CMAKE_C_COMPILER'] = cc
+    defines['CMAKE_CXX_COMPILER'] = cxx
+    defines['CMAKE_INSTALL_PREFIX'] = install_folder
+    defines['LLVM_BINUTILS_INCDIR'] = root + "/" + utils.current_binutils() + "/include"
+    defines['LLVM_ENABLE_PROJECTS'] = projects
+    defines['LLVM_ENABLE_BINDINGS'] = 'OFF'
+    defines['LLVM_ENABLE_OCAMLDOC'] = 'OFF'
+    defines['LLVM_ENABLE_TERMINFO'] = 'OFF'
+    defines['LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR'] = ''
+    defines['LLVM_INCLUDE_DOCS'] = ''
+    defines['LLVM_INCLUDE_EXAMPLES'] = 'OFF'
+    defines['LLVM_TARGETS_TO_BUILD'] = targets
+
+    if debug:
+        defines['CMAKE_BUILD_TYPE'] = 'Debug'
+        defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
+        defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
+        defines['LLVM_BUILD_TESTS'] = 'ON'
+    else:
+        defines['CMAKE_BUILD_TYPE'] = 'Release'
+        defines['CMAKE_C_FLAGS'] = '-O2 -march=native -mtune=native'
+        defines['CMAKE_CXX_FLAGS'] = '-O2 -march=native -mtune=native'
+        defines['LLVM_INCLUDE_TESTS'] = 'OFF'
+        defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
+
+    if "compiler-rt" in projects:
+        defines['COMPILER_RT_BUILD_LIBFUZZER'] = 'OFF'
+
+    if shutil.which("ccache") is not None:
+        defines['LLVM_CCACHE_BUILD'] = 'ON'
+
+    if ld is not None:
+        defines['LLVM_USE_LINKER'] = ld
+
+    cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
+    for key in defines:
+        newdef = '-D' + key + '=' + defines[key]
+        cmake += [newdef]
+    cmake += [root + "/llvm-project/llvm"]
+
+    subprocess.run(cmake, check=True)
+
+
 def main():
     root = os.path.dirname(os.path.realpath(__file__))
     os.chdir(root)
@@ -176,6 +226,7 @@ def main():
     check_dependencies()
     fetch_llvm_binutils(root, not args.no_pull, args.branch)
     cleanup(root, args.incremental)
+    invoke_cmake(cc, cxx, args.debug, args.install_folder, ld, args.projects, root, args.targets)
     pass
 
 

@@ -8,8 +8,11 @@ import os
 import shutil
 import subprocess
 
+def current_binutils():
+    return "binutils-2.32"
+
 def download_binutils(root):
-    binutils = "binutils-2.32"
+    binutils = current_binutils()
     p = pathlib.Path(root + "/" + binutils)
     if not p.is_dir():
         os.chdir(root)
