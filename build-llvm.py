@@ -10,7 +10,7 @@ import time
 import utils
 
 
-def parse_parameters():
+def parse_parameters(root):
     parser = argparse.ArgumentParser()
     parser.add_argument("-b", "--branch",
                         help="""
@@ -39,7 +39,7 @@ def parse_parameters():
                         else, pass it to this parameter. This can either be an absolute or relative path.
 
                         Example: ~/llvm
-                        """, type=str, default=os.getcwd() + "/usr")
+                        """, type=str, default=os.path.join(root.as_posix(), "usr"))
     parser.add_argument("-n", "--no-pull",
                         help="""
                         By default, the script always updates the LLVM repo before building. This prevents
@@ -146,31 +146,24 @@ def check_dependencies():
 
 def fetch_llvm_binutils(root, update, branch):
     utils.header("Updating LLVM")
-    p = pathlib.Path(root + "/llvm-project")
+    p = root.joinpath("llvm-project")
     if p.is_dir():
         if update:
-            os.chdir(p)
-            subprocess.run(["git", "checkout", branch], check=True)
-            subprocess.run(["git", "pull", "--rebase"], check=True)
+            subprocess.run(["git", "-C", p.as_posix(), "checkout", branch], check=True)
+            subprocess.run(["git", "-C", p.as_posix(), "pull", "--rebase"], check=True)
     else:
-        subprocess.run(["git", "clone", "-b", branch, "git://github.com/llvm/llvm-project", p], check=True)
+        subprocess.run(["git", "clone", "-b", branch, "git://github.com/llvm/llvm-project", p.as_posix()], check=True)
 
     utils.download_binutils(root)
 
 
-def cleanup(root, incremental):
-    build = pathlib.Path(root + "/build/llvm")
+def cleanup(build, incremental):
     if not incremental and build.is_dir():
-        shutil.rmtree(build)
-    try:
-        os.makedirs(build)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-    os.chdir(build)
+        shutil.rmtree(build.as_posix())
+    build.mkdir(parents=True, exist_ok=True)
 
 
-def invoke_cmake(cc, cxx, debug, install_folder, ld, projects, root, targets):
+def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root, targets):
     utils.header("Configuring LLVM")
 
     defines = {}
@@ -180,7 +173,7 @@ def invoke_cmake(cc, cxx, debug, install_folder, ld, projects, root, targets):
     defines['CMAKE_C_COMPILER'] = cc
     defines['CMAKE_CXX_COMPILER'] = cxx
     defines['CMAKE_INSTALL_PREFIX'] = install_folder
-    defines['LLVM_BINUTILS_INCDIR'] = root + "/" + utils.current_binutils() + "/include"
+    defines['LLVM_BINUTILS_INCDIR'] = root.joinpath(utils.current_binutils(), "include").as_posix()
     defines['LLVM_ENABLE_PROJECTS'] = projects
     defines['LLVM_ENABLE_BINDINGS'] = 'OFF'
     defines['LLVM_ENABLE_OCAMLDOC'] = 'OFF'
@@ -215,37 +208,38 @@ def invoke_cmake(cc, cxx, debug, install_folder, ld, projects, root, targets):
     for key in defines:
         newdef = '-D' + key + '=' + defines[key]
         cmake += [newdef]
-    cmake += [root + "/llvm-project/llvm"]
+    cmake += [root.joinpath("llvm-project", "llvm").as_posix()]
 
-    subprocess.run(cmake, check=True)
+    subprocess.run(cmake, check=True, cwd=build.as_posix())
 
 
-def invoke_ninja(install_folder):
+def invoke_ninja(build, install_folder):
     utils.header("Building LLVM")
 
     timeStarted = time.time()
 
-    subprocess.run('ninja', check=True)
+    subprocess.run('ninja', check=True, cwd=build.as_posix())
 
     print()
     print("LLVM build duration: " + str(datetime.timedelta(seconds=int(time.time() - timeStarted))))
 
-    subprocess.run(['ninja', 'install'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(['ninja', 'install'], check=True, cwd=build.as_posix(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    with open(install_folder + "/.gitignore", "w") as gitignore:
+    with open(os.path.join(install_folder, ".gitignore"), "w") as gitignore:
         gitignore.write("*")
 
 
 def main():
-    root = os.path.dirname(os.path.realpath(__file__))
-    os.chdir(root)
-    args = parse_parameters()
+    root = pathlib.Path(__file__).resolve().parent
+    build = root.joinpath("build", "llvm")
+
+    args = parse_parameters(root)
     cc, cxx, ld = check_cc_ld_variables()
     check_dependencies()
     fetch_llvm_binutils(root, not args.no_pull, args.branch)
-    cleanup(root, args.incremental)
-    invoke_cmake(cc, cxx, args.debug, args.install_folder, ld, args.projects, root, args.targets)
-    invoke_ninja(args.install_folder)
+    cleanup(build, args.incremental)
+    invoke_cmake(build, cc, cxx, args.debug, args.install_folder, ld, args.projects, root, args.targets)
+    invoke_ninja(build, args.install_folder)
 
 
 if __name__ == '__main__':

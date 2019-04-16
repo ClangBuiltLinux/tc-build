@@ -13,17 +13,17 @@ def current_binutils():
 
 def download_binutils(root):
     binutils = current_binutils()
-    p = pathlib.Path(root + "/" + binutils)
+    p = pathlib.Path.joinpath(root, binutils)
     if not p.is_dir():
-        os.chdir(root)
-        for entity in glob.glob(os.path.join(root, 'binutils*')):
-            if os.path.isdir(entity):
-                shutil.rmtree(entity)
+        for entity in root.glob('binutils*'):
+            if entity.is_dir():
+                shutil.rmtree(entity.as_posix())
             else:
-                os.remove(entity)
-        subprocess.run(["curl", "-LSsO", "https://ftp.gnu.org/gnu/binutils/" + binutils + ".tar.gz"], check=True)
+                entity.unlink()
+        binutils_tarball = pathlib.Path.joinpath(root, binutils + ".tar.gz")
+        subprocess.run(["curl", "-LSs", "-o", binutils_tarball.as_posix(), "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name], check=True)
         file_hash = hashlib.sha256()
-        with open(str(p) + ".tar.gz", "rb") as f:
+        with binutils_tarball.open("rb") as f:
             while True:
                 data = f.read(65536)
                 if not data:
@@ -31,8 +31,8 @@ def download_binutils(root):
                 file_hash.update(data)
         if file_hash.hexdigest() != "9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e":
             raise RuntimeError("binutils sha256sum does not match known good one!")
-        subprocess.run(["tar", "-xzf", binutils + ".tar.gz"], check=True)
-        os.remove(binutils + ".tar.gz")
+        subprocess.run(["tar", "-xzf", binutils_tarball.name], check=True)
+        binutils_tarball.unlink()
 
 
 def header(string):
