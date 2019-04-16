@@ -246,7 +246,6 @@ def main():
     cleanup(root, args.incremental)
     invoke_cmake(cc, cxx, args.debug, args.install_folder, ld, args.projects, root, args.targets)
     invoke_ninja(args.install_folder)
-    pass
 
 
 if __name__ == '__main__':
