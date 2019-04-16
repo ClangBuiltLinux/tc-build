@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import pathlib
 import os
 import subprocess
 import shutil
@@ -140,10 +141,27 @@ def check_dependencies():
         print(output)
 
 
+def fetch_llvm_binutils(root, update, branch):
+    utils.header("Updating LLVM")
+    p = pathlib.Path(root + "/llvm-project")
+    if p.is_dir():
+        if update:
+            os.chdir(p)
+            subprocess.run(["git", "checkout", branch], check=True)
+            subprocess.run(["git", "pull", "--rebase"], check=True)
+    else:
+        subprocess.run(["git", "clone", "-b", branch, "git://github.com/llvm/llvm-project", p], check=True)
+
+    utils.download_binutils(root)
+
+
 def main():
+    root = os.path.dirname(os.path.realpath(__file__))
+    os.chdir(root)
     args = parse_parameters()
     cc, cxx, ld = check_cc_ld_variables()
     check_dependencies()
+    fetch_llvm_binutils(root, not args.no_pull, args.branch)
     pass
 
 
