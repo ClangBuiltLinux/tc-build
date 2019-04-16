@@ -210,7 +210,7 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root, targ
     defines['CLANG_PLUGIN_SUPPORT'] = 'OFF'
     defines['CMAKE_C_COMPILER'] = cc
     defines['CMAKE_CXX_COMPILER'] = cxx
-    defines['CMAKE_INSTALL_PREFIX'] = install_folder
+    defines['CMAKE_INSTALL_PREFIX'] = install_folder.as_posix()
     defines['LLVM_BINUTILS_INCDIR'] = root.joinpath(utils.current_binutils(), "include").as_posix()
     defines['LLVM_ENABLE_PROJECTS'] = projects
     defines['LLVM_ENABLE_BINDINGS'] = 'OFF'
@@ -263,7 +263,7 @@ def invoke_ninja(build, install_folder):
 
     subprocess.run(['ninja', 'install'], check=True, cwd=build.as_posix(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    with open(os.path.join(install_folder, ".gitignore"), "w") as gitignore:
+    with install_folder.joinpath(".gitignore").open("w") as gitignore:
         gitignore.write("*")
 
 
@@ -272,12 +272,17 @@ def main():
     build = root.joinpath("build", "llvm")
 
     args = parse_parameters(root)
+
+    install_folder = pathlib.Path(args.install_folder)
+    if not install_folder.is_absolute():
+        install_folder = root.joinpath(install_folder)
+
     cc, cxx, ld = check_cc_ld_variables()
     check_dependencies()
     fetch_llvm_binutils(root, not args.no_pull, args.branch)
     cleanup(build, args.incremental)
-    invoke_cmake(build, cc, cxx, args.debug, args.install_folder, ld, args.projects, root, args.targets)
-    invoke_ninja(build, args.install_folder)
+    invoke_cmake(build, cc, cxx, args.debug, install_folder, ld, args.projects, root, args.targets)
+    invoke_ninja(build, install_folder)
 
 
 if __name__ == '__main__':
