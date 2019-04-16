@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import colorama
 import glob
 import hashlib
 import pathlib
@@ -36,7 +35,7 @@ def download_binutils(root):
 
 
 def header(string):
-    print(colorama.Fore.RED + colorama.Style.BRIGHT)
+    print('\033[01;31m')
     for x in range(0, len(string) + 6):
         print("=", end="")
     print()
@@ -44,4 +43,4 @@ def header(string):
     for x in range(0, len(string) + 6):
         print("=", end="")
     print()
-    print(colorama.Style.RESET_ALL)
+    print('\033[0m')
