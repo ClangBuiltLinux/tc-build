@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import os
 import subprocess
 import shutil
 import utils
@@ -63,6 +64,72 @@ def parse_parameters():
     return parser.parse_args()
 
 
+def linker_test(cc, ld):
+    echo = subprocess.Popen(['echo', 'int main() { return 0; }'], stdout=subprocess.PIPE)
+    cc_call = subprocess.Popen([cc, '-fuse-ld=' + ld, '-o', '/dev/null', '-x', 'c', '-'], stdin=echo.stdout, stderr=subprocess.DEVNULL)
+    cc_call.communicate()
+    return cc_call.returncode
+
+
+def check_cc_ld_variables():
+    utils.header("Checking CC and LD")
+    if not 'CC' in os.environ:
+        possible_compilers = ['clang-9', 'clang-8', 'clang-7', 'clang', 'gcc']
+        for compiler in possible_compilers:
+            cc = shutil.which(compiler)
+            if cc is not None:
+                break
+        if cc is None:
+            raise RuntimeError("Neither gcc nor clang could be found on your system!")
+    else:
+        cc = shutil.which(os.environ['CC'])
+
+    cc = os.path.realpath(cc)
+    cc_folder = os.path.dirname(cc)
+
+    if not 'CXX' in os.environ:
+        if "clang" in cc:
+            cxx = "clang++"
+        else:
+            cxx = "g++"
+        cxx = shutil.which(cxx, path=cc_folder + ":" + os.environ['PATH'])
+    else:
+        cxx = shutil.which(os.environ['CXX'])
+    cxx = cxx.rstrip()
+
+    if not 'LD' in os.environ:
+        if "clang" in cc:
+            possible_linkers = ['lld-9', 'lld-8', 'lld-7', 'lld', 'gold', 'bfd']
+            for linker in possible_linkers:
+                ld = shutil.which("ld." + linker, path=cc_folder + ":" + os.environ['PATH'])
+                if ld is not None:
+                    break
+            # TODO: cc_clang_version check
+        else:
+            ld = "gold"
+            if linker_test(cc, ld):
+                ld = None
+    else:
+        ld = os.environ['LD']
+        # TODO: Evaluate full path if cc_clang_version is greater than 3.9
+        if "clang" in cc:
+            ld = shutil.which(ld)
+        if linker_test(cc, ld):
+            print("LD won't work with " + cc + ", saving you from yourself by ignoring LD value")
+            ld = None
+
+    print("CC: " + cc)
+    print("CXX: " + cxx)
+    if ld is not None:
+        ld = ld.rstrip()
+        ld_to_print = shutil.which("ld." + ld)
+        if ld_to_print is None:
+            ld_to_print = shutil.which(ld)
+        print("LD: " + ld_to_print)
+
+    return cc, cxx, ld
+
+
 def check_dependencies():
     utils.header("Checking dependencies")
     required_commands = ["cmake", "curl", "git", "ninja"]
@@ -75,6 +142,7 @@ def check_dependencies():
 
 def main():
     args = parse_parameters()
+    cc, cxx, ld = check_cc_ld_variables()
     check_dependencies()
     pass
 
