@@ -6,6 +6,7 @@ import pathlib
 import os
 import subprocess
 import shutil
+import textwrap
 import time
 import utils
 
@@ -43,43 +44,45 @@ def clang_version(cc):
 
 
 def parse_parameters(root):
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-b", "--branch",
-                        help="""
+                        help=textwrap.dedent("""\
                         By default, the script builds the master branch (tip of tree) of LLVM. If you would
                         like to build an older branch, use this parameter. This may be helpful in tracking
                         down an older bug to properly bisect. This value is just passed along to 'git checkout'
                         so it can be a branch name, tag name, or hash.
-                        """, type=str, default="master")
+
+                        """), type=str, default="master")
     parser.add_argument("-d", "--debug",
-                        help="""
+                        help=textwrap.dedent("""\
                         By default, the script builds LLVM in the release configuration with all of
                         the tests turned off and optimization at O2. This disables that optimization,
                         builds the tests, and changes the configuration to debug. This can help with
                         reporting problems to LLVM developers but will make compilation of both LLVM
                         and the kernel go slower.
-                        """, action="store_true")
+
+                        """), action="store_true")
     parser.add_argument("-i", "--incremental",
-                        help="""
+                        help=textwrap.dedent("""\
                         By default, the script removes all build artifacts from previous compiles. This
                         prevents that, allowing for dirty builds and faster compiles.
-                        """, action="store_true")
+
+                        """), action="store_true")
     parser.add_argument("-I", "--install-folder",
-                        help="""
+                        help=textwrap.dedent("""\
                         By default, the script will create a "usr" folder in the same folder as this script
                         and install the LLVM toolchain there. If you'd like to have it installed somewhere
                         else, pass it to this parameter. This can either be an absolute or relative path.
 
-                        Example: ~/llvm
-                        """, type=str, default=os.path.join(root.as_posix(), "usr"))
+                        """), type=str, default=os.path.join(root.as_posix(), "usr"))
     parser.add_argument("-n", "--no-pull",
-                        help="""
+                        help=textwrap.dedent("""\
                         By default, the script always updates the LLVM repo before building. This prevents
                         that, which can be helpful during something like bisecting.
-                        """, action="store_true")
-    # FIXME: Formatting for help could use some work
+
+                        """), action="store_true")
     parser.add_argument("-p", "--projects",
-                        help="""
+                        help=textwrap.dedent("""\
                         Currently, the script only enables the clang, compiler-rt, and lld folders in LLVM. If
                         you would like to override this, you can use this parameter and supply a list that is
                         supported by LLVM_ENABLE_PROJECTS.
@@ -87,16 +90,18 @@ def parse_parameters(root):
                         See step #5 here: https://llvm.org/docs/GettingStarted.html#getting-started-quickly-a-summary
 
                         Example: -p \"clang;lld;libcxx\"
-                        """, type=str, default="clang;lld;compiler-rt")
+
+                        """), type=str, default="clang;lld;compiler-rt")
     parser.add_argument("-t", "--targets",
-                        help="""
+                        help=textwrap.dedent("""\
                         LLVM is multitargeted by default. Currently, this script only enables the arm32, aarch64,
                         powerpc, and x86 backends because that's what the Linux kernel is currently concerned with.
                         If you would like to override this, you can use this parameter and supply a list that is
                         supported by LLVM_TARGETS_TO_BUILD: https://llvm.org/docs/CMake.html#llvm-specific-variables
 
                         Example: -t "AArch64;X86"
-                        """, type=str, default="AArch64;ARM;PowerPC;X86")
+
+                        """), type=str, default="AArch64;ARM;PowerPC;X86")
     return parser.parse_args()
 
 
