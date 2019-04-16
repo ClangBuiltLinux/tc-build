@@ -3,3 +3,4 @@
 *.pyc
 /llvm-project/
 /binutils-2.32/
+/build/

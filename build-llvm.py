@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import errno
 import pathlib
 import os
 import subprocess
@@ -155,6 +156,18 @@ def fetch_llvm_binutils(root, update, branch):
     utils.download_binutils(root)
 
 
+def cleanup(root, incremental):
+    build = pathlib.Path(root + "/build/llvm")
+    if not incremental and build.is_dir():
+        shutil.rmtree(build)
+    try:
+        os.makedirs(build)
+    except OSError as e:
+        if e.errno != errno.EEXIST:
+            raise
+    os.chdir(build)
+
+
 def main():
     root = os.path.dirname(os.path.realpath(__file__))
     os.chdir(root)
@@ -162,6 +175,7 @@ def main():
     cc, cxx, ld = check_cc_ld_variables()
     check_dependencies()
     fetch_llvm_binutils(root, not args.no_pull, args.branch)
+    cleanup(root, args.incremental)
     pass
 
 
