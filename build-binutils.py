@@ -137,10 +137,11 @@ def invoke_make(build_folder, install_folder, target):
         ['make', '-s', '-j' + str(multiprocessing.cpu_count()), 'V=0'],
         check=True,
         cwd=build_folder.as_posix())
-    subprocess.run(
-        ['make', '-s', 'prefix=' + install_folder.as_posix(), 'install', 'V=0'],
-        check=True,
-        cwd=build_folder.as_posix())
+    subprocess.run([
+        'make', '-s', 'prefix=' + install_folder.as_posix(), 'install', 'V=0'
+    ],
+                   check=True,
+                   cwd=build_folder.as_posix())
     with install_folder.joinpath(".gitignore").open("w") as gitignore:
         gitignore.write("*")
 
@@ -165,7 +166,7 @@ def main():
     utils.download_binutils(root)
 
     build_targets(root.joinpath("build", "binutils"), install_folder, root,
-                    create_targets(args.targets))
+                  create_targets(args.targets))
 
 
 if __name__ == '__main__':

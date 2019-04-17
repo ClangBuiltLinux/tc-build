@@ -186,7 +186,9 @@ def check_cc_ld_variables():
     if not 'LD' in os.environ:
         # and we're using clang, try to find the fastest one
         if "clang" in cc:
-            possible_linkers = ['lld-9', 'lld-8', 'lld-7', 'lld', 'gold', 'bfd']
+            possible_linkers = [
+                'lld-9', 'lld-8', 'lld-7', 'lld', 'gold', 'bfd'
+            ]
             for linker in possible_linkers:
                 # We want to find lld wherever the clang we are using is located
                 ld = shutil.which("ld." + linker,
