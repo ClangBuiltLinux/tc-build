@@ -63,13 +63,13 @@ def parse_parameters(root):
     parser.add_argument("-I",
                         "--install-folder",
                         help=textwrap.dedent("""\
-                        By default, the script will create a "usr" folder in the same folder as this script
+                        By default, the script will create a "build" folder in the same folder as this script
                         and install the LLVM toolchain there. If you'd like to have it installed somewhere
                         else, pass it to this parameter. This can either be an absolute or relative path.
 
                         """),
                         type=str,
-                        default=os.path.join(root.as_posix(), "usr"))
+                        default=os.path.join(root.as_posix(), "build"))
     parser.add_argument("-n",
                         "--no-pull",
                         help=textwrap.dedent("""\
