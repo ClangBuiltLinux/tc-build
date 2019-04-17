@@ -282,38 +282,37 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
     utils.print_header("Configuring LLVM")
 
     # Base cmake defintions, which don't depend on any user supplied options
-    defines = {}
-    # Objective-C Automatic Reference Counting (we don't use Objective-C)
-    defines['CLANG_ENABLE_ARCMT'] = 'OFF'
-    # We don't (currently) use the static analyzer
-    defines['CLANG_ENABLE_STATIC_ANALYZER'] = 'OFF'
-    # We don't use the plugin system and this saves cycles according to Chromium OS
-    defines['CLANG_PLUGIN_SUPPORT'] = 'OFF'
-    # The C compiler to use
-    defines['CMAKE_C_COMPILER'] = cc
-    # The C++ compiler to use
-    defines['CMAKE_CXX_COMPILER'] = cxx
-    # Where the toolchain should be installed
-    defines['CMAKE_INSTALL_PREFIX'] = install_folder.as_posix()
-    # For LLVMgold.so, which is used for LTO with ld.gold
-    defines['LLVM_BINUTILS_INCDIR'] = root.joinpath(utils.current_binutils(),
-                                                    "include").as_posix()
-    # The projects to build
-    defines['LLVM_ENABLE_PROJECTS'] = projects
-    # Don't build bindings; they are for other languages that the kernel does not use
-    defines['LLVM_ENABLE_BINDINGS'] = 'OFF'
-    # Don't build Ocaml documentation
-    defines['LLVM_ENABLE_OCAMLDOC'] = 'OFF'
-    # Removes system dependency on terminfo and almost every major clang provider turns this off
-    defines['LLVM_ENABLE_TERMINFO'] = 'OFF'
-    # Don't build clang-tools-extras to cut down on build targets (about 400 files or so)
-    defines['LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR'] = ''
-    # Don't include documentation build targets because it is available on the web
-    defines['LLVM_INCLUDE_DOCS'] = ''
-    # Don't include example build targets to save on cmake cycles
-    defines['LLVM_INCLUDE_EXAMPLES'] = 'OFF'
-    # The architectures to build backends for
-    defines['LLVM_TARGETS_TO_BUILD'] = targets
+    defines = {
+        # Objective-C Automatic Reference Counting (we don't use Objective-C)
+        'CLANG_ENABLE_ARCMT': 'OFF',
+        # We don't (currently) use the static analyzer
+        'CLANG_ENABLE_STATIC_ANALYZER': 'OFF',
+        # We don't use the plugin system and this saves cycles according to Chromium OS
+        'CLANG_PLUGIN_SUPPORT': 'OFF',
+        # The C compiler to use
+        'CMAKE_C_COMPILER': cc,
+        # The C++ compiler to use
+        'CMAKE_CXX_COMPILER': cxx,
+        # Where the toolchain should be installed
+        'CMAKE_INSTALL_PREFIX': install_folder.as_posix(),
+        # For LLVMgold.so, which is used for LTO with ld.gold
+        'LLVM_BINUTILS_INCDIR': root.joinpath(utils.current_binutils(), "include").as_posix(),
+        # The projects to build
+        'LLVM_ENABLE_PROJECTS': projects,
+        # Don't build bindings; they are for other languages that the kernel does not use
+        'LLVM_ENABLE_BINDINGS': 'OFF',
+        # Don't build Ocaml documentation
+        'LLVM_ENABLE_OCAMLDOC': 'OFF',
+        # Removes system dependency on terminfo and almost every major clang provider turns this off
+        'LLVM_ENABLE_TERMINFO': 'OFF',
+        # Don't build clang-tools-extras to cut down on build targets (about 400 files or so)
+        'LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR': '',
+        # Don't include documentation build targets because it is available on the web
+        'LLVM_INCLUDE_DOCS': '',
+        # Don't include example build targets to save on cmake cycles
+        'LLVM_INCLUDE_EXAMPLES': 'OFF',
+        # The architectures to build backends for
+        'LLVM_TARGETS_TO_BUILD': targets}
 
     # If a debug build was requested
     if debug:
