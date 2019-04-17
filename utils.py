@@ -64,7 +64,7 @@ def download_binutils(root):
 
 
 # Print a fancy header
-def header(string):
+def print_header(string):
     print('\033[01;31m')
     for x in range(0, len(string) + 6):
         print("=", end="")

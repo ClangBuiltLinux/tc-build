@@ -145,7 +145,7 @@ def linker_test(cc, ld):
 
 # Sets the cc, cxx, and ld variables, which will be passed to cmake
 def check_cc_ld_variables():
-    utils.header("Checking CC and LD")
+    utils.print_header("Checking CC and LD")
     # If the user didn't supply a C compiler, try to find one
     if not 'CC' in os.environ:
         possible_compilers = ['clang-9', 'clang-8', 'clang-7', 'clang', 'gcc']
@@ -233,7 +233,7 @@ def check_cc_ld_variables():
 
 # Make sure that the base dependencies of cmake, curl, git, and ninja are installed
 def check_dependencies():
-    utils.header("Checking dependencies")
+    utils.print_header("Checking dependencies")
     required_commands = ["cmake", "curl", "git", "ninja"]
     for command in required_commands:
         output = shutil.which(command)
@@ -248,13 +248,13 @@ def fetch_llvm_binutils(root, update, branch):
     p = root.joinpath("llvm-project")
     if p.is_dir():
         if update:
-            utils.header("Updating LLVM")
+            utils.print_header("Updating LLVM")
             subprocess.run(
                 ["git", "-C", p.as_posix(), "checkout", branch], check=True)
             subprocess.run(
                 ["git", "-C", p.as_posix(), "pull", "--rebase"], check=True)
     else:
-        utils.header("Downloading LLVM")
+        utils.print_header("Downloading LLVM")
         subprocess.run([
             "git", "clone", "-b", branch, "git://github.com/llvm/llvm-project",
             p.as_posix()
@@ -278,7 +278,7 @@ def cleanup(build, incremental):
 # Invoke cmake to generate the build files
 def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
                  targets):
-    utils.header("Configuring LLVM")
+    utils.print_header("Configuring LLVM")
 
     # Base cmake defintions, which don't depend on any user supplied options
     defines = {}
@@ -352,7 +352,7 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
 
 # Build the world
 def invoke_ninja(build, install_folder):
-    utils.header("Building LLVM")
+    utils.print_header("Building LLVM")
 
     timeStarted = time.time()
 

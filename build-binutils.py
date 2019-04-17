@@ -14,7 +14,7 @@ import utils
 
 
 # Convert the host architecture to the first part of a target triple
-def host_to_key():
+def host_arch_target():
     if platform.machine() == "armv7l":
         return "arm"
     elif platform.machine() == "ppc64le":
@@ -26,13 +26,13 @@ def host_to_key():
 
 
 # Get the architecture from a target triple
-def target_to_arch(target):
+def target_arch(target):
     return target.split("-")[0]
 
 
 # Is the current target triple the same as the host?
 def host_is_target(target):
-    return host_to_key() == target_to_arch(target)
+    return host_arch_target() == target_arch(target)
 
 
 def parse_parameters(root):
@@ -77,9 +77,9 @@ def create_targets(targets):
     else:
         for target in targets:
             if target == "host":
-                key = host_to_key()
+                key = host_arch_target()
             else:
-                key = target_to_arch(target)
+                key = target_arch(target)
             targets_list.append(targets_dict[key])
 
     return targets_list
@@ -124,7 +124,7 @@ def invoke_configure(build_folder, install_folder, root, target):
     # that it is a cross compiler
     if not host_is_target(target):
         configure += ['--program-prefix=' + target + '-', '--target=' + target]
-    utils.header("Building " + target + " binutils")
+    utils.print_header("Building " + target + " binutils")
     subprocess.run(configure, check=True, cwd=build_folder.as_posix())
 
 
@@ -145,7 +145,7 @@ def invoke_make(build_folder, install_folder, target):
         gitignore.write("*")
 
 
-def for_all_targets(build, install_folder, root, targets):
+def build_targets(build, install_folder, root, targets):
     for target in targets:
         build_folder = build.joinpath(target)
         cleanup(build_folder)
@@ -164,7 +164,7 @@ def main():
 
     utils.download_binutils(root)
 
-    for_all_targets(root.joinpath("build", "binutils"), install_folder, root,
+    build_targets(root.joinpath("build", "binutils"), install_folder, root,
                     create_targets(args.targets))
 
 
