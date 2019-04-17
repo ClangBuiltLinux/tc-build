@@ -295,10 +295,14 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
     # Base cmake defintions, which don't depend on any user supplied options
     defines = {
         # Objective-C Automatic Reference Counting (we don't use Objective-C)
+        # https://clang.llvm.org/docs/AutomaticReferenceCounting.html
         'CLANG_ENABLE_ARCMT': 'OFF',
-        # We don't (currently) use the static analyzer
+        # We don't (currently) use the static analyzer and it saves cycles
+        # according to Chromium OS:
+        # https://crrev.com/44702077cc9b5185fc21e99485ee4f0507722f82
         'CLANG_ENABLE_STATIC_ANALYZER': 'OFF',
-        # We don't use the plugin system and this saves cycles according to Chromium OS
+        # We don't use the plugin system and it will remove unused symbols:
+        # https://crbug.com/917404
         'CLANG_PLUGIN_SUPPORT': 'OFF',
         # The C compiler to use
         'CMAKE_C_COMPILER': cc,
