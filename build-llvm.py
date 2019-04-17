@@ -14,39 +14,8 @@ import utils
 
 
 # Returns Clang's version as an integer
-#
-# Some backstory:
-#     When this was written in bash, this was implemented along the lines of
-#     the clang-version.sh script that the Linux kernel uses, dumping the
-#     __clang_major__, __clang_minor__, and __clang_patchlevel__ preprocessor
-#     defintions and then using printf to format them. In Python, that is a lot
-#     uglier because of how subprocess pipes work (see the 'linker_test'
-#     function below). While this isn't much better, it works and doesn't
-#     depend on pipes.
-#
-# How it works:
-#     Clang's version string is different on various distributions but they
-#     all similar enough.
-#
-#     apt.llvm.org: clang version 9.0.0-svn357849-1~exp1+0~20190406231252.1~1.gbpd89028 (trunk)
-#     Arch Linux: clang version 8.0.0 (tags/RELEASE_800/final)
-#     Debian: clang version 3.8.1-24 (tags/RELEASE_381/final)
-#     Fedora: clang version 7.0.1 (Fedora 7.0.1-6.fc29)
-#     Ubuntu: clang version 6.0.0-1ubuntu2 (tags/RELEASE_600/final)
-#
-#     This one liner:
-#         1. Gets the first line of 'clang --version' (.splitlines()[0])
-#         2. Gets the third chunk, which contains the numeric verison (.split(" ")[2])
-#         3. Removes everything after a hyphen if it exists (.split("-")[0])
-#         4. Removes the periods (.replace(".", ""))
-#
-# FIXME: Is there a better way to do this?
 def clang_version(cc):
-    return int(
-        subprocess.check_output([
-            cc, "--version"
-        ]).decode("utf-8").splitlines()[0].split(" ")[2].split("-")[0].replace(
-            ".", ""))
+    return int(subprocess.check_output(["./clang-version.sh", cc]).decode("utf-8"))
 
 
 def parse_parameters(root):
@@ -198,7 +167,7 @@ def check_cc_ld_variables():
             # If clang is older than 3.9, it won't accept absolute paths so we
             # need to just pass it the name (and modify PATH so that it is found properly)
             # https://github.com/llvm/llvm-project/commit/e43b7413597d8102a4412f9de41102e55f4f2ec9
-            if clang_version(cc) < 390:
+            if clang_version(cc) < 30900:
                 os.environ['PATH'] = cc_folder + ":" + os.environ['PATH']
                 ld = linker
         # and we're using gcc, try to use gold
@@ -212,7 +181,7 @@ def check_cc_ld_variables():
         # see if it will work with '-fuse-ld', which is what cmake will do. Doing
         # it now prevents a hard error later.
         ld = os.environ['LD']
-        if "clang" in cc and clang_version(cc) >= 390:
+        if "clang" in cc and clang_version(cc) >= 30900:
             ld = shutil.which(ld)
         if linker_test(cc, ld):
             print("LD won't work with " + cc +
