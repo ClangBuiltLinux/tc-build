@@ -44,20 +44,29 @@ import utils
 #
 # FIXME: Is there a better way to do this?
 def clang_version(cc):
-    return int(subprocess.check_output([cc, "--version"]).decode("utf-8").splitlines()[0].split(" ")[2].split("-")[0].replace(".",""))
+    return int(
+        subprocess.check_output([
+            cc, "--version"
+        ]).decode("utf-8").splitlines()[0].split(" ")[2].split("-")[0].replace(
+            ".", ""))
 
 
 def parse_parameters(root):
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("-b", "--branch",
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("-b",
+                        "--branch",
                         help=textwrap.dedent("""\
                         By default, the script builds the master branch (tip of tree) of LLVM. If you would
                         like to build an older branch, use this parameter. This may be helpful in tracking
                         down an older bug to properly bisect. This value is just passed along to 'git checkout'
                         so it can be a branch name, tag name, or hash.
 
-                        """), type=str, default="master")
-    parser.add_argument("-d", "--debug",
+                        """),
+                        type=str,
+                        default="master")
+    parser.add_argument("-d",
+                        "--debug",
                         help=textwrap.dedent("""\
                         By default, the script builds LLVM in the release configuration with all of
                         the tests turned off and optimization at O2. This disables that optimization,
@@ -65,27 +74,36 @@ def parse_parameters(root):
                         reporting problems to LLVM developers but will make compilation of both LLVM
                         and the kernel go slower.
 
-                        """), action="store_true")
-    parser.add_argument("-i", "--incremental",
+                        """),
+                        action="store_true")
+    parser.add_argument("-i",
+                        "--incremental",
                         help=textwrap.dedent("""\
                         By default, the script removes all build artifacts from previous compiles. This
                         prevents that, allowing for dirty builds and faster compiles.
 
-                        """), action="store_true")
-    parser.add_argument("-I", "--install-folder",
+                        """),
+                        action="store_true")
+    parser.add_argument("-I",
+                        "--install-folder",
                         help=textwrap.dedent("""\
                         By default, the script will create a "usr" folder in the same folder as this script
                         and install the LLVM toolchain there. If you'd like to have it installed somewhere
                         else, pass it to this parameter. This can either be an absolute or relative path.
 
-                        """), type=str, default=os.path.join(root.as_posix(), "usr"))
-    parser.add_argument("-n", "--no-pull",
+                        """),
+                        type=str,
+                        default=os.path.join(root.as_posix(), "usr"))
+    parser.add_argument("-n",
+                        "--no-pull",
                         help=textwrap.dedent("""\
                         By default, the script always updates the LLVM repo before building. This prevents
                         that, which can be helpful during something like bisecting.
 
-                        """), action="store_true")
-    parser.add_argument("-p", "--projects",
+                        """),
+                        action="store_true")
+    parser.add_argument("-p",
+                        "--projects",
                         help=textwrap.dedent("""\
                         Currently, the script only enables the clang, compiler-rt, and lld folders in LLVM. If
                         you would like to override this, you can use this parameter and supply a list that is
@@ -95,8 +113,11 @@ def parse_parameters(root):
 
                         Example: -p \"clang;lld;libcxx\"
 
-                        """), type=str, default="clang;lld;compiler-rt")
-    parser.add_argument("-t", "--targets",
+                        """),
+                        type=str,
+                        default="clang;lld;compiler-rt")
+    parser.add_argument("-t",
+                        "--targets",
                         help=textwrap.dedent("""\
                         LLVM is multitargeted by default. Currently, this script only enables the arm32, aarch64,
                         powerpc, and x86 backends because that's what the Linux kernel is currently concerned with.
@@ -105,14 +126,20 @@ def parse_parameters(root):
 
                         Example: -t "AArch64;X86"
 
-                        """), type=str, default="AArch64;ARM;PowerPC;X86")
+                        """),
+                        type=str,
+                        default="AArch64;ARM;PowerPC;X86")
     return parser.parse_args()
 
 
 # Test to see if the supplied ld value will work with cc -fuse=ld
 def linker_test(cc, ld):
-    echo = subprocess.Popen(['echo', 'int main() { return 0; }'], stdout=subprocess.PIPE)
-    cc_call = subprocess.Popen([cc, '-fuse-ld=' + ld, '-o', '/dev/null', '-x', 'c', '-'], stdin=echo.stdout, stderr=subprocess.DEVNULL)
+    echo = subprocess.Popen(['echo', 'int main() { return 0; }'],
+                            stdout=subprocess.PIPE)
+    cc_call = subprocess.Popen(
+        [cc, '-fuse-ld=' + ld, '-o', '/dev/null', '-x', 'c', '-'],
+        stdin=echo.stdout,
+        stderr=subprocess.DEVNULL)
     cc_call.communicate()
     return cc_call.returncode
 
@@ -128,7 +155,8 @@ def check_cc_ld_variables():
             if cc is not None:
                 break
         if cc is None:
-            raise RuntimeError("Neither gcc nor clang could be found on your system!")
+            raise RuntimeError(
+                "Neither gcc nor clang could be found on your system!")
     # Otherwise, get its full path
     else:
         cc = shutil.which(os.environ['CC'])
@@ -162,7 +190,8 @@ def check_cc_ld_variables():
             possible_linkers = ['lld-9', 'lld-8', 'lld-7', 'lld', 'gold', 'bfd']
             for linker in possible_linkers:
                 # We want to find lld wherever the clang we are using is located
-                ld = shutil.which("ld." + linker, path=cc_folder + ":" + os.environ['PATH'])
+                ld = shutil.which("ld." + linker,
+                                  path=cc_folder + ":" + os.environ['PATH'])
                 if ld is not None:
                     break
             # If clang is older than 3.9, it won't accept absolute paths so we
@@ -185,7 +214,8 @@ def check_cc_ld_variables():
         if "clang" in cc and clang_version(cc) >= 390:
             ld = shutil.which(ld)
         if linker_test(cc, ld):
-            print("LD won't work with " + cc + ", saving you from yourself by ignoring LD value")
+            print("LD won't work with " + cc +
+                  ", saving you from yourself by ignoring LD value")
             ld = None
 
     # Print what binaries we are using to compile/link with so the user can decide if that is proper or not
@@ -208,7 +238,8 @@ def check_dependencies():
     for command in required_commands:
         output = shutil.which(command)
         if output is None:
-            raise RuntimeError(command + " could not be found, please install it!")
+            raise RuntimeError(command +
+                               " could not be found, please install it!")
         print(output)
 
 
@@ -218,11 +249,17 @@ def fetch_llvm_binutils(root, update, branch):
     if p.is_dir():
         if update:
             utils.header("Updating LLVM")
-            subprocess.run(["git", "-C", p.as_posix(), "checkout", branch], check=True)
-            subprocess.run(["git", "-C", p.as_posix(), "pull", "--rebase"], check=True)
+            subprocess.run(
+                ["git", "-C", p.as_posix(), "checkout", branch], check=True)
+            subprocess.run(
+                ["git", "-C", p.as_posix(), "pull", "--rebase"], check=True)
     else:
         utils.header("Downloading LLVM")
-        subprocess.run(["git", "clone", "-b", branch, "git://github.com/llvm/llvm-project", p.as_posix()], check=True)
+        subprocess.run([
+            "git", "clone", "-b", branch, "git://github.com/llvm/llvm-project",
+            p.as_posix()
+        ],
+                       check=True)
 
     # One might wonder why we are downloading binutils in an LLVM build script :)
     # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
@@ -239,7 +276,8 @@ def cleanup(build, incremental):
 
 
 # Invoke cmake to generate the build files
-def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root, targets):
+def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
+                 targets):
     utils.header("Configuring LLVM")
 
     # Base cmake defintions, which don't depend on any user supplied options
@@ -257,7 +295,8 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root, targ
     # Where the toolchain should be installed
     defines['CMAKE_INSTALL_PREFIX'] = install_folder.as_posix()
     # For LLVMgold.so, which is used for LTO with ld.gold
-    defines['LLVM_BINUTILS_INCDIR'] = root.joinpath(utils.current_binutils(), "include").as_posix()
+    defines['LLVM_BINUTILS_INCDIR'] = root.joinpath(utils.current_binutils(),
+                                                    "include").as_posix()
     # The projects to build
     defines['LLVM_ENABLE_PROJECTS'] = projects
     # Don't build bindings; they are for other languages that the kernel does not use
@@ -320,9 +359,14 @@ def invoke_ninja(build, install_folder):
     subprocess.run('ninja', check=True, cwd=build.as_posix())
 
     print()
-    print("LLVM build duration: " + str(datetime.timedelta(seconds=int(time.time() - timeStarted))))
+    print("LLVM build duration: " +
+          str(datetime.timedelta(seconds=int(time.time() - timeStarted))))
 
-    subprocess.run(['ninja', 'install'], check=True, cwd=build.as_posix(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(['ninja', 'install'],
+                   check=True,
+                   cwd=build.as_posix(),
+                   stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL)
 
     # Add a .gitignore automatically
     with install_folder.joinpath(".gitignore").open("w") as gitignore:
@@ -344,7 +388,8 @@ def main():
     check_dependencies()
     fetch_llvm_binutils(root, not args.no_pull, args.branch)
     cleanup(build, args.incremental)
-    invoke_cmake(build, cc, cxx, args.debug, install_folder, ld, args.projects, root, args.targets)
+    invoke_cmake(build, cc, cxx, args.debug, install_folder, ld, args.projects,
+                 root, args.targets)
     invoke_ninja(build, install_folder)
 
     print("LLVM toolchain installed to: " + install_folder.as_posix())

@@ -30,7 +30,12 @@ def download_binutils(root):
 
         # Download the tarball
         binutils_tarball = pathlib.Path.joinpath(root, binutils + ".tar.gz")
-        subprocess.run(["curl", "-LSs", "-o", binutils_tarball.as_posix(), "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name], check=True)
+        subprocess.run([
+            "curl", "-LSs", "-o",
+            binutils_tarball.as_posix(),
+            "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name
+        ],
+                       check=True)
 
         # Check the sha256sum of the downloaded package with a known good one
         # To regenerate the sha256sum, download the .tar.gz and .tar.gz.sig files
@@ -43,8 +48,10 @@ def download_binutils(root):
                 if not data:
                     break
                 file_hash.update(data)
-        if file_hash.hexdigest() != "9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e":
-            raise RuntimeError("binutils sha256sum does not match known good one!")
+        if file_hash.hexdigest(
+        ) != "9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e":
+            raise RuntimeError(
+                "binutils sha256sum does not match known good one!")
 
         # Extract the tarball then remove it
         subprocess.run(["tar", "-xzf", binutils_tarball.name], check=True)
