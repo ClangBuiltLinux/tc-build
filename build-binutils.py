@@ -17,7 +17,11 @@ def host_arch_target():
     Converts the host architecture to the first part of a target triple
     :return: Target host
     """
-    host_mapping = {"armv7l": "arm", "ppc64le": "powerpc64le", "ppc": "powerpc"}
+    host_mapping = {
+        "armv7l": "arm",
+        "ppc64le": "powerpc64le",
+        "ppc": "powerpc"
+    }
     machine = platform.machine()
     if machine in host_mapping.keys():
         return host_mapping[machine]
