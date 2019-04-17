@@ -5,7 +5,6 @@
 
 import argparse
 import datetime
-import errno
 import pathlib
 import os
 import subprocess
