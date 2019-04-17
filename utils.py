@@ -48,27 +48,28 @@ def download_binutils(root):
             "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name
         ],
                        check=True)
-
-        # Check the sha256sum of the downloaded package with a known good one
-        # To regenerate the sha256sum, download the .tar.gz and .tar.gz.sig files
-        # $ gpg --verify *.tar.gz.sig *.tar.gz
-        # $ sha256sum *.tar.gz
-        file_hash = hashlib.sha256()
-        with binutils_tarball.open("rb") as f:
-            while True:
-                data = f.read(65536)
-                if not data:
-                    break
-                file_hash.update(data)
-        good_hash = "9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e"
-        if file_hash.hexdigest() != good_hash:
-            raise RuntimeError(
-                "binutils sha256sum does not match known good one!")
-
+        verify_checksum(binutils_tarball)
         # Extract the tarball then remove it
         subprocess.run(["tar", "-xzf", binutils_tarball.name], check=True)
         create_gitignore(p)
         binutils_tarball.unlink()
+
+
+def verify_checksum(file):
+    # Check the sha256sum of the downloaded package with a known good one
+    # To regenerate the sha256sum, download the .tar.gz and .tar.gz.sig files
+    # $ gpg --verify *.tar.gz.sig *.tar.gz
+    # $ sha256sum *.tar.gz
+    file_hash = hashlib.sha256()
+    with file.open("rb") as f:
+        while True:
+            data = f.read(65536)
+            if not data:
+                break
+            file_hash.update(data)
+    good_hash = "9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e"
+    if file_hash.hexdigest() != good_hash:
+        raise RuntimeError("binutils sha256sum does not match known good one!")
 
 
 def print_header(string):
