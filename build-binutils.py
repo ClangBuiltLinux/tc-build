@@ -12,8 +12,11 @@ import subprocess
 import utils
 
 
-# Convert the host architecture to the first part of a target triple
 def host_arch_target():
+    """
+    Converts the host architecture to the first part of a target triple
+    :return: Target host
+    """
     host_mapping = {"armv7l": "arm", "ppc64le": "powerpc64le", "ppc": "powerpc"}
     machine = platform.machine()
     if machine in host_mapping.keys():
@@ -22,17 +25,30 @@ def host_arch_target():
         return machine
 
 
-# Get the architecture from a target triple
 def target_arch(target):
+    """
+    Returns the architecture from a target triple
+    :param target: Triple to deduce architecture from
+    :return: Architecture associated with given triple
+    """
     return target.split("-")[0]
 
 
-# Is the current target triple the same as the host?
 def host_is_target(target):
+    """
+    Checks in the current target triple the same as the host?
+    :param target: Triple to match host architecture against
+    :return: True if host and target are same, False otherwise
+    """
     return host_arch_target() == target_arch(target)
 
 
 def parse_parameters(root):
+    """
+    Parses parameters passed to the script into options
+    :param root: The directory where the script is being invoked from
+    :return: A 'Namespace' object with all the options parsed from supplied parameters
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("-I",
                         "--install-folder",
@@ -59,6 +75,11 @@ def parse_parameters(root):
 
 
 def create_targets(targets):
+    """
+    Generate a list of targets that can be passed to the binutils compile function
+    :param targets: A list of targets to convert to binutils target triples
+    :return: A list of target triples
+    """
     targets_dict = {
         "arm": "arm-linux-gnueabi",
         "aarch64": "aarch64-linux-gnu",
@@ -82,12 +103,23 @@ def create_targets(targets):
 
 
 def cleanup(build_folder):
+    """
+    Cleanup the build directory
+    :param build_folder: Build directory
+    """
     if build_folder.is_dir():
         shutil.rmtree(build_folder.as_posix())
     build_folder.mkdir(parents=True, exist_ok=True)
 
 
 def invoke_configure(build_folder, install_folder, root, target):
+    """
+    Invokes the configure script to generate a Makefile
+    :param build_folder: Build directory
+    :param install_folder: Directory to install binutils to
+    :param root: Working directory
+    :param target: Target to compile for
+    """
     configure = [
         root.joinpath(utils.current_binutils(), "configure").as_posix(),
         '--prefix=' + install_folder.as_posix(),
@@ -125,6 +157,12 @@ def invoke_configure(build_folder, install_folder, root, target):
 
 
 def invoke_make(build_folder, install_folder, target):
+    """
+    Invoke make to compile binutils
+    :param build_folder: Build directory
+    :param install_folder: Directory to install binutils to
+    :param target: Target to compile for
+    """
     if host_is_target(target):
         subprocess.run(['make', '-s', 'configure-host', 'V=0'],
                        check=True,
@@ -143,6 +181,14 @@ def invoke_make(build_folder, install_folder, target):
 
 
 def build_targets(build, install_folder, root, targets):
+    """
+    Builds binutils for all specified targets
+    :param build: Build directory
+    :param install_folder: Directory to install binutils to
+    :param root: Working directory
+    :param targets: Targets to compile binutils for
+    :return:
+    """
     for target in targets:
         build_folder = build.joinpath(target)
         cleanup(build_folder)
