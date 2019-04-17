@@ -43,8 +43,6 @@ def parse_parameters(root):
                         By default, the script will create a "usr" folder in the same folder as this script
                         and install binutils there. If you'd like to have it installed somewhere else, pass
                         it to this parameter. This can either be an absolute or relative path.
-
-                        Example: ~/binutils
                         """,
                         type=str,
                         default=os.path.join(root.as_posix(), "usr"))
@@ -52,12 +50,11 @@ def parse_parameters(root):
                         "--targets",
                         help="""
                         The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
-                        powerpc-linux-gnu, powerpc64le-linux-gnu, and x86_64-linux-gnu (host if on x86_64).
+                        powerpc-linux-gnu, powerpc64le-linux-gnu, and x86_64-linux-gnu.
 
                         You can either pass the full target or just the first part (arm, aarch64, x86_64, etc)
-                        or all if you want to build all targets (which is the default).
-
-                        Example: all, aarch64, arm-linux-gnueabi
+                        or all if you want to build all targets (which is the default). It will only add the
+                        target prefix if it is not for the host architecture.
                         """,
                         default="all",
                         nargs="+")
