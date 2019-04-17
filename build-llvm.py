@@ -146,7 +146,7 @@ def linker_test(cc, ld):
 def check_cc_ld_variables():
     utils.print_header("Checking CC and LD")
     # If the user didn't supply a C compiler, try to find one
-    if not 'CC' in os.environ:
+    if 'CC' not in os.environ:
         possible_compilers = ['clang-9', 'clang-8', 'clang-7', 'clang', 'gcc']
         for compiler in possible_compilers:
             cc = shutil.which(compiler)
@@ -169,7 +169,7 @@ def check_cc_ld_variables():
     cc_folder = os.path.dirname(cc)
 
     # If the user didn't supply a C++ compiler
-    if not 'CXX' in os.environ:
+    if 'CXX' not in os.environ:
         if "clang" in cc:
             cxx = "clang++"
         else:
@@ -182,7 +182,7 @@ def check_cc_ld_variables():
     cxx = cxx.rstrip()
 
     # If the user didn't specify a linker
-    if not 'LD' in os.environ:
+    if 'LD' not in os.environ:
         # and we're using clang, try to find the fastest one
         if "clang" in cc:
             possible_linkers = [
@@ -260,7 +260,7 @@ def fetch_llvm_binutils(root, update, branch):
             "git", "clone", "-b", branch, "git://github.com/llvm/llvm-project",
             p.as_posix()
         ],
-                       check=True)
+            check=True)
 
     # One might wonder why we are downloading binutils in an LLVM build script :)
     # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
@@ -354,13 +354,13 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
 def invoke_ninja(build, install_folder):
     utils.print_header("Building LLVM")
 
-    timeStarted = time.time()
+    time_started = time.time()
 
     subprocess.run('ninja', check=True, cwd=build.as_posix())
 
     print()
     print("LLVM build duration: " +
-          str(datetime.timedelta(seconds=int(time.time() - timeStarted))))
+          str(datetime.timedelta(seconds=int(time.time() - time_started))))
 
     subprocess.run(['ninja', 'install'],
                    check=True,
