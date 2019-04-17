@@ -46,8 +46,8 @@ def download_binutils(root):
                 if not data:
                     break
                 file_hash.update(data)
-        if file_hash.hexdigest(
-        ) != "9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e":
+        good_hash = "9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e"
+        if file_hash.hexdigest() != good_hash:
             raise RuntimeError(
                 "binutils sha256sum does not match known good one!")
 
