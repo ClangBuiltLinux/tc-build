@@ -340,11 +340,19 @@ def main():
         install_folder = root.joinpath(install_folder)
 
     cc, cxx, ld = check_cc_ld_variables()
+
     check_dependencies()
     fetch_llvm_binutils(root, not args.no_pull, args.branch)
     cleanup(build, args.incremental)
     invoke_cmake(build, cc, cxx, args.debug, install_folder, ld, args.projects, root, args.targets)
     invoke_ninja(build, install_folder)
+
+    print("LLVM toolchain installed to: " + install_folder.as_posix())
+    print("\nTo use, either run:\n")
+    print("    $ export PATH=" + install_folder.as_posix() + ":${PATH}\n")
+    print("or add:\n")
+    print("    PATH=" + install_folder.as_posix() + ":${PATH}\n")
+    print("to the command you want to use this toolchain.\n")
 
 
 if __name__ == '__main__':
