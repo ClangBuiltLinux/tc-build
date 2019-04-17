@@ -8,19 +8,28 @@ import shutil
 import subprocess
 
 
-# Create a gitignore that ignores all files in a folder
 def create_gitignore(folder):
+    """
+    Create a gitignore that ignores all files in a folder
+    :param folder: Folder to create the gitignore in
+    """
     with folder.joinpath(".gitignore").open("w") as gitignore:
         gitignore.write("*")
 
 
-# The latest stable version of binutils
 def current_binutils():
+    """
+    Simple getter for current stable binutils release
+    :return: The current stable release of binutils
+    """
     return "binutils-2.32"
 
 
-# Download the latest stable version of binutils
 def download_binutils(root):
+    """
+    Downloads the latest stable version of binutils
+    :param root: Directory to download binutils to
+    """
     binutils = current_binutils()
     p = pathlib.Path.joinpath(root, binutils)
     if not p.is_dir():
@@ -62,8 +71,11 @@ def download_binutils(root):
         binutils_tarball.unlink()
 
 
-# Print a fancy header
 def print_header(string):
+    """
+    Prints a fancy header
+    :param string: String to print inside the header
+    """
     print('\033[01;31m')
     for x in range(0, len(string) + 6):
         print("=", end="")
