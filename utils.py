@@ -41,9 +41,7 @@ def header(string):
     print('\033[01;31m')
     for x in range(0, len(string) + 6):
         print("=", end="")
-    print()
-    print("== " + string + " ==")
+    print("\n== " + string + " ==")
     for x in range(0, len(string) + 6):
         print("=", end="")
-    print()
-    print('\033[0m')
+    print('\n\033[0m')
