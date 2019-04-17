@@ -100,7 +100,7 @@ def invoke_configure(build_folder, install_folder, root, target):
         'CFLAGS=-O2 -march=native -mtune=native',
         'CXXFLAGS=-O2 -march=native -mtune=native'
     ]
-    if "arm-" in target or "aarch64-" in target:
+    if "arm" in target or "aarch64" in target:
         configure += [
             '--disable-multilib', '--disable-nls',
             '--program-prefix=' + target + '-', '--target=' + target,
@@ -114,7 +114,7 @@ def invoke_configure(build_folder, install_folder, root, target):
             '--disable-werror', '--program-prefix=' + target + '-',
             '--target=' + target, '--with-pic', '--with-system-zlib'
         ]
-    elif "x86" in target:
+    elif "x86_64" in target:
         configure += [
             '--enable-lto', '--enable-relro', '--enable-shared',
             '--enable-targets=x86_64-pep', '--enable-threads', '--disable-gdb',
