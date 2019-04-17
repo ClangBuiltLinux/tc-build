@@ -109,6 +109,7 @@ def parse_parameters(root):
     return parser.parse_args()
 
 
+# Test to see if the supplied ld value will work with cc -fuse=ld
 def linker_test(cc, ld):
     echo = subprocess.Popen(['echo', 'int main() { return 0; }'], stdout=subprocess.PIPE)
     cc_call = subprocess.Popen([cc, '-fuse-ld=' + ld, '-o', '/dev/null', '-x', 'c', '-'], stdin=echo.stdout, stderr=subprocess.DEVNULL)
@@ -116,8 +117,10 @@ def linker_test(cc, ld):
     return cc_call.returncode
 
 
+# Sets the cc, cxx, and ld variables, which will be passed to cmake
 def check_cc_ld_variables():
     utils.header("Checking CC and LD")
+    # If the user didn't supply a C compiler, try to find one
     if not 'CC' in os.environ:
         possible_compilers = ['clang-9', 'clang-8', 'clang-7', 'clang', 'gcc']
         for compiler in possible_compilers:
@@ -126,37 +129,58 @@ def check_cc_ld_variables():
                 break
         if cc is None:
             raise RuntimeError("Neither gcc nor clang could be found on your system!")
+    # Otherwise, get its full path
     else:
         cc = shutil.which(os.environ['CC'])
 
+    # Evaluate if CC is a symlink. Certain packages of clang (like from
+    # apt.llvm.org) symlink the clang++ binary to clang++-<version> in
+    # /usr/bin, which then points to something like /usr/lib/llvm-<version/bin.
+    # This won't be found by the dumb logic below and trying to parse and figure
+    # out a heuristic for that is a lot more effort than just going into the
+    # folder that clang is actually installed in and getting clang++ from there.
     cc = os.path.realpath(cc)
     cc_folder = os.path.dirname(cc)
 
+    # If the user didn't supply a C++ compiler
     if not 'CXX' in os.environ:
         if "clang" in cc:
             cxx = "clang++"
         else:
             cxx = "g++"
+        # Use the one that is located where CC is
         cxx = shutil.which(cxx, path=cc_folder + ":" + os.environ['PATH'])
+    # Otherwise, get its full path
     else:
         cxx = shutil.which(os.environ['CXX'])
     cxx = cxx.rstrip()
 
+    # If the user didn't specify a linker
     if not 'LD' in os.environ:
+        # and we're using clang, try to find the fastest one
         if "clang" in cc:
             possible_linkers = ['lld-9', 'lld-8', 'lld-7', 'lld', 'gold', 'bfd']
             for linker in possible_linkers:
+                # We want to find lld wherever the clang we are using is located
                 ld = shutil.which("ld." + linker, path=cc_folder + ":" + os.environ['PATH'])
                 if ld is not None:
                     break
+            # If clang is older than 3.9, it won't accept absolute paths so we
+            # need to just pass it the name (and modify PATH so that it is found properly)
+            # https://github.com/llvm/llvm-project/commit/e43b7413597d8102a4412f9de41102e55f4f2ec9
             if clang_version(cc) < 390:
                 os.environ['PATH'] = cc_folder + ":" + os.environ['PATH']
                 ld = linker
+        # and we're using gcc, try to use gold
         else:
             ld = "gold"
             if linker_test(cc, ld):
                 ld = None
+    # If the user did specify a linker
     else:
+        # evaluate its full path with clang to avoid weird issues and check to
+        # see if it will work with '-fuse-ld', which is what cmake will do. Doing
+        # it now prevents a hard error later.
         ld = os.environ['LD']
         if "clang" in cc and clang_version(cc) >= 390:
             ld = shutil.which(ld)
@@ -164,6 +188,7 @@ def check_cc_ld_variables():
             print("LD won't work with " + cc + ", saving you from yourself by ignoring LD value")
             ld = None
 
+    # Print what binaries we are using to compile/link with so the user can decide if that is proper or not
     print("CC: " + cc)
     print("CXX: " + cxx)
     if ld is not None:
@@ -176,6 +201,7 @@ def check_cc_ld_variables():
     return cc, cxx, ld
 
 
+# Make sure that the base dependencies of cmake, curl, git, and ninja are installed
 def check_dependencies():
     utils.header("Checking dependencies")
     required_commands = ["cmake", "curl", "git", "ninja"]
@@ -186,6 +212,7 @@ def check_dependencies():
         print(output)
 
 
+# Download llvm and binutils or update them if they exist
 def fetch_llvm_binutils(root, update, branch):
     p = root.joinpath("llvm-project")
     if p.is_dir():
@@ -197,40 +224,64 @@ def fetch_llvm_binutils(root, update, branch):
         utils.header("Downloading LLVM")
         subprocess.run(["git", "clone", "-b", branch, "git://github.com/llvm/llvm-project", p.as_posix()], check=True)
 
+    # One might wonder why we are downloading binutils in an LLVM build script :)
+    # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
+    # which at the time of writing this, is how the Google Pixel 3 kernel is built
+    # and linked.
     utils.download_binutils(root)
 
 
+# Clean up and create the build folder
 def cleanup(build, incremental):
     if not incremental and build.is_dir():
         shutil.rmtree(build.as_posix())
     build.mkdir(parents=True, exist_ok=True)
 
 
+# Invoke cmake to generate the build files
 def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root, targets):
     utils.header("Configuring LLVM")
 
+    # Base cmake defintions, which don't depend on any user supplied options
     defines = {}
+    # Objective-C Automatic Reference Counting (we don't use Objective-C)
     defines['CLANG_ENABLE_ARCMT'] = 'OFF'
+    # We don't (currently) use the static analyzer
     defines['CLANG_ENABLE_STATIC_ANALYZER'] = 'OFF'
+    # We don't use the plugin system and this saves cycles according to Chromium OS
     defines['CLANG_PLUGIN_SUPPORT'] = 'OFF'
+    # The C compiler to use
     defines['CMAKE_C_COMPILER'] = cc
+    # The C++ compiler to use
     defines['CMAKE_CXX_COMPILER'] = cxx
+    # Where the toolchain should be installed
     defines['CMAKE_INSTALL_PREFIX'] = install_folder.as_posix()
+    # For LLVMgold.so, which is used for LTO with ld.gold
     defines['LLVM_BINUTILS_INCDIR'] = root.joinpath(utils.current_binutils(), "include").as_posix()
+    # The projects to build
     defines['LLVM_ENABLE_PROJECTS'] = projects
+    # Don't build bindings; they are for other languages that the kernel does not use
     defines['LLVM_ENABLE_BINDINGS'] = 'OFF'
+    # Don't build Ocaml documentation
     defines['LLVM_ENABLE_OCAMLDOC'] = 'OFF'
+    # Removes system dependency on terminfo and almost every major clang provider turns this off
     defines['LLVM_ENABLE_TERMINFO'] = 'OFF'
+    # Don't build clang-tools-extras to cut down on build targets (about 400 files or so)
     defines['LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR'] = ''
+    # Don't include documentation build targets because it is available on the web
     defines['LLVM_INCLUDE_DOCS'] = ''
+    # Don't include example build targets to save on cmake cycles
     defines['LLVM_INCLUDE_EXAMPLES'] = 'OFF'
+    # The architectures to build backends for
     defines['LLVM_TARGETS_TO_BUILD'] = targets
 
+    # If a debug build was requested
     if debug:
         defines['CMAKE_BUILD_TYPE'] = 'Debug'
         defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
         defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
         defines['LLVM_BUILD_TESTS'] = 'ON'
+    # If a release build was requested
     else:
         defines['CMAKE_BUILD_TYPE'] = 'Release'
         defines['CMAKE_C_FLAGS'] = '-O2 -march=native -mtune=native'
@@ -238,15 +289,19 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root, targ
         defines['LLVM_INCLUDE_TESTS'] = 'OFF'
         defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
 
+    # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
     if "compiler-rt" in projects:
         defines['COMPILER_RT_BUILD_LIBFUZZER'] = 'OFF'
 
+    # Use ccache if it is available for faster incremental builds
     if shutil.which("ccache") is not None:
         defines['LLVM_CCACHE_BUILD'] = 'ON'
 
+    # If we found a linker, we should use it
     if ld is not None:
         defines['LLVM_USE_LINKER'] = ld
 
+    # Add the defines, point them to our build folder, and invoke cmake
     cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
     for key in defines:
         newdef = '-D' + key + '=' + defines[key]
@@ -256,6 +311,7 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root, targ
     subprocess.run(cmake, check=True, cwd=build.as_posix())
 
 
+# Build the world
 def invoke_ninja(build, install_folder):
     utils.header("Building LLVM")
 
@@ -268,6 +324,7 @@ def invoke_ninja(build, install_folder):
 
     subprocess.run(['ninja', 'install'], check=True, cwd=build.as_posix(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    # Add a .gitignore automatically
     with install_folder.joinpath(".gitignore").open("w") as gitignore:
         gitignore.write("*")
 
