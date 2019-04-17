@@ -15,14 +15,12 @@ import utils
 
 # Convert the host architecture to the first part of a target triple
 def host_arch_target():
-    if platform.machine() == "armv7l":
-        return "arm"
-    elif platform.machine() == "ppc64le":
-        return "powerpc64le"
-    elif platform.machine() == "ppc":
-        return "powerpc"
+    host_mapping = {"armv7l": "arm", "ppc64le": "powerpc64le", "ppc": "powerpc"}
+    machine = platform.machine()
+    if machine in host_mapping.keys():
+        return host_mapping[machine]
     else:
-        return platform.machine()
+        return machine
 
 
 # Get the architecture from a target triple
