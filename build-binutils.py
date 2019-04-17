@@ -47,7 +47,7 @@ def create_targets(targets):
     targets_dict = {
         "arm": "arm-linux-gnueabi",
         "aarch64": "aarch64-linux-gnu",
-        "powerpc64le": "powerpc64-linux-gnu",
+        "powerpc64le": "powerpc64le-linux-gnu",
         "powerpc": "powerpc-linux-gnu",
         "x86": x86_64_target()
     }
