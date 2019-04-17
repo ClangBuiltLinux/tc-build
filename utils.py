@@ -3,10 +3,8 @@
 # Copyright (C) 2019 The ClangBuiltLinux Authors
 # Description: Common helper functions
 
-import glob
 import hashlib
 import pathlib
-import os
 import shutil
 import subprocess
 
