@@ -368,9 +368,7 @@ def invoke_ninja(build, install_folder):
                    stdout=subprocess.DEVNULL,
                    stderr=subprocess.DEVNULL)
 
-    # Add a .gitignore automatically
-    with install_folder.joinpath(".gitignore").open("w") as gitignore:
-        gitignore.write("*")
+    utils.create_gitignore(install_folder)
 
 
 def main():

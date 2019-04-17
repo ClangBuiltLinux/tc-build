@@ -9,6 +9,12 @@ import shutil
 import subprocess
 
 
+# Create a gitignore that ignores all files in a folder
+def create_gitignore(folder):
+    with folder.joinpath(".gitignore").open("w") as gitignore:
+        gitignore.write("*")
+
+
 # The latest stable version of binutils
 def current_binutils():
     return "binutils-2.32"
@@ -53,6 +59,7 @@ def download_binutils(root):
 
         # Extract the tarball then remove it
         subprocess.run(["tar", "-xzf", binutils_tarball.name], check=True)
+        create_gitignore(p)
         binutils_tarball.unlink()
 
 
