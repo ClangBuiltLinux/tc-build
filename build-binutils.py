@@ -13,11 +13,26 @@ import subprocess
 import utils
 
 
-def x86_64_target():
-    if platform.machine() == "x86_64":
-        return "host"
+# Convert the host architecture to the first part of a target triple
+def host_to_key():
+    if platform.machine() == "armv7l":
+        return "arm"
+    elif platform.machine() == "ppc64le":
+        return "powerpc64le"
+    elif platform.machine() == "ppc":
+        return "powerpc"
     else:
-        return "x86_64-linux-gnu"
+        return platform.machine()
+
+
+# Get the architecture from a target triple
+def target_to_arch(target):
+    return target.split("-")[0]
+
+
+# Is the current target triple the same as the host?
+def host_is_target(target):
+    return host_to_key() == target_to_arch(target)
 
 
 def parse_parameters(root):
@@ -39,8 +54,8 @@ def parse_parameters(root):
                         The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
                         powerpc-linux-gnu, powerpc64le-linux-gnu, and x86_64-linux-gnu (host if on x86_64).
 
-                        You can either pass the full target or just the first part (arm, aarch64, etc) or all
-                        if you want to build all targets (which is the default).
+                        You can either pass the full target or just the first part (arm, aarch64, x86_64, etc)
+                        or all if you want to build all targets (which is the default).
 
                         Example: all, aarch64, arm-linux-gnueabi
                         """,
@@ -55,7 +70,7 @@ def create_targets(targets):
         "aarch64": "aarch64-linux-gnu",
         "powerpc64le": "powerpc64le-linux-gnu",
         "powerpc": "powerpc-linux-gnu",
-        "x86": x86_64_target()
+        "x86_64": "x86_64-linux-gnu"
     }
     targets_list = []
 
@@ -64,7 +79,11 @@ def create_targets(targets):
             targets_list.append(targets_dict[key])
     else:
         for target in targets:
-            targets_list.append(targets_dict[target.split("-")[0]])
+            if target == "host":
+                key = host_to_key()
+            else:
+                key = target_to_arch(target)
+            targets_list.append(targets_dict[key])
 
     return targets_list
 
@@ -98,22 +117,22 @@ def invoke_configure(build_folder, install_folder, root, target):
             '--disable-werror', '--program-prefix=' + target + '-',
             '--target=' + target, '--with-pic', '--with-system-zlib'
         ]
-    elif "x86" in target or "host" in target:
+    elif "x86" in target:
         configure += [
             '--enable-lto', '--enable-relro', '--enable-shared',
             '--enable-targets=x86_64-pep', '--enable-threads', '--disable-gdb',
             '--disable-werror', '--with-pic', '--with-system-zlib'
         ]
-        if platform.machine() != "x86_64":
-            configure += [
-                '--program-prefix=' + target + '-', '--target=' + target
-            ]
+    # If the current machine is not the target, add the prefix to indicate
+    # that it is a cross compiler
+    if not host_is_target(target):
+        configure += ['--program-prefix=' + target + '-', '--target=' + target]
     utils.header("Building " + target + " binutils")
     subprocess.run(configure, check=True, cwd=build_folder.as_posix())
 
 
 def invoke_make(build_folder, install_folder, target):
-    if target == "host":
+    if host_is_target(target):
         subprocess.run(['make', '-s', 'configure-host', 'V=0'],
                        check=True,
                        cwd=build_folder.as_posix())
