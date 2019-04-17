@@ -323,7 +323,7 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
         # Don't build clang-tools-extras to cut down on build targets (about 400 files or so)
         'LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR': '',
         # Don't include documentation build targets because it is available on the web
-        'LLVM_INCLUDE_DOCS': '',
+        'LLVM_INCLUDE_DOCS': 'OFF',
         # Don't include example build targets to save on cmake cycles
         'LLVM_INCLUDE_EXAMPLES': 'OFF',
         # The architectures to build backends for
