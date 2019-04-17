@@ -217,7 +217,8 @@ def check_cc_ld_variables():
                   ", saving you from yourself by ignoring LD value")
             ld = None
 
-    # Print what binaries we are using to compile/link with so the user can decide if that is proper or not
+    # Print what binaries we are using to compile/link with so the user can
+    # decide if that is proper or not
     print("CC: " + cc)
     print("CXX: " + cxx)
     if ld is not None:
