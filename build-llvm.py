@@ -13,12 +13,21 @@ import time
 import utils
 
 
-# Returns Clang's version as an integer
 def clang_version(cc):
+    """
+    Returns Clang's version as an integer
+    :param cc: The compiler to check the version of
+    :return: an int denoting the version of the given compiler
+    """
     return int(subprocess.check_output(["./clang-version.sh", cc]).decode("utf-8"))
 
 
 def parse_parameters(root):
+    """
+    Parses parameters passed to the script into options
+    :param root: The directory where the script is being invoked from
+    :return: A 'Namespace' object with all the options parsed from supplied parameters
+    """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument("-b",
@@ -99,8 +108,13 @@ def parse_parameters(root):
     return parser.parse_args()
 
 
-# Test to see if the supplied ld value will work with cc -fuse=ld
 def linker_test(cc, ld):
+    """
+    Test to see if the supplied ld value will work with cc -fuse=ld
+    :param cc: A working C compiler to compile the test program
+    :param ld: A linker to test -fuse=ld against
+    :return: 0 if the linker supports -fuse=ld, 1 otherwise
+    """
     echo = subprocess.Popen(['echo', 'int main() { return 0; }'],
                             stdout=subprocess.PIPE)
     cc_call = subprocess.Popen(
@@ -111,8 +125,11 @@ def linker_test(cc, ld):
     return cc_call.returncode
 
 
-# Sets the cc, cxx, and ld variables, which will be passed to cmake
 def check_cc_ld_variables():
+    """
+    Sets the cc, cxx, and ld variables, which will be passed to cmake
+    :return: A tuple of valid cc, cxx, ld values that can be used to compile LLVM
+    """
     utils.print_header("Checking CC and LD")
     cc, linker, ld = None, None, None
     # If the user didn't supply a C compiler, try to find one
@@ -202,8 +219,10 @@ def check_cc_ld_variables():
     return cc, cxx, ld
 
 
-# Make sure that the base dependencies of cmake, curl, git, and ninja are installed
 def check_dependencies():
+    """
+    Makes sure that the base dependencies of cmake, curl, git, and ninja are installed
+    """
     utils.print_header("Checking dependencies")
     required_commands = ["cmake", "curl", "git", "ninja"]
     for command in required_commands:
@@ -214,20 +233,25 @@ def check_dependencies():
         print(output)
 
 
-# Download llvm and binutils or update them if they exist
-def fetch_llvm_binutils(root, update, branch):
+def fetch_llvm_binutils(root, update, ref):
+    """
+    Download llvm and binutils or update them if they exist
+    :param root: Working directory
+    :param update: Boolean indicating whether sources need to be updated or not
+    :param ref: The ref to checkout the monorepo to
+    """
     p = root.joinpath("llvm-project")
     if p.is_dir():
         if update:
             utils.print_header("Updating LLVM")
             subprocess.run(
-                ["git", "-C", p.as_posix(), "checkout", branch], check=True)
+                ["git", "-C", p.as_posix(), "checkout", ref], check=True)
             subprocess.run(
                 ["git", "-C", p.as_posix(), "pull", "--rebase"], check=True)
     else:
         utils.print_header("Downloading LLVM")
         subprocess.run([
-            "git", "clone", "-b", branch, "git://github.com/llvm/llvm-project",
+            "git", "clone", "-b", ref, "git://github.com/llvm/llvm-project",
             p.as_posix()
         ],
             check=True)
@@ -239,16 +263,33 @@ def fetch_llvm_binutils(root, update, branch):
     utils.download_binutils(root)
 
 
-# Clean up and create the build folder
 def cleanup(build, incremental):
+    """
+    Clean up and create the build folder
+    :param build: The build directory
+    :param incremental: Whether the build is incremental or not.
+    :return:
+    """
     if not incremental and build.is_dir():
         shutil.rmtree(build.as_posix())
     build.mkdir(parents=True, exist_ok=True)
 
 
-# Invoke cmake to generate the build files
 def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
                  targets):
+    """
+    Invoke cmake to generate the build files
+    :param build: Working directory
+    :param cc: C compiler
+    :param cxx: C++ compiler
+    :param debug: Boolean indicating if a debug toolchain is to be built
+    :param install_folder: Directory to install the toolchain to
+    :param ld: Linker
+    :param projects: Projects to compile
+    :param root: Root of the repository
+    :param targets: Targets to compile
+    :return:
+    """
     utils.print_header("Configuring LLVM")
 
     # Base cmake defintions, which don't depend on any user supplied options
@@ -320,8 +361,13 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
     subprocess.run(cmake, check=True, cwd=build.as_posix())
 
 
-# Build the world
 def invoke_ninja(build, install_folder):
+    """
+    Invoke ninja to run the actual build
+    :param build: Working directory
+    :param install_folder: Folder to install the built toolchain to
+    :return:
+    """
     utils.print_header("Building LLVM")
 
     time_started = time.time()
