@@ -68,9 +68,8 @@ def create_targets(targets):
     }
     targets_list = []
 
-    if ''.join(targets) == "all":
-        for key in targets_dict:
-            targets_list.append(targets_dict[key])
+    if len(targets) == 1 and targets[0] == "all":
+        targets_list = list(targets_dict.values())
     else:
         for target in targets:
             if target == "host":
