@@ -73,7 +73,6 @@ def parse_parameters(root):
                         or all if you want to build all targets (which is the default). It will only add the
                         target prefix if it is not for the host architecture.
                         """,
-                        default="all",
                         nargs="+")
     return parser.parse_args()
 
@@ -209,10 +208,14 @@ def main():
     if not install_folder.is_absolute():
         install_folder = root.joinpath(install_folder)
 
+    targets = ["all"]
+    if args.targets is not None:
+        targets = args.targets
+
     utils.download_binutils(root)
 
     build_targets(root.joinpath("build", "binutils"), install_folder, root,
-                  create_targets(args.targets))
+                  create_targets(targets))
 
 
 if __name__ == '__main__':
