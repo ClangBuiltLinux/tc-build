@@ -145,6 +145,7 @@ def linker_test(cc, ld):
 # Sets the cc, cxx, and ld variables, which will be passed to cmake
 def check_cc_ld_variables():
     utils.print_header("Checking CC and LD")
+    cc, linker, ld = None, None, None
     # If the user didn't supply a C compiler, try to find one
     if 'CC' not in os.environ:
         possible_compilers = ['clang-9', 'clang-8', 'clang-7', 'clang', 'gcc']
