@@ -13,6 +13,20 @@ import time
 import utils
 
 
+class Directories():
+    def __init__(self, build_folder, install_folder, root_folder):
+        self.build_folder = build_folder
+        self.install_folder = install_folder
+        self.root_folder = root_folder
+
+
+class EnvVars():
+    def __init__(self, cc, cxx, ld):
+        self.cc = cc
+        self.cxx = cxx
+        self.ld = ld
+
+
 def clang_version(cc):
     """
     Returns Clang's version as an integer
@@ -22,10 +36,10 @@ def clang_version(cc):
     return int(subprocess.check_output(["./clang-version.sh", cc]).decode("utf-8"))
 
 
-def parse_parameters(root):
+def parse_parameters(root_folder):
     """
     Parses parameters passed to the script into options
-    :param root: The directory where the script is being invoked from
+    :param root_folder: The directory where the script is being invoked from
     :return: A 'Namespace' object with all the options parsed from supplied parameters
     """
     parser = argparse.ArgumentParser(
@@ -69,7 +83,7 @@ def parse_parameters(root):
 
                         """),
                         type=str,
-                        default=os.path.join(root.as_posix(), "build"))
+                        default=os.path.join(root_folder.as_posix(), "build"))
     parser.add_argument("-n",
                         "--no-pull",
                         help=textwrap.dedent("""\
@@ -233,14 +247,14 @@ def check_dependencies():
         print(output)
 
 
-def fetch_llvm_binutils(root, update, ref):
+def fetch_llvm_binutils(root_folder, update, ref):
     """
     Download llvm and binutils or update them if they exist
-    :param root: Working directory
+    :param root_folder: Working directory
     :param update: Boolean indicating whether sources need to be updated or not
     :param ref: The ref to checkout the monorepo to
     """
-    p = root.joinpath("llvm-project")
+    p = root_folder.joinpath("llvm-project")
     if p.is_dir():
         if update:
             utils.print_header("Updating LLVM")
@@ -260,37 +274,36 @@ def fetch_llvm_binutils(root, update, ref):
     # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
     # which at the time of writing this, is how the Google Pixel 3 kernel is built
     # and linked.
-    utils.download_binutils(root)
+    utils.download_binutils(root_folder)
 
 
-def cleanup(build, incremental):
+def cleanup(build_folder, incremental):
     """
     Clean up and create the build folder
-    :param build: The build directory
+    :param build_folder: The build directory
     :param incremental: Whether the build is incremental or not.
     :return:
     """
-    if not incremental and build.is_dir():
-        shutil.rmtree(build.as_posix())
-    build.mkdir(parents=True, exist_ok=True)
+    if not incremental and build_folder.is_dir():
+        shutil.rmtree(build_folder.as_posix())
+    build_folder.mkdir(parents=True, exist_ok=True)
 
 
-def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
-                 targets):
+def invoke_cmake(dirs, env_vars, debug, projects, targets):
     """
     Invoke cmake to generate the build files
-    :param build: Working directory
-    :param cc: C compiler
-    :param cxx: C++ compiler
+    :param dirs: An instance of the Directories class with the paths to use
     :param debug: Boolean indicating if a debug toolchain is to be built
-    :param install_folder: Directory to install the toolchain to
-    :param ld: Linker
+    :param env_vars: An instance of the EnvVars class with the compilers/linker to use
     :param projects: Projects to compile
-    :param root: Root of the repository
     :param targets: Targets to compile
     :return:
     """
     utils.print_header("Configuring LLVM")
+
+    build_folder = dirs.build_folder
+    install_folder = dirs.install_folder
+    root_folder = dirs.root_folder
 
     # Base cmake defintions, which don't depend on any user supplied options
     defines = {
@@ -305,13 +318,13 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
         # https://crbug.com/917404
         'CLANG_PLUGIN_SUPPORT': 'OFF',
         # The C compiler to use
-        'CMAKE_C_COMPILER': cc,
+        'CMAKE_C_COMPILER': env_vars.cc,
         # The C++ compiler to use
-        'CMAKE_CXX_COMPILER': cxx,
+        'CMAKE_CXX_COMPILER': env_vars.cxx,
         # Where the toolchain should be installed
         'CMAKE_INSTALL_PREFIX': install_folder.as_posix(),
         # For LLVMgold.so, which is used for LTO with ld.gold
-        'LLVM_BINUTILS_INCDIR': root.joinpath(utils.current_binutils(), "include").as_posix(),
+        'LLVM_BINUTILS_INCDIR': root_folder.joinpath(utils.current_binutils(), "include").as_posix(),
         # The projects to build
         'LLVM_ENABLE_PROJECTS': projects,
         # Don't build bindings; they are for other languages that the kernel does not use
@@ -352,31 +365,33 @@ def invoke_cmake(build, cc, cxx, debug, install_folder, ld, projects, root,
         defines['LLVM_CCACHE_BUILD'] = 'ON'
 
     # If we found a linker, we should use it
-    if ld is not None:
-        defines['LLVM_USE_LINKER'] = ld
+    if env_vars.ld is not None:
+        defines['LLVM_USE_LINKER'] = env_vars.ld
 
     # Add the defines, point them to our build folder, and invoke cmake
     cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
     for key in defines:
         newdef = '-D' + key + '=' + defines[key]
         cmake += [newdef]
-    cmake += [root.joinpath("llvm-project", "llvm").as_posix()]
+    cmake += [root_folder.joinpath("llvm-project", "llvm").as_posix()]
 
-    subprocess.run(cmake, check=True, cwd=build.as_posix())
+    subprocess.run(cmake, check=True, cwd=build_folder.as_posix())
 
 
-def invoke_ninja(build, install_folder):
+def invoke_ninja(dirs):
     """
     Invoke ninja to run the actual build
-    :param build: Working directory
-    :param install_folder: Folder to install the built toolchain to
+    :param dirs: An instance of the Directories class with the paths to use
     :return:
     """
     utils.print_header("Building LLVM")
 
+    build_folder = dirs.build_folder
+    install_folder = dirs.install_folder
+
     time_started = time.time()
 
-    subprocess.run('ninja', check=True, cwd=build.as_posix())
+    subprocess.run('ninja', check=True, cwd=build_folder.as_posix())
 
     print()
     print("LLVM build duration: " +
@@ -384,7 +399,7 @@ def invoke_ninja(build, install_folder):
 
     subprocess.run(['ninja', 'install'],
                    check=True,
-                   cwd=build.as_posix(),
+                   cwd=build_folder.as_posix(),
                    stdout=subprocess.DEVNULL,
                    stderr=subprocess.DEVNULL)
 
@@ -392,23 +407,25 @@ def invoke_ninja(build, install_folder):
 
 
 def main():
-    root = pathlib.Path(__file__).resolve().parent
-    build = root.joinpath("build", "llvm")
+    root_folder = pathlib.Path(__file__).resolve().parent
+    build_folder = root_folder.joinpath("build", "llvm")
 
-    args = parse_parameters(root)
+    args = parse_parameters(root_folder)
 
     install_folder = pathlib.Path(args.install_folder)
     if not install_folder.is_absolute():
         install_folder = root.joinpath(install_folder)
 
+    dirs = Directories(build_folder, install_folder, root_folder)
+
     cc, cxx, ld = check_cc_ld_variables()
+    env_vars = EnvVars(cc, cxx, ld)
 
     check_dependencies()
-    fetch_llvm_binutils(root, not args.no_pull, args.branch)
-    cleanup(build, args.incremental)
-    invoke_cmake(build, cc, cxx, args.debug, install_folder, ld, args.projects,
-                 root, args.targets)
-    invoke_ninja(build, install_folder)
+    fetch_llvm_binutils(root_folder, not args.no_pull, args.branch)
+    cleanup(build_folder, args.incremental)
+    invoke_cmake(dirs, env_vars, args.debug, args.projects, args.targets)
+    invoke_ninja(dirs)
 
     print("\nLLVM toolchain installed to: " + install_folder.as_posix())
     print("\nTo use, either run:\n")
