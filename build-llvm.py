@@ -306,6 +306,7 @@ def invoke_cmake(dirs, env_vars, debug, projects, targets):
     root_folder = dirs.root_folder
 
     # Base cmake defintions, which don't depend on any user supplied options
+    # yapf: disable
     defines = {
         # Objective-C Automatic Reference Counting (we don't use Objective-C)
         # https://clang.llvm.org/docs/AutomaticReferenceCounting.html
@@ -340,7 +341,9 @@ def invoke_cmake(dirs, env_vars, debug, projects, targets):
         # Don't include example build targets to save on cmake cycles
         'LLVM_INCLUDE_EXAMPLES': 'OFF',
         # The architectures to build backends for
-        'LLVM_TARGETS_TO_BUILD': targets}
+        'LLVM_TARGETS_TO_BUILD': targets
+    }
+    # yapf: enable
 
     # If a debug build was requested
     if debug:
