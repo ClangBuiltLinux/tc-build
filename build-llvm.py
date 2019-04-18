@@ -410,7 +410,7 @@ def main():
                  root, args.targets)
     invoke_ninja(build, install_folder)
 
-    print("LLVM toolchain installed to: " + install_folder.as_posix())
+    print("\nLLVM toolchain installed to: " + install_folder.as_posix())
     print("\nTo use, either run:\n")
     print("    $ export PATH=" + install_folder.as_posix() + ":${PATH}\n")
     print("or add:\n")
