@@ -32,7 +32,7 @@ def clang_version(cc):
     :param cc: The compiler to check the version of
     :return: an int denoting the version of the given compiler
     """
-    return int(subprocess.check_output(["./clang-version.sh", cc]).decode("utf-8"))
+    return int(subprocess.check_output(["./clang-version.sh", cc]).decode())
 
 
 def parse_parameters(root_folder):
