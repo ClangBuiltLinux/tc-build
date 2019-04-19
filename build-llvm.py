@@ -267,7 +267,7 @@ def fetch_llvm_binutils(root_folder, update, ref):
             "git", "clone", "-b", ref, "git://github.com/llvm/llvm-project",
             p.as_posix()
         ],
-            check=True)
+                       check=True)
 
     # One might wonder why we are downloading binutils in an LLVM build script :)
     # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
