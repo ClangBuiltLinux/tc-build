@@ -9,7 +9,8 @@ import subprocess
 
 def create_gitignore(folder):
     """
-    Create a gitignore that ignores all files in a folder
+    Create a gitignore that ignores all files in a folder. Some folders are not
+    known until the script is run so they can't be added to the root .gitignore
     :param folder: Folder to create the gitignore in
     """
     with folder.joinpath(".gitignore").open("w") as gitignore:
