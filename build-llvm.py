@@ -419,9 +419,7 @@ def main():
     if not install_folder.is_absolute():
         install_folder = root.joinpath(install_folder)
 
-    cc, cxx, ld = check_cc_ld_variables()
-    env_vars = EnvVars(cc, cxx, ld)
-
+    env_vars = EnvVars(*check_cc_ld_variables())
     check_dependencies()
     fetch_llvm_binutils(root_folder, not args.no_pull, args.branch)
     cleanup(build_folder, args.incremental)
