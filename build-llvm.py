@@ -419,14 +419,13 @@ def main():
     if not install_folder.is_absolute():
         install_folder = root.joinpath(install_folder)
 
-    dirs = Directories(build_folder, install_folder, root_folder)
-
     cc, cxx, ld = check_cc_ld_variables()
     env_vars = EnvVars(cc, cxx, ld)
 
     check_dependencies()
     fetch_llvm_binutils(root_folder, not args.no_pull, args.branch)
     cleanup(build_folder, args.incremental)
+    dirs = Directories(build_folder, install_folder, root_folder)
     invoke_cmake(dirs, env_vars, args.debug, args.projects, args.targets)
     invoke_ninja(dirs)
 
