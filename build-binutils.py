@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (C) 2019 The ClangBuiltLinux Authors
 # Description: Builds a standalone copy of binutils
 
 import argparse

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (C) 2019 The ClangBuiltLinux Authors
 # Description: Builds an LLVM toolchain suitable for kernel development
 
 import argparse
