@@ -179,7 +179,7 @@ def check_cc_ld_variables():
     # Otherwise, get its full path
     else:
         cxx = shutil.which(os.environ['CXX'])
-    cxx = cxx.rstrip()
+    cxx = cxx.strip()
 
     # If the user didn't specify a linker
     if 'LD' not in os.environ:
@@ -223,7 +223,7 @@ def check_cc_ld_variables():
     print("CC: " + cc)
     print("CXX: " + cxx)
     if ld is not None:
-        ld = ld.rstrip()
+        ld = ld.strip()
         ld_to_print = shutil.which("ld." + ld)
         if ld_to_print is None:
             ld_to_print = shutil.which(ld)
