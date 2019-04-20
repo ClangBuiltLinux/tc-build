@@ -130,12 +130,10 @@ def linker_test(cc, ld):
     """
     echo = subprocess.Popen(['echo', 'int main() { return 0; }'],
                             stdout=subprocess.PIPE)
-    cc_call = subprocess.Popen(
+    return subprocess.run(
         [cc, '-fuse-ld=' + ld, '-o', '/dev/null', '-x', 'c', '-'],
         stdin=echo.stdout,
-        stderr=subprocess.DEVNULL)
-    cc_call.communicate()
-    return cc_call.returncode
+        stderr=subprocess.DEVNULL).returncode
 
 
 def check_cc_ld_variables():
