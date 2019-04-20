@@ -77,10 +77,12 @@ def print_header(string):
     Prints a fancy header
     :param string: String to print inside the header
     """
-    print('\033[01;31m')
+    # Use bold red for the header
+    print("\033[01;31m")
     for x in range(0, len(string) + 6):
         print("=", end="")
     print("\n== " + string + " ==")
     for x in range(0, len(string) + 6):
         print("=", end="")
-    print('\n\033[0m')
+    # \033[0m resets the color back to the user's default
+    print("\n\033[0m")
