@@ -143,8 +143,11 @@ def check_cc_ld_variables():
     """
     utils.print_header("Checking CC and LD")
     cc, linker, ld = None, None, None
-    # If the user didn't supply a C compiler, try to find one
-    if 'CC' not in os.environ:
+    # If the user specified a C compiler, get its full path
+    if 'CC' in os.environ:
+        cc = shutil.which(os.environ['CC'])
+    # Otherwise, try to find one
+    else:
         possible_compilers = ['clang-9', 'clang-8', 'clang-7', 'clang', 'gcc']
         for compiler in possible_compilers:
             cc = shutil.which(compiler)
@@ -153,9 +156,6 @@ def check_cc_ld_variables():
         if cc is None:
             raise RuntimeError(
                 "Neither gcc nor clang could be found on your system!")
-    # Otherwise, get its full path
-    else:
-        cc = shutil.which(os.environ['CC'])
 
     # Evaluate if CC is a symlink. Certain packages of clang (like from
     # apt.llvm.org) symlink the clang++ binary to clang++-<version> in
@@ -166,21 +166,32 @@ def check_cc_ld_variables():
     cc = os.path.realpath(cc)
     cc_folder = os.path.dirname(cc)
 
-    # If the user didn't supply a C++ compiler
-    if 'CXX' not in os.environ:
+    # If the user specified a C++ compiler, get its full path
+    if 'CXX' in os.environ:
+        cxx = shutil.which(os.environ['CXX'])
+    # Otherwise, use the one where CC is
+    else:
         if "clang" in cc:
             cxx = "clang++"
         else:
             cxx = "g++"
-        # Use the one that is located where CC is
         cxx = shutil.which(cxx, path=cc_folder + ":" + os.environ['PATH'])
-    # Otherwise, get its full path
-    else:
-        cxx = shutil.which(os.environ['CXX'])
     cxx = cxx.strip()
 
+    # If the user specified a linker
+    if 'LD' in os.environ:
+        # evaluate its full path with clang to avoid weird issues and check to
+        # see if it will work with '-fuse-ld', which is what cmake will do. Doing
+        # it now prevents a hard error later.
+        ld = os.environ['LD']
+        if "clang" in cc and clang_version(cc) >= 30900:
+            ld = shutil.which(ld)
+        if linker_test(cc, ld):
+            print("LD won't work with " + cc +
+                  ", saving you from yourself by ignoring LD value")
+            ld = None
     # If the user didn't specify a linker
-    if 'LD' not in os.environ:
+    else:
         # and we're using clang, try to find the fastest one
         if "clang" in cc:
             possible_linkers = [
@@ -203,18 +214,6 @@ def check_cc_ld_variables():
             ld = "gold"
             if linker_test(cc, ld):
                 ld = None
-    # If the user did specify a linker
-    else:
-        # evaluate its full path with clang to avoid weird issues and check to
-        # see if it will work with '-fuse-ld', which is what cmake will do. Doing
-        # it now prevents a hard error later.
-        ld = os.environ['LD']
-        if "clang" in cc and clang_version(cc) >= 30900:
-            ld = shutil.which(ld)
-        if linker_test(cc, ld):
-            print("LD won't work with " + cc +
-                  ", saving you from yourself by ignoring LD value")
-            ld = None
 
     # Print what binaries we are using to compile/link with so the user can
     # decide if that is proper or not
