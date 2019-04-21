@@ -81,7 +81,7 @@ def print_header(string):
     print("\033[01;31m")
     for x in range(0, len(string) + 6):
         print("=", end="")
-    print("\n== " + string + " ==")
+    print("\n== %s ==" % string)
     for x in range(0, len(string) + 6):
         print("=", end="")
     # \033[0m resets the color back to the user's default
