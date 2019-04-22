@@ -131,17 +131,15 @@ def invoke_configure(build_folder, install_folder, root, target):
     ]
     if "arm" in target or "aarch64" in target:
         configure += [
-            '--disable-multilib', '--disable-nls',
-            '--program-prefix=' + target + '-', '--target=' + target,
-            '--with-gnu-as', '--with-gnu-ld',
+            '--disable-multilib', '--disable-nls', '--with-gnu-as',
+            '--with-gnu-ld',
             '--with-sysroot=' + install_folder.joinpath(target).as_posix()
         ]
     elif "powerpc" in target:
         configure += [
             '--enable-lto', '--enable-relro', '--enable-shared',
             '--enable-threads', '--disable-gdb', '--disable-sim',
-            '--disable-werror', '--program-prefix=' + target + '-',
-            '--target=' + target, '--with-pic', '--with-system-zlib'
+            '--disable-werror', '--with-pic', '--with-system-zlib'
         ]
     elif "x86_64" in target:
         configure += [
