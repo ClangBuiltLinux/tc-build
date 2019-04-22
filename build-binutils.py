@@ -129,28 +129,35 @@ def invoke_configure(build_folder, install_folder, root, target):
         'CFLAGS=-O2 -march=native -mtune=native',
         'CXXFLAGS=-O2 -march=native -mtune=native'
     ]
-    if "arm" in target or "aarch64" in target:
-        configure += [
+    configure_arch_flags = {
+        "arm-linux-gnueabi": [
             '--disable-multilib', '--disable-nls', '--with-gnu-as',
             '--with-gnu-ld',
             '--with-sysroot=%s' % install_folder.joinpath(target).as_posix()
-        ]
-    elif "powerpc" in target:
-        configure += [
+        ],
+        "powerpc-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-shared',
             '--enable-threads', '--disable-gdb', '--disable-sim',
             '--disable-werror', '--with-pic', '--with-system-zlib'
-        ]
-    elif "x86_64" in target:
-        configure += [
+        ],
+        "x86_64-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-shared',
             '--enable-targets=x86_64-pep', '--enable-threads', '--disable-gdb',
             '--disable-werror', '--with-pic', '--with-system-zlib'
         ]
+    }
+    configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
+        'arm-linux-gnueabi']
+    configure_arch_flags['powerpc64le-linux-gnu'] = configure_arch_flags[
+        'powerpc-linux-gnu']
+
+    configure += configure_arch_flags.get(target, [])
+
     # If the current machine is not the target, add the prefix to indicate
     # that it is a cross compiler
     if not host_is_target(target):
         configure += ['--program-prefix=%s-' % target, '--target=%s' % target]
+
     utils.print_header("Building %s binutils" % target)
     subprocess.run(configure, check=True, cwd=build_folder.as_posix())
 
