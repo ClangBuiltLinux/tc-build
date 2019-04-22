@@ -90,12 +90,11 @@ def create_targets(targets):
         "x86_64": "x86_64-linux-gnu"
     }
 
-    if len(targets) == 1 and targets[0] == "all":
-        return list(targets_dict.values())
-
     targets_set = set()
     for target in targets:
-        if target == "host":
+        if target == "all":
+            return list(targets_dict.values())
+        elif target == "host":
             key = host_arch_target()
         else:
             key = target_arch(target)
