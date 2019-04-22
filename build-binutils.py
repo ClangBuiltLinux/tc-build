@@ -123,7 +123,7 @@ def invoke_configure(build_folder, install_folder, root, target):
     """
     configure = [
         root.joinpath(utils.current_binutils(), "configure").as_posix(),
-        '--prefix=' + install_folder.as_posix(),
+        '--prefix=%s' % install_folder.as_posix(),
         '--enable-deterministic-archives', '--enable-gold',
         '--enable-ld=default', '--enable-plugins', '--quiet',
         'CFLAGS=-O2 -march=native -mtune=native',
@@ -133,7 +133,7 @@ def invoke_configure(build_folder, install_folder, root, target):
         configure += [
             '--disable-multilib', '--disable-nls', '--with-gnu-as',
             '--with-gnu-ld',
-            '--with-sysroot=' + install_folder.joinpath(target).as_posix()
+            '--with-sysroot=%s' % install_folder.joinpath(target).as_posix()
         ]
     elif "powerpc" in target:
         configure += [
@@ -150,8 +150,8 @@ def invoke_configure(build_folder, install_folder, root, target):
     # If the current machine is not the target, add the prefix to indicate
     # that it is a cross compiler
     if not host_is_target(target):
-        configure += ['--program-prefix=' + target + '-', '--target=' + target]
-    utils.print_header("Building " + target + " binutils")
+        configure += ['--program-prefix=%s-' % target, '--target=%s' % target]
+    utils.print_header("Building %s binutils" % target)
     subprocess.run(configure, check=True, cwd=build_folder.as_posix())
 
 
