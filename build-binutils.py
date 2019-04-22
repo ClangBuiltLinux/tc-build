@@ -89,17 +89,17 @@ def create_targets(targets):
         "powerpc": "powerpc-linux-gnu",
         "x86_64": "x86_64-linux-gnu"
     }
-    targets_list = []
 
     if len(targets) == 1 and targets[0] == "all":
-        targets_list = list(targets_dict.values())
-    else:
-        for target in targets:
-            if target == "host":
-                key = host_arch_target()
-            else:
-                key = target_arch(target)
-            targets_list.append(targets_dict[key])
+        return list(targets_dict.values())
+
+    targets_list = []
+    for target in targets:
+        if target == "host":
+            key = host_arch_target()
+        else:
+            key = target_arch(target)
+        targets_list.append(targets_dict[key])
 
     return targets_list
 
