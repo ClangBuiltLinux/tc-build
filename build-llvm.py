@@ -26,13 +26,14 @@ class EnvVars():
         self.ld = ld
 
 
-def clang_version(cc):
+def clang_version(cc, root_folder):
     """
     Returns Clang's version as an integer
     :param cc: The compiler to check the version of
     :return: an int denoting the version of the given compiler
     """
-    return int(subprocess.check_output(["./clang-version.sh", cc]).decode())
+    command = [root_folder.joinpath("clang-version.sh"), cc]
+    return int(subprocess.check_output(command).decode())
 
 
 def parse_parameters(root_folder):
@@ -136,7 +137,7 @@ def linker_test(cc, ld):
         stderr=subprocess.DEVNULL).returncode
 
 
-def check_cc_ld_variables():
+def check_cc_ld_variables(root_folder):
     """
     Sets the cc, cxx, and ld variables, which will be passed to cmake
     :return: A tuple of valid cc, cxx, ld values that can be used to compile LLVM
@@ -184,7 +185,7 @@ def check_cc_ld_variables():
         # see if it will work with '-fuse-ld', which is what cmake will do. Doing
         # it now prevents a hard error later.
         ld = os.environ['LD']
-        if "clang" in cc and clang_version(cc) >= 30900:
+        if "clang" in cc and clang_version(cc, root_folder) >= 30900:
             ld = shutil.which(ld)
         if linker_test(cc, ld):
             print("LD won't work with " + cc +
@@ -206,7 +207,7 @@ def check_cc_ld_variables():
             # If clang is older than 3.9, it won't accept absolute paths so we
             # need to just pass it the name (and modify PATH so that it is found properly)
             # https://github.com/llvm/llvm-project/commit/e43b7413597d8102a4412f9de41102e55f4f2ec9
-            if clang_version(cc) < 30900:
+            if clang_version(cc, root_folder) < 30900:
                 os.environ['PATH'] = cc_folder + ":" + os.environ['PATH']
                 ld = linker
         # and we're using gcc, try to use gold
@@ -415,7 +416,7 @@ def main():
     if not install_folder.is_absolute():
         install_folder = root.joinpath(install_folder)
 
-    env_vars = EnvVars(*check_cc_ld_variables())
+    env_vars = EnvVars(*check_cc_ld_variables(root_folder))
     check_dependencies()
     fetch_llvm_binutils(root_folder, not args.no_pull, args.branch)
     cleanup(build_folder, args.incremental)
