@@ -39,7 +39,7 @@ def target_arch(target):
 
 def host_is_target(target):
     """
-    Checks in the current target triple the same as the host?
+    Checks if the current target triple the same as the host.
     :param target: Triple to match host architecture against
     :return: True if host and target are same, False otherwise
     """
