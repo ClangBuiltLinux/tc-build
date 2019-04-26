@@ -22,10 +22,7 @@ def host_arch_target():
         "ppc": "powerpc"
     }
     machine = platform.machine()
-    if machine in host_mapping.keys():
-        return host_mapping[machine]
-    else:
-        return machine
+    return host_mapping.get(machine, machine)
 
 
 def target_arch(target):
