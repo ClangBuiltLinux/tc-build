@@ -32,7 +32,7 @@ def clang_version(cc, root_folder):
     :param cc: The compiler to check the version of
     :return: an int denoting the version of the given compiler
     """
-    command = [root_folder.joinpath("clang-version.sh"), cc]
+    command = [root_folder.joinpath("clang-version.sh").as_posix(), cc]
     return int(subprocess.check_output(command).decode())
 
 
