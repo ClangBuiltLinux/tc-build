@@ -424,7 +424,7 @@ def main():
 
     install_folder = pathlib.Path(args.install_folder)
     if not install_folder.is_absolute():
-        install_folder = root.joinpath(install_folder)
+        install_folder = root_folder.joinpath(install_folder)
 
     env_vars = EnvVars(*check_cc_ld_variables(root_folder))
     check_dependencies()
