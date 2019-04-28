@@ -407,6 +407,11 @@ def invoke_ninja(dirs):
 
 
 def print_install_info(install_folder):
+    """
+    Prints out where the LLVM toolchain is installed and how to add to PATH
+    :param install_folder: Where the LLVM toolchain is installed
+    :return:
+    """
     bin_folder = install_folder.joinpath("bin").as_posix()
     print("\nLLVM toolchain installed to: %s" % install_folder.as_posix())
     print("\nTo use, either run:\n")
