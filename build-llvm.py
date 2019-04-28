@@ -406,6 +406,16 @@ def invoke_ninja(dirs):
     utils.create_gitignore(install_folder)
 
 
+def print_install_info(install_folder):
+    bin_folder = install_folder.joinpath("bin").as_posix()
+    print("\nLLVM toolchain installed to: %s" % install_folder.as_posix())
+    print("\nTo use, either run:\n")
+    print("    $ export PATH=%s:${PATH}\n" % bin_folder)
+    print("or add:\n")
+    print("    PATH=%s:${PATH}\n" % bin_folder)
+    print("to the command you want to use this toolchain.\n")
+
+
 def main():
     root_folder = pathlib.Path(__file__).resolve().parent
     build_folder = root_folder.joinpath("build", "llvm")
@@ -423,13 +433,7 @@ def main():
     dirs = Directories(build_folder, install_folder, root_folder)
     invoke_cmake(dirs, env_vars, args.debug, args.projects, args.targets)
     invoke_ninja(dirs)
-
-    print("\nLLVM toolchain installed to: " + install_folder.as_posix())
-    print("\nTo use, either run:\n")
-    print("    $ export PATH=" + install_folder.as_posix() + ":${PATH}\n")
-    print("or add:\n")
-    print("    PATH=" + install_folder.as_posix() + ":${PATH}\n")
-    print("to the command you want to use this toolchain.\n")
+    print_install_info(install_folder)
 
 
 if __name__ == '__main__':
