@@ -449,7 +449,6 @@ def stage_specific_cmake_defines(args, dirs, stage):
         defines['CMAKE_CXX_FLAGS'] = '-O2 -march=native -mtune=native'
         defines['LLVM_ENABLE_BACKTRACES'] = 'OFF'
         defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
-        defines['LLVM_ENABLE_ZLIB'] = 'OFF'
         defines['LLVM_INCLUDE_TESTS'] = 'OFF'
     else:
         # If a debug build was requested
