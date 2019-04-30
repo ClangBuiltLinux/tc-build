@@ -13,10 +13,12 @@ import utils
 
 
 class Directories():
-    def __init__(self, build_folder, install_folder, root_folder):
+    def __init__(self, build_folder, install_folder, root_folder,
+                 stage1_folder):
         self.build_folder = build_folder
         self.install_folder = install_folder
         self.root_folder = root_folder
+        self.stage1_folder = stage1_folder
 
 
 class EnvVars():
@@ -106,6 +108,12 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="clang;lld;compiler-rt")
+    parser.add_argument("--stage1-only",
+                        help=textwrap.dedent("""\
+                        Do not do a multistage build; build stage one as if it was stage two.
+
+                        """),
+                        action="store_true")
     parser.add_argument("-t",
                         "--targets",
                         help=textwrap.dedent("""\
@@ -119,6 +127,14 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="AArch64;ARM;PowerPC;X86")
+    parser.add_argument("--thin-lto",
+                        help=textwrap.dedent("""\
+                        Build the stage 2 compiler with ThinLTO, which can improve compile time performance.
+
+                        See https://clang.llvm.org/docs/ThinLTO.html for more information.
+
+                        """),
+                        action="store_true")
     return parser.parse_args()
 
 
@@ -286,23 +302,13 @@ def cleanup(build_folder, incremental):
     build_folder.mkdir(parents=True, exist_ok=True)
 
 
-def invoke_cmake(dirs, env_vars, debug, projects, targets):
+def base_cmake_defines(dirs):
     """
-    Invoke cmake to generate the build files
+    Generate base cmake defines, which will always be present, regardless of
+    user input and stage
     :param dirs: An instance of the Directories class with the paths to use
-    :param debug: Boolean indicating if a debug toolchain is to be built
-    :param env_vars: An instance of the EnvVars class with the compilers/linker to use
-    :param projects: Projects to compile
-    :param targets: Targets to compile
-    :return:
+    :return: A set of defines
     """
-    utils.print_header("Configuring LLVM")
-
-    build_folder = dirs.build_folder
-    install_folder = dirs.install_folder
-    root_folder = dirs.root_folder
-
-    # Base cmake defintions, which don't depend on any user supplied options
     # yapf: disable
     defines = {
         # Objective-C Automatic Reference Counting (we don't use Objective-C)
@@ -315,16 +321,8 @@ def invoke_cmake(dirs, env_vars, debug, projects, targets):
         # We don't use the plugin system and it will remove unused symbols:
         # https://crbug.com/917404
         'CLANG_PLUGIN_SUPPORT': 'OFF',
-        # The C compiler to use
-        'CMAKE_C_COMPILER': env_vars.cc,
-        # The C++ compiler to use
-        'CMAKE_CXX_COMPILER': env_vars.cxx,
-        # Where the toolchain should be installed
-        'CMAKE_INSTALL_PREFIX': install_folder.as_posix(),
         # For LLVMgold.so, which is used for LTO with ld.gold
-        'LLVM_BINUTILS_INCDIR': root_folder.joinpath(utils.current_binutils(), "include").as_posix(),
-        # The projects to build
-        'LLVM_ENABLE_PROJECTS': projects,
+        'LLVM_BINUTILS_INCDIR': dirs.root_folder.joinpath(utils.current_binutils(), "include").as_posix(),
         # Don't build bindings; they are for other languages that the kernel does not use
         'LLVM_ENABLE_BINDINGS': 'OFF',
         # Don't build Ocaml documentation
@@ -337,57 +335,214 @@ def invoke_cmake(dirs, env_vars, debug, projects, targets):
         'LLVM_INCLUDE_DOCS': 'OFF',
         # Don't include example build targets to save on cmake cycles
         'LLVM_INCLUDE_EXAMPLES': 'OFF',
-        # The architectures to build backends for
-        'LLVM_TARGETS_TO_BUILD': targets
+
     }
     # yapf: enable
-
-    # If a debug build was requested
-    if debug:
-        defines['CMAKE_BUILD_TYPE'] = 'Debug'
-        defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
-        defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
-        defines['LLVM_BUILD_TESTS'] = 'ON'
-    # If a release build was requested
-    else:
-        defines['CMAKE_BUILD_TYPE'] = 'Release'
-        defines['CMAKE_C_FLAGS'] = '-O2 -march=native -mtune=native'
-        defines['CMAKE_CXX_FLAGS'] = '-O2 -march=native -mtune=native'
-        defines['LLVM_INCLUDE_TESTS'] = 'OFF'
-        defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
-
-    # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
-    if "compiler-rt" in projects:
-        defines['COMPILER_RT_BUILD_LIBFUZZER'] = 'OFF'
 
     # Use ccache if it is available for faster incremental builds
     if shutil.which("ccache") is not None:
         defines['LLVM_CCACHE_BUILD'] = 'ON'
 
-    # If we found a linker, we should use it
-    if env_vars.ld is not None:
-        defines['LLVM_USE_LINKER'] = env_vars.ld
+    return defines
 
+
+def get_stage1_binary(binary, dirs):
+    """
+    Generate a path from the stage 1 bin directory for the requested binary
+    :param binary: Name of the binary
+    :param dirs: An instance of the Directories class with the paths to use
+    :return: A path suitable for a cmake define
+    """
+    return dirs.stage1_folder.joinpath("bin", binary).as_posix()
+
+
+def cc_ld_cmake_defines(dirs, env_vars, stage):
+    """
+    Generate compiler and linker cmake defines, which change depending on what
+    stage we are at
+    :param dirs: An instance of the Directories class with the paths to use
+    :param env_vars: An instance of the EnvVars class with the compilers/linker to use
+    :param stage: What stage we are at
+    :return: A set of defines
+    """
+    defines = {}
+
+    if stage == 1:
+        ar = None
+        cc = env_vars.cc
+        cxx = env_vars.cxx
+        ld = env_vars.ld
+        ranlib = None
+    else:
+        ar = get_stage1_binary("llvm-ar", dirs)
+        cc = get_stage1_binary("clang", dirs)
+        cxx = get_stage1_binary("clang++", dirs)
+        ld = get_stage1_binary("ld.lld", dirs)
+        ranlib = get_stage1_binary("llvm-ranlib", dirs)
+
+    # Use llvm-ar for stage 2 builds to avoid errors with bfd plugin
+    # bfd plugin: LLVM gold plugin has failed to create LTO module: Unknown attribute kind (60) (Producer: 'LLVM9.0.0svn' Reader: 'LLVM 8.0.0')
+    if ar is not None:
+        defines['CMAKE_AR'] = ar
+
+    # The C compiler to use
+    defines['CMAKE_C_COMPILER'] = cc
+
+    # The C++ compiler to use
+    defines['CMAKE_CXX_COMPILER'] = cxx
+
+    # If we have a linker, use it
+    if ld is not None:
+        defines['LLVM_USE_LINKER'] = ld
+
+    # Use llvm-ranlib for stage 2 builds
+    if ranlib is not None:
+        defines['CMAKE_RANLIB'] = ranlib
+
+    return defines
+
+
+def project_target_cmake_defines(args, stage):
+    """
+    Generate project and target cmake defines, which change depending on what
+    stage we are at
+    :param args: The args variable generated by parse_parameters
+    :param stage: What stage we are at
+    :return: A set of defines
+    """
+    defines = {}
+
+    if stage == 1 and not args.stage1_only:
+        projects = "clang;lld"
+        targets = "host"
+    else:
+        projects = args.projects
+        targets = args.targets
+
+    # The projects to build
+    defines['LLVM_ENABLE_PROJECTS'] = projects
+
+    # The architectures to build backends for
+    defines['LLVM_TARGETS_TO_BUILD'] = targets
+
+    # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
+    if "compiler-rt" in projects:
+        defines['COMPILER_RT_BUILD_LIBFUZZER'] = 'OFF'
+
+    return defines
+
+
+def stage_specific_cmake_defines(args, dirs, stage):
+    """
+    Generate other stage specific defines
+    :param args: The args variable generated by parse_parameters
+    :param dirs: An instance of the Directories class with the paths to use
+    :param stage: What stage we are at
+    :return: A set of defines
+    """
+    defines = {}
+
+    if stage == 1 and not args.stage1_only:
+        # Based on clang/cmake/caches/Apple-stage1.cmake
+        defines['CMAKE_BUILD_TYPE'] = 'Release'
+        defines['CMAKE_C_FLAGS'] = '-O2 -march=native -mtune=native'
+        defines['CMAKE_CXX_FLAGS'] = '-O2 -march=native -mtune=native'
+        defines['LLVM_ENABLE_BACKTRACES'] = 'OFF'
+        defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
+        defines['LLVM_INCLUDE_TESTS'] = 'OFF'
+    else:
+        # If a debug build was requested
+        if args.debug:
+            defines['CMAKE_BUILD_TYPE'] = 'Debug'
+            defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
+            defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
+            defines['LLVM_BUILD_TESTS'] = 'ON'
+        # If a release build was requested
+        else:
+            defines['CMAKE_BUILD_TYPE'] = 'Release'
+            defines['CMAKE_C_FLAGS'] = '-O2 -march=native -mtune=native'
+            defines['CMAKE_CXX_FLAGS'] = '-O2 -march=native -mtune=native'
+            defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
+            defines['LLVM_INCLUDE_TESTS'] = 'OFF'
+
+        # Where the toolchain should be installed
+        defines['CMAKE_INSTALL_PREFIX'] = dirs.install_folder.as_posix()
+
+        # Build with ThinLTO if requested and it is an actual stage 2 build
+        # since we will have a guaranteed compatible ThinLTO linker
+        if stage == 2 and args.thin_lto:
+            defines['LLVM_ENABLE_LTO'] = 'Thin'
+
+    return defines
+
+
+def build_cmake_defines(args, dirs, env_vars, stage):
+    """
+    Generate cmake defines
+    :param args: The args variable generated by parse_parameters
+    :param dirs: An instance of the Directories class with the paths to use
+    :param env_vars: An instance of the EnvVars class with the compilers/linker to use
+    :param stage: What stage we are at
+    :return: A set of defines
+    """
+
+    # Get base defines, that don't depend on any user inputs
+    defines = base_cmake_defines(dirs)
+
+    # Add compiler/linker defines, which change based on stage
+    defines.update(cc_ld_cmake_defines(dirs, env_vars, stage))
+
+    # Add project and target defines, which change based on stage
+    defines.update(project_target_cmake_defines(args, stage))
+
+    # Add other stage specific defines
+    defines.update(stage_specific_cmake_defines(args, dirs, stage))
+
+    return defines
+
+
+def invoke_cmake(args, dirs, env_vars, stage):
+    """
+    Invoke cmake to generate the build files
+    :param args: The args variable generated by parse_parameters
+    :param dirs: An instance of the Directories class with the paths to use
+    :param env_vars: An instance of the EnvVars class with the compilers/linker to use
+    :param stage: What stage we are at
+    :return:
+    """
     # Add the defines, point them to our build folder, and invoke cmake
     cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
+    defines = build_cmake_defines(args, dirs, env_vars, stage)
     for key in defines:
         newdef = '-D' + key + '=' + defines[key]
         cmake += [newdef]
-    cmake += [root_folder.joinpath("llvm-project", "llvm").as_posix()]
+    cmake += [dirs.root_folder.joinpath("llvm-project", "llvm").as_posix()]
 
-    subprocess.run(cmake, check=True, cwd=build_folder.as_posix())
+    if stage == 1:
+        cwd = dirs.stage1_folder.as_posix()
+    else:
+        cwd = dirs.build_folder.as_posix()
+
+    utils.print_header("Configuring LLVM stage %d" % stage)
+
+    subprocess.run(cmake, check=True, cwd=cwd)
 
 
-def invoke_ninja(dirs):
+def invoke_ninja(args, dirs, stage):
     """
     Invoke ninja to run the actual build
+    :param args: The args variable generated by parse_parameters
     :param dirs: An instance of the Directories class with the paths to use
     :return:
     """
-    utils.print_header("Building LLVM")
+    utils.print_header("Building LLVM stage %d" % stage)
 
-    build_folder = dirs.build_folder
-    install_folder = dirs.install_folder
+    if stage == 1:
+        build_folder = dirs.stage1_folder
+        install_folder = None
+    else:
+        build_folder = dirs.build_folder
+        install_folder = dirs.install_folder
 
     time_started = time.time()
 
@@ -397,13 +552,14 @@ def invoke_ninja(dirs):
     print("LLVM build duration: " +
           str(datetime.timedelta(seconds=int(time.time() - time_started))))
 
-    subprocess.run(['ninja', 'install'],
-                   check=True,
-                   cwd=build_folder.as_posix(),
-                   stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL)
+    if install_folder is not None:
+        subprocess.run(['ninja', 'install'],
+                       check=True,
+                       cwd=build_folder.as_posix(),
+                       stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL)
 
-    utils.create_gitignore(install_folder)
+        utils.create_gitignore(install_folder)
 
 
 def print_install_info(install_folder):
@@ -421,9 +577,28 @@ def print_install_info(install_folder):
     print("to the command you want to use this toolchain.\n")
 
 
+def do_multistage_build(args, dirs, env_vars):
+    stages = [1]
+
+    if not args.stage1_only:
+        stages += [2]
+        install_folder = dirs.install_folder
+    else:
+        install_folder = dirs.stage1_folder
+
+    dirs.stage1_folder.mkdir(parents=True, exist_ok=True)
+
+    for stage in stages:
+        invoke_cmake(args, dirs, env_vars, stage)
+        invoke_ninja(args, dirs, stage)
+
+    print_install_info(install_folder)
+
+
 def main():
     root_folder = pathlib.Path(__file__).resolve().parent
     build_folder = root_folder.joinpath("build", "llvm")
+    stage1_folder = build_folder.joinpath("stage1")
 
     args = parse_parameters(root_folder)
 
@@ -435,10 +610,9 @@ def main():
     check_dependencies()
     fetch_llvm_binutils(root_folder, not args.no_pull, args.branch)
     cleanup(build_folder, args.incremental)
-    dirs = Directories(build_folder, install_folder, root_folder)
-    invoke_cmake(dirs, env_vars, args.debug, args.projects, args.targets)
-    invoke_ninja(dirs)
-    print_install_info(install_folder)
+    dirs = Directories(build_folder, install_folder, root_folder,
+                       stage1_folder)
+    do_multistage_build(args, dirs, env_vars)
 
 
 if __name__ == '__main__':
