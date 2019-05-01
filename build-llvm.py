@@ -450,6 +450,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
         defines['LLVM_ENABLE_BACKTRACES'] = 'OFF'
         defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
         defines['LLVM_INCLUDE_TESTS'] = 'OFF'
+        defines['LLVM_INCLUDE_UTILS'] = 'OFF'
     else:
         # If a debug build was requested
         if args.debug:
