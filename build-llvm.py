@@ -57,6 +57,18 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="master")
+    parser.add_argument("-B",
+                        "--build-folder",
+                        help=textwrap.dedent("""\
+                        By default, the script will create a "build" folder in the same folder as this script,
+                        then an "llvm" folder within that one and build the files there. If you would like
+                        that done somewhere else, pass it to this parameter. This can either be an absolute
+                        or relative path.
+
+                        """),
+                        type=str,
+                        default=os.path.join(root_folder.as_posix(), "build",
+                                             "llvm"))
     parser.add_argument("-d",
                         "--debug",
                         help=textwrap.dedent("""\
@@ -598,10 +610,13 @@ def do_multistage_build(args, dirs, env_vars):
 
 def main():
     root_folder = pathlib.Path(__file__).resolve().parent
-    build_folder = root_folder.joinpath("build", "llvm")
-    stage1_folder = build_folder.joinpath("stage1")
 
     args = parse_parameters(root_folder)
+
+    build_folder = pathlib.Path(args.build_folder)
+    if not build_folder.is_absolute():
+        build_folder = root_folder.joinpath(build_folder)
+    stage1_folder = build_folder.joinpath("stage1")
 
     install_folder = pathlib.Path(args.install_folder)
     if not install_folder.is_absolute():
