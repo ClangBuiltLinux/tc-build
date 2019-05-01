@@ -42,11 +42,11 @@ Python 3.5.3+ is recommended, as that is what the script has been tested against
 
 ## build-llvm.py
 
-By default, `./build-llvm.py` will clone LLVM, grab the latest binutils tarball (for the LLVMgold.so plugin), and build LLVM, clang, and lld, and install them into `build`. Run `./build-llvm.py -h` for more options.
+By default, `./build-llvm.py` will clone LLVM, grab the latest binutils tarball (for the LLVMgold.so plugin), and build LLVM, clang, and lld, and install them into `install`. Run `./build-llvm.py -h` for more options.
 
 ## build-binutils.py
 
-This script builds a standalone copy of binutils. By default, `./build-binutils.py` will download binutils 2.32, build for all architectures we currently care about (arm32, aarch64, powerpc32, powerpc64le, and x86_64), and install them into `build`. Run `./build-binutils.py -h` for more options.
+This script builds a standalone copy of binutils. By default, `./build-binutils.py` will download binutils 2.32, build for all architectures we currently care about (arm32, aarch64, powerpc32, powerpc64le, and x86_64), and install them into `install`. Run `./build-binutils.py -h` for more options.
 
 Building a standalone copy of binutils might be needed because certain distributions like Arch Linux (whose options the script uses) might symlink `/usr/lib/LLVMgold.so` to `/usr/lib/bfd-plugins` ([source](https://bugs.archlinux.org/task/28479)), which can cause issues when using the system's linker for LTO (even with `LD_LIBRARY_PATH`):
 
