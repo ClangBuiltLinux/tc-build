@@ -25,23 +25,23 @@ def current_binutils():
     return "binutils-2.32"
 
 
-def download_binutils(root):
+def download_binutils(folder):
     """
     Downloads the latest stable version of binutils
-    :param root: Directory to download binutils to
+    :param folder: Directory to download binutils to
     """
     binutils = current_binutils()
-    p = pathlib.Path.joinpath(root, binutils)
-    if not p.is_dir():
+    binutils_folder = folder.joinpath(binutils)
+    if not binutils_folder.is_dir():
         # Remove any previous copies of binutils
-        for entity in root.glob('binutils*'):
+        for entity in folder.glob('binutils-*'):
             if entity.is_dir():
                 shutil.rmtree(entity.as_posix())
             else:
                 entity.unlink()
 
         # Download the tarball
-        binutils_tarball = pathlib.Path.joinpath(root, binutils + ".tar.gz")
+        binutils_tarball = folder.joinpath(binutils + ".tar.gz")
         subprocess.run([
             "curl", "-LSs", "-o",
             binutils_tarball.as_posix(),
@@ -51,7 +51,7 @@ def download_binutils(root):
         verify_checksum(binutils_tarball)
         # Extract the tarball then remove it
         subprocess.run(["tar", "-xzf", binutils_tarball.name], check=True)
-        create_gitignore(p)
+        create_gitignore(binutils_folder)
         binutils_tarball.unlink()
 
 
