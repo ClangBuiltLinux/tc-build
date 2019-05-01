@@ -166,17 +166,13 @@ def invoke_make(build_folder, install_folder, target):
     :param install_folder: Directory to install binutils to
     :param target: Target to compile for
     """
+    make = ['make', '-s', '-j' + str(multiprocessing.cpu_count()), 'V=0']
     if host_is_target(target):
-        subprocess.run(['make', '-s', 'configure-host', 'V=0'],
+        subprocess.run(make + ['configure-host'],
                        check=True,
                        cwd=build_folder.as_posix())
-    subprocess.run(
-        ['make', '-s', '-j' + str(multiprocessing.cpu_count()), 'V=0'],
-        check=True,
-        cwd=build_folder.as_posix())
-    subprocess.run([
-        'make', '-s', 'prefix=' + install_folder.as_posix(), 'install', 'V=0'
-    ],
+    subprocess.run(make, check=True, cwd=build_folder.as_posix())
+    subprocess.run(make + ['prefix=%s' % install_folder.as_posix(), 'install'],
                    check=True,
                    cwd=build_folder.as_posix())
     with install_folder.joinpath(".gitignore").open("w") as gitignore:
