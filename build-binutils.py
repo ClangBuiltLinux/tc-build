@@ -53,7 +53,7 @@ def parse_parameters(root):
     parser.add_argument("-B",
                         "--build-folder",
                         help="""
-                        By default, the script will create a "build" folder in the same folder as this script
+                        By default, the script will create a "build" folder in the same folder as this script,
                         then a "binutils" folder within that one and build the files there. If you would like
                         that done somewhere else, pass it to this parameter. This can either be an absolute
                         or relative path.
