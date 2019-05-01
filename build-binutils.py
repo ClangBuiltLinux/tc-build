@@ -50,6 +50,17 @@ def parse_parameters(root):
     :return: A 'Namespace' object with all the options parsed from supplied parameters
     """
     parser = argparse.ArgumentParser()
+    parser.add_argument("-B",
+                        "--build-folder",
+                        help="""
+                        By default, the script will create a "build" folder in the same folder as this script
+                        then a "binutils" folder within that one and build the files there. If you would like
+                        that done somewhere else, pass it to this parameter. This can either be an absolute
+                        or relative path.
+                        """,
+                        type=str,
+                        default=os.path.join(root.as_posix(), "build",
+                                             "binutils"))
     parser.add_argument("-I",
                         "--install-folder",
                         help="""
@@ -204,6 +215,10 @@ def main():
 
     args = parse_parameters(root)
 
+    build_folder = pathlib.Path(args.build_folder)
+    if not build_folder.is_absolute():
+        build_folder = root.joinpath(build_folder)
+
     install_folder = pathlib.Path(args.install_folder)
     if not install_folder.is_absolute():
         install_folder = root.joinpath(install_folder)
@@ -214,8 +229,7 @@ def main():
 
     utils.download_binutils(root)
 
-    build_targets(root.joinpath("build", "binutils"), install_folder, root,
-                  create_targets(targets))
+    build_targets(build_folder, install_folder, root, create_targets(targets))
 
 
 if __name__ == '__main__':
