@@ -60,7 +60,7 @@ def parse_parameters(root_folder):
     parser.add_argument("-B",
                         "--build-folder",
                         help=textwrap.dedent("""\
-                        By default, the script will create a "build" folder in the same folder as this script
+                        By default, the script will create a "build" folder in the same folder as this script,
                         then an "llvm" folder within that one and build the files there. If you would like
                         that done somewhere else, pass it to this parameter. This can either be an absolute
                         or relative path.
