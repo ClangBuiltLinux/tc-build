@@ -43,10 +43,10 @@ def host_is_target(target):
     return host_arch_target() == target_arch(target)
 
 
-def parse_parameters(root):
+def parse_parameters(root_folder):
     """
     Parses parameters passed to the script into options
-    :param root: The directory where the script is being invoked from
+    :param root_folder: The directory where the script is being invoked from
     :return: A 'Namespace' object with all the options parsed from supplied parameters
     """
     parser = argparse.ArgumentParser()
@@ -59,7 +59,7 @@ def parse_parameters(root):
                         or relative path.
                         """,
                         type=str,
-                        default=os.path.join(root.as_posix(), "build",
+                        default=os.path.join(root_folder.as_posix(), "build",
                                              "binutils"))
     parser.add_argument("-I",
                         "--install-folder",
@@ -69,7 +69,8 @@ def parse_parameters(root):
                         it to this parameter. This can either be an absolute or relative path.
                         """,
                         type=str,
-                        default=os.path.join(root.as_posix(), "install"))
+                        default=os.path.join(root_folder.as_posix(),
+                                             "install"))
     parser.add_argument("-t",
                         "--targets",
                         help="""
@@ -121,16 +122,16 @@ def cleanup(build_folder):
     build_folder.mkdir(parents=True, exist_ok=True)
 
 
-def invoke_configure(build_folder, install_folder, root, target):
+def invoke_configure(build_folder, install_folder, root_folder, target):
     """
     Invokes the configure script to generate a Makefile
     :param build_folder: Build directory
     :param install_folder: Directory to install binutils to
-    :param root: Working directory
+    :param root_folder: Working directory
     :param target: Target to compile for
     """
     configure = [
-        root.joinpath(utils.current_binutils(), "configure").as_posix(),
+        root_folder.joinpath(utils.current_binutils(), "configure").as_posix(),
         '--prefix=%s' % install_folder.as_posix(),
         '--enable-deterministic-archives', '--enable-gold',
         '--enable-ld=default', '--enable-plugins', '--quiet',
@@ -190,42 +191,43 @@ def invoke_make(build_folder, install_folder, target):
         gitignore.write("*")
 
 
-def build_targets(build, install_folder, root, targets):
+def build_targets(build, install_folder, root_folder, targets):
     """
     Builds binutils for all specified targets
     :param build: Build directory
     :param install_folder: Directory to install binutils to
-    :param root: Working directory
+    :param root_folder: Working directory
     :param targets: Targets to compile binutils for
     :return:
     """
     for target in targets:
         build_folder = build.joinpath(target)
         cleanup(build_folder)
-        invoke_configure(build_folder, install_folder, root, target)
+        invoke_configure(build_folder, install_folder, root_folder, target)
         invoke_make(build_folder, install_folder, target)
 
 
 def main():
-    root = pathlib.Path(__file__).resolve().parent
+    root_folder = pathlib.Path(__file__).resolve().parent
 
-    args = parse_parameters(root)
+    args = parse_parameters(root_folder)
 
     build_folder = pathlib.Path(args.build_folder)
     if not build_folder.is_absolute():
-        build_folder = root.joinpath(build_folder)
+        build_folder = root_folder.joinpath(build_folder)
 
     install_folder = pathlib.Path(args.install_folder)
     if not install_folder.is_absolute():
-        install_folder = root.joinpath(install_folder)
+        install_folder = root_folder.joinpath(install_folder)
 
     targets = ["all"]
     if args.targets is not None:
         targets = args.targets
 
-    utils.download_binutils(root)
+    utils.download_binutils(root_folder)
 
-    build_targets(build_folder, install_folder, root, create_targets(targets))
+    build_targets(build_folder, install_folder, root_folder,
+                  create_targets(targets))
 
 
 if __name__ == '__main__':
