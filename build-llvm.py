@@ -479,6 +479,10 @@ def stage_specific_cmake_defines(args, dirs, stage):
             defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
             defines['LLVM_INCLUDE_TESTS'] = 'OFF'
 
+        # We need to build libLLVM.so to enable plugin support after
+        # https://github.com/llvm/llvm-project/commit/b7804ef3a746cd6c2c95c81eb19a81fb9df34cc6
+        defines['LLVM_BUILD_LLVM_DYLIB'] = 'ON'
+
         # Where the toolchain should be installed
         defines['CMAKE_INSTALL_PREFIX'] = dirs.install_folder.as_posix()
 
