@@ -440,9 +440,14 @@ def project_target_cmake_defines(args, stage):
     # The architectures to build backends for
     defines['LLVM_TARGETS_TO_BUILD'] = targets
 
-    # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
     if "compiler-rt" in projects:
+        # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
         defines['COMPILER_RT_BUILD_LIBFUZZER'] = 'OFF'
+        # We only use compiler-rt for the sanitizers, disable some extra stuff we don't need
+        # Chromium OS also does this: https://crrev.com/c/1629950
+        defines['COMPILER_RT_BUILD_BUILTINS'] = 'OFF'
+        defines['COMPILER_RT_BUILD_CRT'] = 'OFF'
+        defines['COMPILER_RT_BUILD_XRAY'] = 'OFF'
 
     return defines
 
