@@ -338,6 +338,8 @@ def base_cmake_defines(dirs):
         'LLVM_BINUTILS_INCDIR': dirs.root_folder.joinpath(utils.current_binutils(), "include").as_posix(),
         # Don't build bindings; they are for other languages that the kernel does not use
         'LLVM_ENABLE_BINDINGS': 'OFF',
+        # We need to enable LLVM plugin support so that LLVMgold.so is loadable
+        'LLVM_ENABLE_PLUGINS': 'ON',
         # Don't build Ocaml documentation
         'LLVM_ENABLE_OCAMLDOC': 'OFF',
         # Removes system dependency on terminfo and almost every major clang provider turns this off
