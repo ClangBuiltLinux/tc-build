@@ -338,6 +338,8 @@ def base_cmake_defines(dirs):
         'LLVM_BINUTILS_INCDIR': dirs.root_folder.joinpath(utils.current_binutils(), "include").as_posix(),
         # Don't build bindings; they are for other languages that the kernel does not use
         'LLVM_ENABLE_BINDINGS': 'OFF',
+        # We need to enable LLVM plugin support so that LLVMgold.so is loadable
+        'LLVM_ENABLE_PLUGINS': 'ON',
         # Don't build Ocaml documentation
         'LLVM_ENABLE_OCAMLDOC': 'OFF',
         # Removes system dependency on terminfo and almost every major clang provider turns this off
@@ -478,10 +480,6 @@ def stage_specific_cmake_defines(args, dirs, stage):
             defines['CMAKE_CXX_FLAGS'] = '-O2 -march=native -mtune=native'
             defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
             defines['LLVM_INCLUDE_TESTS'] = 'OFF'
-
-        # We need to build libLLVM.so to enable plugin support after
-        # https://github.com/llvm/llvm-project/commit/b7804ef3a746cd6c2c95c81eb19a81fb9df34cc6
-        defines['LLVM_BUILD_LLVM_DYLIB'] = 'ON'
 
         # Where the toolchain should be installed
         defines['CMAKE_INSTALL_PREFIX'] = dirs.install_folder.as_posix()
