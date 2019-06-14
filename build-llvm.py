@@ -427,27 +427,27 @@ def cc_ld_cmake_defines(dirs, env_vars, stage):
 
     # Use llvm-ar for stage 2+ builds to avoid errors with bfd plugin
     # bfd plugin: LLVM gold plugin has failed to create LTO module: Unknown attribute kind (60) (Producer: 'LLVM9.0.0svn' Reader: 'LLVM 8.0.0')
-    if ar is not None:
+    if ar:
         defines['CMAKE_AR'] = ar
 
     # The C compiler to use
     defines['CMAKE_C_COMPILER'] = cc
 
-    if clang_tblgen is not None:
+    if clang_tblgen:
         defines['CLANG_TABLEGEN'] = clang_tblgen
 
     # The C++ compiler to use
     defines['CMAKE_CXX_COMPILER'] = cxx
 
     # If we have a linker, use it
-    if ld is not None:
+    if ld:
         defines['LLVM_USE_LINKER'] = ld
 
-    if llvm_tblgen is not None:
+    if llvm_tblgen:
         defines['LLVM_TABLEGEN'] = llvm_tblgen
 
     # Use llvm-ranlib for stage 2+ builds
-    if ranlib is not None:
+    if ranlib:
         defines['CMAKE_RANLIB'] = ranlib
 
     return defines
