@@ -645,11 +645,12 @@ def generate_pgo_profiles(args, dirs):
         cwd=dirs.build_folder.as_posix())
 
     # Combine profiles
-    stage2_folder = dirs.build_folder.joinpath("stage2")
     subprocess.run([
-        stage2_folder.joinpath("bin", "llvm-profdata"), "merge",
+        dirs.build_folder.joinpath("stage1", "bin", "llvm-profdata"), "merge",
         "-output=%s" % dirs.build_folder.joinpath("profdata.prof").as_posix()
-    ] + glob.glob(stage2_folder.joinpath("profiles", "*.profraw").as_posix()),
+    ] + glob.glob(
+        dirs.build_folder.joinpath("stage2", "profiles",
+                                   "*.profraw").as_posix()),
                    check=True)
 
 
