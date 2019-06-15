@@ -38,6 +38,8 @@ These scripts have been tested in a Docker image of the following distributions,
   pacman -S base-devel ccache clang cmake git lld ninja python3
   ```
 
+If you intend to compile with PGO, please ensure that you also have `bc`, `bison`,`flex`, and `libssl-dev` (or equivalent) installed as you will be building some Linux kernels.
+
 Python 3.5.3+ is recommended, as that is what the script has been tested against. These scripts should be distribution agnostic. Please feel free to add different distribution install commands here through a pull request.
 
 ## build-llvm.py
