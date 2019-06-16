@@ -7,6 +7,9 @@ TC_BLD=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"/.. && pwd)
 # Parse parameters
 while (( ${#} )); do
     case ${1} in
+        "-b"|"--build-folder")
+            shift
+            BUILD_FOLDER=${1} ;;
         "-p"|"--path-override")
             shift
             PATH_OVERRIDE=${1} ;;
@@ -32,7 +35,7 @@ done
 
 # Add the default install bin folder to PATH for binutils
 # Add the stage 2 bin folder to PATH for the instrumented clang
-for BIN_FOLDER in ${TC_BLD}/install/bin ${TC_BLD}/build/llvm/stage2/bin; do
+for BIN_FOLDER in ${TC_BLD}/install/bin ${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin; do
     export PATH=${BIN_FOLDER}:${PATH}
 done
 
