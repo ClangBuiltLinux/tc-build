@@ -639,10 +639,12 @@ def generate_pgo_profiles(args, dirs):
     utils.print_header("Building PGO profiles")
 
     # Run kernel/build.sh
-    subprocess.run(
-        [dirs.root_folder.joinpath("kernel", "build.sh"), '-t', args.targets],
-        check=True,
-        cwd=dirs.build_folder.as_posix())
+    subprocess.run([
+        dirs.root_folder.joinpath("kernel", "build.sh"), '-b',
+        dirs.build_folder, '-t', args.targets
+    ],
+                   check=True,
+                   cwd=dirs.build_folder.as_posix())
 
     # Combine profiles
     subprocess.run([
