@@ -680,7 +680,7 @@ def do_multistage_build(args, dirs, env_vars):
             stages += [3]
         install_folder = dirs.install_folder
     else:
-        install_folder = dirs.build_folder.joinpath("stage%d" % stage)
+        install_folder = dirs.build_folder.joinpath("stage%d" % stages[0])
 
     for stage in stages:
         dirs.build_folder.joinpath("stage%d" % stage).mkdir(parents=True,
