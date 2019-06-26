@@ -98,6 +98,13 @@ def parse_parameters(root_folder):
                         type=str,
                         default=os.path.join(root_folder.as_posix(),
                                              "install"))
+    parser.add_argument("--march-native",
+                        help=textwrap.dedent("""\
+                        Add -march=native and -mtune=native to CFLAGS to further optimize the toolchain for
+                        the host processor.
+
+                        """),
+                        action="store_true")
     parser.add_argument("-n",
                         "--no-pull",
                         help=textwrap.dedent("""\
@@ -506,8 +513,6 @@ def stage_specific_cmake_defines(args, dirs, stage):
     if stage == 1 and not args.stage1_only:
         # Based on clang/cmake/caches/Apple-stage1.cmake
         defines['CMAKE_BUILD_TYPE'] = 'Release'
-        defines['CMAKE_C_FLAGS'] = '-O2 -march=native -mtune=native'
-        defines['CMAKE_CXX_FLAGS'] = '-O2 -march=native -mtune=native'
         defines['LLVM_ENABLE_BACKTRACES'] = 'OFF'
         defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
         defines['LLVM_INCLUDE_TESTS'] = 'OFF'
@@ -516,14 +521,10 @@ def stage_specific_cmake_defines(args, dirs, stage):
         # If a debug build was requested
         if args.debug:
             defines['CMAKE_BUILD_TYPE'] = 'Debug'
-            defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
-            defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
             defines['LLVM_BUILD_TESTS'] = 'ON'
         # If a release build was requested
         else:
             defines['CMAKE_BUILD_TYPE'] = 'Release'
-            defines['CMAKE_C_FLAGS'] = '-O2 -march=native -mtune=native'
-            defines['CMAKE_CXX_FLAGS'] = '-O2 -march=native -mtune=native'
             defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
             defines['LLVM_INCLUDE_TESTS'] = 'OFF'
 
@@ -567,6 +568,11 @@ def build_cmake_defines(args, dirs, env_vars, stage):
 
     # Add other stage specific defines
     defines.update(stage_specific_cmake_defines(args, dirs, stage))
+
+    # Add {-march,-mtune}=native flags if the user wants them
+    if args.march_native:
+        defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
+        defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
 
     return defines
 
