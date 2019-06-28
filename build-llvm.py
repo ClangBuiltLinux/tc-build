@@ -387,10 +387,6 @@ def base_cmake_defines(dirs):
     }
     # yapf: enable
 
-    # Use ccache if it is available for faster incremental builds
-    if shutil.which("ccache") is not None:
-        defines['LLVM_CCACHE_BUILD'] = 'ON'
-
     return defines
 
 
@@ -509,6 +505,11 @@ def stage_specific_cmake_defines(args, dirs, stage):
     :return: A set of defines
     """
     defines = {}
+
+    # Use ccache for the stage 1 build as it will usually be done with a consistent
+    # compiler and won't need a full rebuild very often
+    if stage == 1 and shutil.which("ccache") is not None:
+        defines['LLVM_CCACHE_BUILD'] = 'ON'
 
     if stage == 1 and not args.stage1_only:
         # Based on clang/cmake/caches/Apple-stage1.cmake
