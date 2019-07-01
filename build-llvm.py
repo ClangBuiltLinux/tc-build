@@ -78,7 +78,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default="")
+                        default="ClangBuiltLinux")
     parser.add_argument("-d",
                         "--debug",
                         help=textwrap.dedent("""\
