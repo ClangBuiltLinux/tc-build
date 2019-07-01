@@ -68,6 +68,17 @@ def parse_parameters(root_folder):
                         type=str,
                         default=os.path.join(root_folder.as_posix(), "build",
                                              "llvm"))
+    parser.add_argument("--clang-vendor",
+                        help=textwrap.dedent("""\
+                        Add this value to the clang version string (like "Apple clang version..." or
+                        "Android clang version..."). Useful when reverting or applying patches on top
+                        of upstream clang to differentiate a toolchain built with this script from
+                        upstream clang or to distinguish a toolchain built with this script from the
+                        system's clang. Defaults to empty.
+
+                        """),
+                        type=str,
+                        default="")
     parser.add_argument("-d",
                         "--debug",
                         help=textwrap.dedent("""\
@@ -574,6 +585,10 @@ def build_cmake_defines(args, dirs, env_vars, stage):
     if args.march_native:
         defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
         defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
+
+    # Add the vendor string if necessary
+    if args.clang_vendor:
+        defines['CLANG_VENDOR'] = args.clang_vendor
 
     return defines
 
