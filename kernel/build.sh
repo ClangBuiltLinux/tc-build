@@ -46,7 +46,7 @@ done
 if [[ -n ${SRC_FOLDER} ]]; then
     cd "${SRC_FOLDER}" || exit 1
 else
-    LINUX=linux-5.1
+    LINUX=linux-5.2
     LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.xz
     LINUX_PATCH=${TC_BLD}/kernel/${LINUX}.patch
 
