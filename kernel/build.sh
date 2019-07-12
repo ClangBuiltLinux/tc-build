@@ -50,14 +50,15 @@ else
     LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.xz
     LINUX_PATCH=${TC_BLD}/kernel/${LINUX}.patch
 
-    # If we don't have the source tarball, download it
-    [[ -f ${LINUX_TARBALL} ]] || curl -LSso "${LINUX_TARBALL}" https://cdn.kernel.org/pub/linux/kernel/v5.x/"${LINUX_TARBALL##*/}"
+    # If we don't have the source tarball, download and verify it
+    if [[ ! -f ${LINUX_TARBALL} ]]; then
+        curl -LSso "${LINUX_TARBALL}" https://cdn.kernel.org/pub/linux/kernel/v5.x/"${LINUX_TARBALL##*/}"
 
-    # Verify the tarball
-    ( cd "${LINUX_TARBALL%/*}" || exit 1; sha256sum -c "${LINUX_TARBALL}".sha256 --quiet ) || {
-        echo "Linux tarball verification failed! Please remove '${LINUX_TARBALL}' and try again."
-        exit 1
-    }
+        ( cd "${LINUX_TARBALL%/*}" || exit 1; sha256sum -c "${LINUX_TARBALL}".sha256 --quiet ) || {
+            echo "Linux tarball verification failed! Please remove '${LINUX_TARBALL}' and try again."
+            exit 1
+        }
+    fi
 
     # If there is a patch to apply, remove the folder so that we can patch it accurately (we cannot assume it has already been patched)
     [[ -f ${LINUX_PATCH} ]] && rm -rf ${LINUX}
