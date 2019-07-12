@@ -47,7 +47,7 @@ if [[ -n ${SRC_FOLDER} ]]; then
     cd "${SRC_FOLDER}" || exit 1
 else
     LINUX=linux-5.1
-    LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.gz
+    LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.xz
     LINUX_PATCH=${TC_BLD}/kernel/${LINUX}.patch
 
     # If we don't have the source tarball, download it
@@ -55,7 +55,7 @@ else
 
     # If there is a patch to apply, remove the folder so that we can patch it accurately (we cannot assume it has already been patched)
     [[ -f ${LINUX_PATCH} ]] && rm -rf ${LINUX}
-    [[ -d ${LINUX} ]] || { tar -xzf "${LINUX_TARBALL}" || exit ${?}; }
+    [[ -d ${LINUX} ]] || { tar -xf "${LINUX_TARBALL}" || exit ${?}; }
     cd ${LINUX} || exit 1
     [[ -f ${LINUX_PATCH} ]] && patch -p1 < "${LINUX_PATCH}"
 fi
