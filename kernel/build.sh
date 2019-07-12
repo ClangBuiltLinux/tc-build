@@ -31,7 +31,7 @@ while (( ${#} )); do
     esac
     shift
 done
-[[ -z ${TARGETS} ]] && TARGETS=( "arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64le-linux-gnu" "x86_64-linux-gnu" )
+[[ -z ${TARGETS[*]} ]] && TARGETS=( "arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64le-linux-gnu" "x86_64-linux-gnu" )
 
 # Add the default install bin folder to PATH for binutils
 # Add the stage 2 bin folder to PATH for the instrumented clang
@@ -86,10 +86,10 @@ MAKE=( make -j"$(nproc)" CC=clang O=out )
 
 for TARGET in "${TARGETS[@]}"; do
     case ${TARGET} in
-        "arm-linux-gnueabi") time "${MAKE[@]}" ARCH=arm CROSS_COMPILE=${TARGET}- LD=ld.lld distclean defconfig zImage modules || exit ${?} ;;
-        "aarch64-linux-gnu") time "${MAKE[@]}" ARCH=arm64 CROSS_COMPILE=${TARGET}- LD=ld.lld distclean defconfig Image.gz modules || exit ${?} ;;
-        "powerpc-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE=${TARGET}- distclean ppc44x_defconfig zImage modules || exit ${?} ;;
-        "powerpc64le-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE=${TARGET}- distclean powernv_defconfig zImage.epapr modules || exit ${?} ;;
+        "arm-linux-gnueabi") time "${MAKE[@]}" ARCH=arm CROSS_COMPILE="${TARGET}-" LD=ld.lld distclean defconfig zImage modules || exit ${?} ;;
+        "aarch64-linux-gnu") time "${MAKE[@]}" ARCH=arm64 CROSS_COMPILE="${TARGET}-" LD=ld.lld distclean defconfig Image.gz modules || exit ${?} ;;
+        "powerpc-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean ppc44x_defconfig zImage modules || exit ${?} ;;
+        "powerpc64le-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean powernv_defconfig zImage.epapr modules || exit ${?} ;;
         "x86_64-linux-gnu") time "${MAKE[@]}" LD=ld.lld O=out distclean defconfig bzImage modules || exit ${?} ;;
     esac
 done
