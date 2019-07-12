@@ -51,7 +51,7 @@ else
     LINUX_PATCH=${TC_BLD}/kernel/${LINUX}.patch
 
     # If we don't have the source tarball, download it
-    [[ -f ${LINUX_TARBALL} ]] || curl -LSso "${LINUX_TARBALL}" https://git.kernel.org/torvalds/t/${LINUX}.tar.gz
+    [[ -f ${LINUX_TARBALL} ]] || curl -LSso "${LINUX_TARBALL}" https://cdn.kernel.org/pub/linux/kernel/v5.x/"${LINUX_TARBALL##*/}"
 
     # If there is a patch to apply, remove the folder so that we can patch it accurately (we cannot assume it has already been patched)
     [[ -f ${LINUX_PATCH} ]] && rm -rf ${LINUX}
