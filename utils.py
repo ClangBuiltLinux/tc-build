@@ -50,7 +50,9 @@ def download_binutils(folder):
                        check=True)
         verify_checksum(binutils_tarball)
         # Extract the tarball then remove it
-        subprocess.run(["tar", "-xzf", binutils_tarball.name], check=True, cwd=folder.as_posix())
+        subprocess.run(["tar", "-xzf", binutils_tarball.name],
+                       check=True,
+                       cwd=folder.as_posix())
         create_gitignore(binutils_folder)
         binutils_tarball.unlink()
 
