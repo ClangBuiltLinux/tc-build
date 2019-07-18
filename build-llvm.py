@@ -311,9 +311,27 @@ def fetch_llvm_binutils(root_folder, update, ref):
         if update:
             utils.print_header("Updating LLVM")
             subprocess.run(
-                ["git", "-C", p.as_posix(), "checkout", ref], check=True)
+                ["git", "-C", p.as_posix(), "fetch", "origin"], check=True)
             subprocess.run(
-                ["git", "-C", p.as_posix(), "pull", "--rebase"], check=True)
+                ["git", "-C", p.as_posix(), "checkout", ref], check=True)
+            local_ref = None
+            try:
+                local_ref = subprocess.check_output(
+                    ["git", "-C",
+                     p.as_posix(), "symbolic-ref", "-q",
+                     "HEAD"]).decode("utf-8")
+            except subprocess.CalledProcessError:
+                # This is thrown when we're on a revision that cannot be mapped to a symbolic reference, like a tag
+                # or a git hash. Swallow and move on with the rest of our business.
+                pass
+            if local_ref and local_ref.startswith("refs/heads/"):
+                # This is a branch, pull from remote
+                subprocess.run([
+                    "git", "-C",
+                    p.as_posix(), "pull", "origin",
+                    local_ref.strip().replace("refs/heads/", ""), "--rebase"
+                ],
+                               check=True)
     else:
         utils.print_header("Downloading LLVM")
         subprocess.run([
