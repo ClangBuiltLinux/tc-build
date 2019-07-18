@@ -13,14 +13,14 @@ import time
 import utils
 
 
-class Directories():
+class Directories:
     def __init__(self, build_folder, install_folder, root_folder):
         self.build_folder = build_folder
         self.install_folder = install_folder
         self.root_folder = root_folder
 
 
-class EnvVars():
+class EnvVars:
     def __init__(self, cc, cxx, ld):
         self.cc = cc
         self.cxx = cxx
