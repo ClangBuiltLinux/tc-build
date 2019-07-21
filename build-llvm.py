@@ -68,6 +68,20 @@ def parse_parameters(root_folder):
                         type=str,
                         default=os.path.join(root_folder.as_posix(), "build",
                                              "llvm"))
+    parser.add_argument("--build-stage1-only",
+                        help=textwrap.dedent("""\
+                        By default, the script does a multi-stage build: it builds a more lightweight version of
+                        LLVM first (stage 1) then uses that build to build the full toolchain (stage 2). This
+                        is also known as bootstrapping.
+
+                        This option avoids that, building the first stage as if it were the final stage. Note,
+                        this does not install the first stage only toolchain by default to avoid overwritting an
+                        installed mutlt-stage LLVM toolchain; this option is more intended for quick testing
+                        and verification of issues and not regular use. However, if your system is slow or can't
+                        handle 2+ stage builds, you may need this flag.
+
+                        """),
+                        action="store_true")
     parser.add_argument("--clang-vendor",
                         help=textwrap.dedent("""\
                         Add this value to the clang version string (like "Apple clang version..." or
@@ -143,12 +157,6 @@ def parse_parameters(root_folder):
                         Build the final compiler with PGO, which can improve compile time performance.
 
                         See https://llvm.org/docs/HowToBuildWithPGO.html for more information.
-
-                        """),
-                        action="store_true")
-    parser.add_argument("--stage1-only",
-                        help=textwrap.dedent("""\
-                        Do not do a multistage build; build stage one as if it was stage two.
 
                         """),
                         action="store_true")
@@ -477,7 +485,7 @@ def project_target_cmake_defines(args, stage):
     """
     defines = {}
 
-    if stage == 1 and not args.stage1_only:
+    if stage == 1 and not args.build_stage1_only:
         projects = "clang;lld"
         if args.pgo:
             projects += ';compiler-rt'
@@ -522,7 +530,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
     if stage == 1 and shutil.which("ccache") is not None:
         defines['LLVM_CCACHE_BUILD'] = 'ON'
 
-    if stage == 1 and not args.stage1_only:
+    if stage == 1 and not args.build_stage1_only:
         # Based on clang/cmake/caches/Apple-stage1.cmake
         defines['CMAKE_BUILD_TYPE'] = 'Release'
         defines['LLVM_ENABLE_BACKTRACES'] = 'OFF'
@@ -696,7 +704,7 @@ def print_install_info(install_folder):
 def do_multistage_build(args, dirs, env_vars):
     stages = [1]
 
-    if not args.stage1_only:
+    if not args.build_stage1_only:
         stages += [2]
         if args.pgo:
             stages += [3]
