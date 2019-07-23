@@ -79,7 +79,7 @@ def parse_parameters(root_folder):
                         installed mutlt-stage LLVM toolchain; this option is more intended for quick testing
                         and verification of issues and not regular use. However, if your system is slow or can't
                         handle 2+ stage builds, you may need this flag. If you would like to install a toolchain
-                        built with this flag, see '--install-stage1' below.
+                        built with this flag, see '--install-stage1-only' below.
 
                         """),
                         action="store_true")
@@ -124,7 +124,7 @@ def parse_parameters(root_folder):
                         type=str,
                         default=os.path.join(root_folder.as_posix(),
                                              "install"))
-    parser.add_argument("--install-stage1",
+    parser.add_argument("--install-stage1-only",
                         help=textwrap.dedent("""\
                         When doing a stage 1 only build with '--build-stage1-only', install the toolchain to
                         the value of INSTALL_FOLDER.
@@ -383,7 +383,7 @@ def should_install_toolchain(args, stage):
 
     # We shouldn't install the toolchain if the user is only building stage 1 build
     # and they didn't explicitly request an install
-    if args.build_stage1_only and not args.install_stage1:
+    if args.build_stage1_only and not args.install_stage1_only:
         return False
 
     # Otherwise, we should install the toolchain to the install folder
@@ -697,7 +697,7 @@ def invoke_ninja(args, dirs, stage):
     install_folder = None
     if should_install_toolchain(args, stage):
         install_folder = dirs.install_folder
-    elif stage == 1 and args.build_stage1_only and not args.install_stage1:
+    elif stage == 1 and args.build_stage1_only and not args.install_stage1_only:
         install_folder = build_folder
 
     build_folder = build_folder.as_posix()
