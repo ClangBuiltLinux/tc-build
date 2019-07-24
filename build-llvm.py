@@ -141,10 +141,11 @@ def parse_parameters(root_folder):
                         """),
                         type=str)
     parser.add_argument("-n",
-                        "--no-pull",
+                        "--no-update",
                         help=textwrap.dedent("""\
                         By default, the script always updates the LLVM repo before building. This prevents
-                        that, which can be helpful during something like bisecting.
+                        that, which can be helpful during something like bisecting or manually managing the
+                        repo to pin it to a particular revision.
 
                         """),
                         action="store_true")
@@ -788,7 +789,7 @@ def main():
 
     env_vars = EnvVars(*check_cc_ld_variables(root_folder))
     check_dependencies()
-    fetch_llvm_binutils(root_folder, not args.no_pull, args.branch)
+    fetch_llvm_binutils(root_folder, not args.no_update, args.branch)
     cleanup(build_folder, args.incremental)
     dirs = Directories(build_folder, install_folder, root_folder)
     do_multistage_build(args, dirs, env_vars)
