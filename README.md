@@ -12,8 +12,6 @@ There are times where a tip of tree LLVM build will have some issue fixed and it
   * clang/gcc + ld.gold
   * clang/gcc + ld.bfd
 
-It also aims to make kernel compilation go a little bit faster by generating a toolchain that is optimized for the host CPU (using `-O2 -march=native -mtune=native`).
-
 ## Getting started
 
 These scripts have been tested in a Docker image of the following distributions, with the following packages installed:
