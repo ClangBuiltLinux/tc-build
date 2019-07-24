@@ -83,10 +83,9 @@ def parse_parameters(root_folder):
                         "--debug",
                         help=textwrap.dedent("""\
                         By default, the script builds LLVM in the release configuration with all of
-                        the tests turned off and optimization at O2. This disables that optimization,
-                        builds the tests, and changes the configuration to debug. This can help with
-                        reporting problems to LLVM developers but will make compilation of both LLVM
-                        and the kernel go slower.
+                        the tests turned off. This changes the configuration to debug and builds the
+                        tests. This can help with reporting problems to LLVM developers but will make
+                        compilation of both LLVM and the kernel go slower.
 
                         """),
                         action="store_true")
