@@ -131,13 +131,15 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
-    parser.add_argument("--march-native",
+    parser.add_argument("-m",
+                        "--march",
+                        metavar="ARCH",
                         help=textwrap.dedent("""\
-                        Add -march=native and -mtune=native to CFLAGS to further optimize the toolchain for
-                        the host processor.
+                        Add -march=ARCH and -mtune=ARCH to CFLAGS to further optimize the toolchain for the
+                        target host processor.
 
                         """),
-                        action="store_true")
+                        type=str)
     parser.add_argument("-n",
                         "--no-pull",
                         help=textwrap.dedent("""\
@@ -632,10 +634,12 @@ def build_cmake_defines(args, dirs, env_vars, stage):
     # Add other stage specific defines
     defines.update(stage_specific_cmake_defines(args, dirs, stage))
 
-    # Add {-march,-mtune}=native flags if the user wants them
-    if args.march_native:
-        defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
-        defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
+    # Add {-march,-mtune} flags if the user wants them
+    if args.march:
+        defines['CMAKE_C_FLAGS'] = '-march=%s -mtune=%s' % (args.march,
+                                                            args.march)
+        defines['CMAKE_CXX_FLAGS'] = '-march=%s -mtune=%s' % (args.march,
+                                                              args.march)
 
     # Add the vendor string if necessary
     if args.clang_vendor:
