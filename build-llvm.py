@@ -131,6 +131,20 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
+    parser.add_argument("--lto",
+                        metavar="LTO_TYPE",
+                        help=textwrap.dedent("""\
+                        Build the final compiler with either full LTO (full) or ThinLTO (thin), which can
+                        improve compile time performance.
+
+                        See the two links below for more information.
+
+                        https://llvm.org/docs/LinkTimeOptimization.html
+                        https://clang.llvm.org/docs/ThinLTO.html
+
+                        """),
+                        type=str,
+                        choices=['full', 'thin'])
     parser.add_argument("-m",
                         "--march",
                         metavar="ARCH",
@@ -190,14 +204,6 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="AArch64;ARM;PowerPC;X86")
-    parser.add_argument("--thin-lto",
-                        help=textwrap.dedent("""\
-                        Build the final compiler with ThinLTO, which can improve compile time performance.
-
-                        See https://clang.llvm.org/docs/ThinLTO.html for more information.
-
-                        """),
-                        action="store_true")
     return parser.parse_args()
 
 
@@ -613,8 +619,8 @@ def stage_specific_cmake_defines(args, dirs, stage):
             if args.pgo:
                 defines['LLVM_PROFDATA_FILE'] = dirs.build_folder.joinpath(
                     "profdata.prof").as_posix()
-            if args.thin_lto:
-                defines['LLVM_ENABLE_LTO'] = 'Thin'
+            if args.lto:
+                defines['LLVM_ENABLE_LTO'] = args.lto.capitalize()
 
     return defines
 
