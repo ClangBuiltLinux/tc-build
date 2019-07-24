@@ -585,7 +585,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
 
     # Use ccache for the stage 1 build as it will usually be done with a consistent
     # compiler and won't need a full rebuild very often
-    if stage == 1 and not args.no_ccache and shutil.which("ccache") is not None:
+    if stage == 1 and not args.no_ccache and shutil.which("ccache"):
         defines['LLVM_CCACHE_BUILD'] = 'ON'
 
     if bootstrap_stage(args, stage):
