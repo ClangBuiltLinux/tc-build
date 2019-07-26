@@ -50,6 +50,13 @@ def parse_parameters(root_folder):
     """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("--assertions",
+                        help=textwrap.dedent("""\
+                        In a release configuration, assertions are not enabled. Assertions can help catch
+                        issues when compiling but it will increase compile times by 15-20%%.
+
+                        """),
+                        action="store_true")
     parser.add_argument("-b",
                         "--branch",
                         help=textwrap.dedent("""\
@@ -650,6 +657,10 @@ def stage_specific_cmake_defines(args, dirs, stage):
             defines['CMAKE_BUILD_TYPE'] = 'Release'
             defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
             defines['LLVM_INCLUDE_TESTS'] = 'OFF'
+            # Build with assertions enabled if requested (will slow down compilation
+            # so it is not on by default)
+            if args.assertions:
+                defines['LLVM_ENABLE_ASSERTIONS'] = 'ON'
 
         # Where the toolchain should be installed
         defines['CMAKE_INSTALL_PREFIX'] = dirs.install_folder.as_posix()
