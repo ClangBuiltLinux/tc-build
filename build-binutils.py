@@ -75,7 +75,7 @@ def parse_parameters(root_folder):
                         "--targets",
                         help="""
                         The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
-                        powerpc-linux-gnu, powerpc64le-linux-gnu, and x86_64-linux-gnu.
+                        mipsel-linux-gnu, powerpc-linux-gnu, powerpc64le-linux-gnu, and x86_64-linux-gnu.
 
                         You can either pass the full target or just the first part (arm, aarch64, x86_64, etc)
                         or all if you want to build all targets (which is the default). It will only add the
@@ -103,6 +103,7 @@ def create_targets(targets):
     targets_dict = {
         "arm": "arm-linux-gnueabi",
         "aarch64": "aarch64-linux-gnu",
+        "mipsel": "mipsel-linux-gnu",
         "powerpc64le": "powerpc64le-linux-gnu",
         "powerpc": "powerpc-linux-gnu",
         "x86_64": "x86_64-linux-gnu"
@@ -153,6 +154,12 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
             '--disable-multilib', '--disable-nls', '--with-gnu-as',
             '--with-gnu-ld',
             '--with-sysroot=%s' % install_folder.joinpath(target).as_posix()
+        ],
+        "mipsel-linux-gnu": [
+            '--disable-compressed-debug-sections', '--enable-new-dtags',
+            '--enable-shared',
+            '--enable-targets=mips64el-linux-gnuabi64,mips64el-linux-gnuabin32',
+            '--enable-threads'
         ],
         "powerpc-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-shared',
