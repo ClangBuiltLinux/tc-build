@@ -144,8 +144,7 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
     configure = [
         root_folder.joinpath(utils.current_binutils(), "configure").as_posix(),
         '--prefix=%s' % install_folder.as_posix(),
-        '--enable-deterministic-archives', '--enable-gold',
-        '--enable-ld=default', '--enable-plugins', '--quiet',
+        '--enable-deterministic-archives', '--enable-plugins', '--quiet',
         'CFLAGS=-O2 -march=%s -mtune=%s' % (host_arch, host_arch),
         'CXXFLAGS=-O2 -march=%s -mtune=%s' % (host_arch, host_arch)
     ]
@@ -167,7 +166,7 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         ]
     }
     configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
-        'arm-linux-gnueabi']
+        'arm-linux-gnueabi'] + ['--enable-ld=default', '--enable-gold']
     configure_arch_flags['powerpc64le-linux-gnu'] = configure_arch_flags[
         'powerpc-linux-gnu']
 
