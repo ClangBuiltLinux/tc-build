@@ -573,6 +573,9 @@ def project_target_cmake_defines(args, stage):
         defines['COMPILER_RT_BUILD_BUILTINS'] = 'OFF'
         defines['COMPILER_RT_BUILD_CRT'] = 'OFF'
         defines['COMPILER_RT_BUILD_XRAY'] = 'OFF'
+        # We don't need the sanitizers for the stage 1 bootstrap
+        if bootstrap_stage(args, stage):
+            defines['COMPILER_RT_BUILD_SANITIZERS'] = 'OFF'
 
     return defines
 
