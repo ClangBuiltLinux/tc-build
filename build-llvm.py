@@ -106,6 +106,16 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="Release")
+    parser.add_argument("--check-targets",
+                        help=textwrap.dedent("""\
+                        By default, no testing is run on the toolchain. If you would like to run unit/regression
+                        tests, use this parameter to specify a list of check targets (llvm, clang, and lld are
+                        common ones).
+
+                        These values will be concatenated with 'check-'.
+
+                        """),
+                        nargs="+")
     parser.add_argument("--clang-vendor",
                         help=textwrap.dedent("""\
                         Add this value to the clang version string (like "Apple clang version..." or
@@ -778,6 +788,12 @@ def invoke_ninja(args, dirs, stage):
     time_started = time.time()
 
     subprocess.run('ninja', check=True, cwd=build_folder)
+
+    if args.check_targets and stage == get_final_stage(args):
+        subprocess.run(['ninja'] +
+                       ['check-%s' % s for s in args.check_targets],
+                       check=True,
+                       cwd=build_folder)
 
     print()
     print("LLVM build duration: " +
