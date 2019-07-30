@@ -207,6 +207,17 @@ def linker_test(cc, ld):
         stderr=subprocess.DEVNULL).returncode
 
 
+def versioned_binaries(binary_name):
+    """
+    Returns a list of versioned binaries that may be used on Debian/Ubuntu
+    :param binary_name: The name of the binary that we're checking for
+    :return: List of versioned binaries
+    """
+
+    # There might be clang-6 to clang-10
+    return ['%s-%s' % (binary_name, i) for i in range(10, 5, -1)]
+
+
 def check_cc_ld_variables(root_folder):
     """
     Sets the cc, cxx, and ld variables, which will be passed to cmake
@@ -219,9 +230,7 @@ def check_cc_ld_variables(root_folder):
         cc = shutil.which(os.environ['CC'])
     # Otherwise, try to find one
     else:
-        possible_compilers = [
-            'clang-10', 'clang-9', 'clang-8', 'clang-7', 'clang', 'gcc'
-        ]
+        possible_compilers = versioned_binaries("clang") + ['clang', 'gcc']
         for compiler in possible_compilers:
             cc = shutil.which(compiler)
             if cc is not None:
@@ -267,8 +276,8 @@ def check_cc_ld_variables(root_folder):
     else:
         # and we're using clang, try to find the fastest one
         if "clang" in cc:
-            possible_linkers = [
-                'lld-10', 'lld-9', 'lld-8', 'lld-7', 'lld', 'gold', 'bfd'
+            possible_linkers = versioned_binaries("lld") + [
+                'lld', 'gold', 'bfd'
             ]
             for linker in possible_linkers:
                 # We want to find lld wherever the clang we are using is located
