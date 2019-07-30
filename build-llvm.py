@@ -12,6 +12,10 @@ import textwrap
 import time
 import utils
 
+# This is a known good revision of LLVM for building the kernel
+# To bump this, run 'PATH_OVERRIDE=<path_to_updated_toolchain>/bin kernel/build.sh --allyesconfig'
+GOOD_REVISION = '9aeab53eba0a63829a7f6f8ba878a257530a2dd7'
+
 
 class Directories:
     def __init__(self, build_folder, install_folder, root_folder):
@@ -204,6 +208,15 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="AArch64;ARM;PowerPC;X86")
+    parser.add_argument("--use-good-revision",
+                        help=textwrap.dedent("""\
+                        By default, the script updates LLVM to the latest tip of tree revision, which may at times be
+                        broken or not work right. With this option, it will checkout a known good revision of LLVM
+                        that builds and works properly. If you use this option often, please remember to update the
+                        script as the known good revision will change.
+
+                        """),
+                        action="store_true")
     return parser.parse_args()
 
 
@@ -834,7 +847,11 @@ def main():
 
     env_vars = EnvVars(*check_cc_ld_variables(root_folder))
     check_dependencies()
-    fetch_llvm_binutils(root_folder, not args.no_update, args.branch)
+    if args.use_good_revision:
+        ref = GOOD_REVISION
+    else:
+        ref = args.branch
+    fetch_llvm_binutils(root_folder, not args.no_update, ref)
     cleanup(build_folder, args.incremental)
     dirs = Directories(build_folder, install_folder, root_folder)
     do_multistage_build(args, dirs, env_vars)
