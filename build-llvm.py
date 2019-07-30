@@ -131,18 +131,41 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
-    parser.add_argument("--march-native",
+    parser.add_argument("--lto",
+                        metavar="LTO_TYPE",
                         help=textwrap.dedent("""\
-                        Add -march=native and -mtune=native to CFLAGS to further optimize the toolchain for
-                        the host processor.
+                        Build the final compiler with either full LTO (full) or ThinLTO (thin), which can
+                        improve compile time performance.
+
+                        See the two links below for more information.
+
+                        https://llvm.org/docs/LinkTimeOptimization.html
+                        https://clang.llvm.org/docs/ThinLTO.html
+
+                        """),
+                        type=str,
+                        choices=['full', 'thin'])
+    parser.add_argument("-m",
+                        "--march",
+                        metavar="ARCH",
+                        help=textwrap.dedent("""\
+                        Add -march=ARCH and -mtune=ARCH to CFLAGS to further optimize the toolchain for the
+                        target host processor.
+
+                        """),
+                        type=str)
+    parser.add_argument("-n",
+                        "--no-update",
+                        help=textwrap.dedent("""\
+                        By default, the script always updates the LLVM repo before building. This prevents
+                        that, which can be helpful during something like bisecting or manually managing the
+                        repo to pin it to a particular revision.
 
                         """),
                         action="store_true")
-    parser.add_argument("-n",
-                        "--no-pull",
+    parser.add_argument("--no-ccache",
                         help=textwrap.dedent("""\
-                        By default, the script always updates the LLVM repo before building. This prevents
-                        that, which can be helpful during something like bisecting.
+                        Don't enable LLVM_CCACHE_BUILD. Useful for benchmarking clean builds.
 
                         """),
                         action="store_true")
@@ -181,14 +204,6 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="AArch64;ARM;PowerPC;X86")
-    parser.add_argument("--thin-lto",
-                        help=textwrap.dedent("""\
-                        Build the final compiler with ThinLTO, which can improve compile time performance.
-
-                        See https://clang.llvm.org/docs/ThinLTO.html for more information.
-
-                        """),
-                        action="store_true")
     return parser.parse_args()
 
 
@@ -591,7 +606,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
 
     # Use ccache for the stage 1 build as it will usually be done with a consistent
     # compiler and won't need a full rebuild very often
-    if stage == 1 and shutil.which("ccache") is not None:
+    if stage == 1 and not args.no_ccache and shutil.which("ccache"):
         defines['LLVM_CCACHE_BUILD'] = 'ON'
 
     if bootstrap_stage(args, stage):
@@ -625,8 +640,8 @@ def stage_specific_cmake_defines(args, dirs, stage):
             if args.pgo:
                 defines['LLVM_PROFDATA_FILE'] = dirs.build_folder.joinpath(
                     "profdata.prof").as_posix()
-            if args.thin_lto:
-                defines['LLVM_ENABLE_LTO'] = 'Thin'
+            if args.lto:
+                defines['LLVM_ENABLE_LTO'] = args.lto.capitalize()
 
     return defines
 
@@ -653,10 +668,12 @@ def build_cmake_defines(args, dirs, env_vars, stage):
     # Add other stage specific defines
     defines.update(stage_specific_cmake_defines(args, dirs, stage))
 
-    # Add {-march,-mtune}=native flags if the user wants them
-    if args.march_native:
-        defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
-        defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
+    # Add {-march,-mtune} flags if the user wants them
+    if args.march:
+        defines['CMAKE_C_FLAGS'] = '-march=%s -mtune=%s' % (args.march,
+                                                            args.march)
+        defines['CMAKE_CXX_FLAGS'] = '-march=%s -mtune=%s' % (args.march,
+                                                              args.march)
 
     # Add the vendor string if necessary
     if args.clang_vendor:
@@ -806,7 +823,7 @@ def main():
 
     env_vars = EnvVars(*check_cc_ld_variables(root_folder))
     check_dependencies()
-    fetch_llvm_binutils(root_folder, not args.no_pull, args.branch)
+    fetch_llvm_binutils(root_folder, not args.no_update, args.branch)
     cleanup(build_folder, args.incremental)
     dirs = Directories(build_folder, install_folder, root_folder)
     do_multistage_build(args, dirs, env_vars)

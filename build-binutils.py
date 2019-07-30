@@ -82,6 +82,15 @@ def parse_parameters(root_folder):
                         target prefix if it is not for the host architecture.
                         """,
                         nargs="+")
+    parser.add_argument("-m",
+                        "--march",
+                        metavar="ARCH",
+                        help="""
+                        Add -march=ARCH and -mtune=ARCH to CFLAGS to optimize the toolchain for the target
+                        host processor.
+                        """,
+                        type=str,
+                        default="native")
     return parser.parse_args()
 
 
@@ -122,21 +131,23 @@ def cleanup(build_folder):
     build_folder.mkdir(parents=True, exist_ok=True)
 
 
-def invoke_configure(build_folder, install_folder, root_folder, target):
+def invoke_configure(build_folder, install_folder, root_folder, target,
+                     host_arch):
     """
     Invokes the configure script to generate a Makefile
     :param build_folder: Build directory
     :param install_folder: Directory to install binutils to
     :param root_folder: Working directory
     :param target: Target to compile for
+    :param host_arch: Host architecture to optimize for
     """
     configure = [
         root_folder.joinpath(utils.current_binutils(), "configure").as_posix(),
         '--prefix=%s' % install_folder.as_posix(),
         '--enable-deterministic-archives', '--enable-gold',
         '--enable-ld=default', '--enable-plugins', '--quiet',
-        'CFLAGS=-O2 -march=native -mtune=native',
-        'CXXFLAGS=-O2 -march=native -mtune=native'
+        'CFLAGS=-O2 -march=%s -mtune=%s' % (host_arch, host_arch),
+        'CXXFLAGS=-O2 -march=%s -mtune=%s' % (host_arch, host_arch)
     ]
     configure_arch_flags = {
         "arm-linux-gnueabi": [
@@ -191,19 +202,21 @@ def invoke_make(build_folder, install_folder, target):
         gitignore.write("*")
 
 
-def build_targets(build, install_folder, root_folder, targets):
+def build_targets(build, install_folder, root_folder, targets, host_arch):
     """
     Builds binutils for all specified targets
     :param build: Build directory
     :param install_folder: Directory to install binutils to
     :param root_folder: Working directory
     :param targets: Targets to compile binutils for
+    :param host_arch: Host architecture to optimize for
     :return:
     """
     for target in targets:
         build_folder = build.joinpath(target)
         cleanup(build_folder)
-        invoke_configure(build_folder, install_folder, root_folder, target)
+        invoke_configure(build_folder, install_folder, root_folder, target,
+                         host_arch)
         invoke_make(build_folder, install_folder, target)
 
 
@@ -227,7 +240,7 @@ def main():
     utils.download_binutils(root_folder)
 
     build_targets(build_folder, install_folder, root_folder,
-                  create_targets(targets))
+                  create_targets(targets), args.march)
 
 
 if __name__ == '__main__':
