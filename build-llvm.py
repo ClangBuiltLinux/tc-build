@@ -50,6 +50,13 @@ def parse_parameters(root_folder):
     """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument("--assertions",
+                        help=textwrap.dedent("""\
+                        In a release configuration, assertions are not enabled. Assertions can help catch
+                        issues when compiling but it will increase compile times by 15-20%%.
+
+                        """),
+                        action="store_true")
     parser.add_argument("-b",
                         "--branch",
                         help=textwrap.dedent("""\
@@ -88,6 +95,29 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
+    parser.add_argument("--build-type",
+                        metavar='BUILD_TYPE',
+                        help=textwrap.dedent("""\
+                        By default, the script does a Release build; Debug may be useful for tracking down
+                        particularly nasty bugs.
+
+                        See https://llvm.org/docs/GettingStarted.html#compiling-the-llvm-suite-source-code for
+                        more information.
+
+                        """),
+                        type=str,
+                        choices=['Release', 'Debug', 'RelWithDebInfo', 'MinSizeRel'],
+                        default="Release")
+    parser.add_argument("--check-targets",
+                        help=textwrap.dedent("""\
+                        By default, no testing is run on the toolchain. If you would like to run unit/regression
+                        tests, use this parameter to specify a list of check targets (llvm, clang, and lld are
+                        common ones).
+
+                        These values will be concatenated with 'check-'.
+
+                        """),
+                        nargs="+")
     parser.add_argument("--clang-vendor",
                         help=textwrap.dedent("""\
                         Add this value to the clang version string (like "Apple clang version..." or
@@ -99,16 +129,6 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="ClangBuiltLinux")
-    parser.add_argument("-d",
-                        "--debug",
-                        help=textwrap.dedent("""\
-                        By default, the script builds LLVM in the release configuration with all of
-                        the tests turned off. This changes the configuration to debug and builds the
-                        tests. This can help with reporting problems to LLVM developers but will make
-                        compilation of both LLVM and the kernel go slower.
-
-                        """),
-                        action="store_true")
     parser.add_argument("-i",
                         "--incremental",
                         help=textwrap.dedent("""\
@@ -641,15 +661,17 @@ def stage_specific_cmake_defines(args, dirs, stage):
         defines['LLVM_INCLUDE_TESTS'] = 'OFF'
         defines['LLVM_INCLUDE_UTILS'] = 'OFF'
     else:
-        # If a debug build was requested
-        if args.debug:
-            defines['CMAKE_BUILD_TYPE'] = 'Debug'
-            defines['LLVM_BUILD_TESTS'] = 'ON'
-        # If a release build was requested
-        else:
-            defines['CMAKE_BUILD_TYPE'] = 'Release'
+        # https://llvm.org/docs/CMake.html#frequently-used-cmake-variables
+        defines['CMAKE_BUILD_TYPE'] = args.build_type
+
+        # We don't care about warnings if we are building a release build
+        if args.build_type == "Release":
             defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
-            defines['LLVM_INCLUDE_TESTS'] = 'OFF'
+
+        # Build with assertions enabled if requested (will slow down compilation
+        # so it is not on by default)
+        if args.assertions:
+            defines['LLVM_ENABLE_ASSERTIONS'] = 'ON'
 
         # Where the toolchain should be installed
         defines['CMAKE_INSTALL_PREFIX'] = dirs.install_folder.as_posix()
@@ -768,6 +790,12 @@ def invoke_ninja(args, dirs, stage):
     time_started = time.time()
 
     subprocess.run('ninja', check=True, cwd=build_folder)
+
+    if args.check_targets and stage == get_final_stage(args):
+        subprocess.run(['ninja'] +
+                       ['check-%s' % s for s in args.check_targets],
+                       check=True,
+                       cwd=build_folder)
 
     print()
     print("LLVM build duration: " +
