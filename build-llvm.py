@@ -96,6 +96,7 @@ def parse_parameters(root_folder):
                         """),
                         action="store_true")
     parser.add_argument("--build-type",
+                        metavar='BUILD_TYPE',
                         help=textwrap.dedent("""\
                         By default, the script does a Release build; Debug may be useful for tracking down
                         particularly nasty bugs.
@@ -105,6 +106,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
+                        choices=['Release', 'Debug', 'RelWithDebInfo', 'MinSizeRel'],
                         default="Release")
     parser.add_argument("--check-targets",
                         help=textwrap.dedent("""\
@@ -660,10 +662,10 @@ def stage_specific_cmake_defines(args, dirs, stage):
         defines['LLVM_INCLUDE_UTILS'] = 'OFF'
     else:
         # https://llvm.org/docs/CMake.html#frequently-used-cmake-variables
-        defines['CMAKE_BUILD_TYPE'] = args.build_type.capitalize()
+        defines['CMAKE_BUILD_TYPE'] = args.build_type
 
         # We don't care about warnings if we are building a release build
-        if args.build_type.lower() == "release":
+        if args.build_type == "Release":
             defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
 
         # Build with assertions enabled if requested (will slow down compilation
