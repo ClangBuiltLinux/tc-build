@@ -108,10 +108,10 @@ def parse_parameters(root_folder):
                         type=str,
                         choices=['Release', 'Debug', 'RelWithDebInfo', 'MinSizeRel'],
                         default="Release")
-    parser.add_argument("--check-targets",
+    parser.add_argument("--check-projects",
                         help=textwrap.dedent("""\
                         By default, no testing is run on the toolchain. If you would like to run unit/regression
-                        tests, use this parameter to specify a list of check targets (llvm, clang, and lld are
+                        tests, use this parameter to specify a list of check projects (llvm, clang, and lld are
                         common ones).
 
                         These values will be concatenated with 'check-'.
@@ -791,9 +791,9 @@ def invoke_ninja(args, dirs, stage):
 
     subprocess.run('ninja', check=True, cwd=build_folder)
 
-    if args.check_targets and stage == get_final_stage(args):
+    if args.check_projects and stage == get_final_stage(args):
         subprocess.run(['ninja'] +
-                       ['check-%s' % s for s in args.check_targets],
+                       ['check-%s' % s for s in args.check_projects],
                        check=True,
                        cwd=build_folder)
 
