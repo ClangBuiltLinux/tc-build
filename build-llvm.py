@@ -111,10 +111,12 @@ def parse_parameters(root_folder):
     parser.add_argument("--check-targets",
                         help=textwrap.dedent("""\
                         By default, no testing is run on the toolchain. If you would like to run unit/regression
-                        tests, use this parameter to specify a list of check targets (llvm, clang, and lld are
-                        common ones).
+                        tests, use this parameter to specify a list of check targets to run with ninja. Common
+                        ones include check-llvm, check-clang, and check-lld.
 
-                        These values will be concatenated with 'check-'.
+                        The values passed to this parameter will be automatically concatenated with 'check-'.
+
+                        Example: '--check-targets clang llvm' will make ninja invokve 'check-clang' and 'check-llvm'.
 
                         """),
                         nargs="+")
