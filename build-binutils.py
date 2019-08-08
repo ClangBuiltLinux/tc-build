@@ -18,6 +18,7 @@ def host_arch_target():
     """
     host_mapping = {
         "armv7l": "arm",
+        "ppc64": "powerpc64",
         "ppc64le": "powerpc64le",
         "ppc": "powerpc"
     }
@@ -75,7 +76,8 @@ def parse_parameters(root_folder):
                         "--targets",
                         help="""
                         The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
-                        mipsel-linux-gnu, powerpc-linux-gnu, powerpc64le-linux-gnu, and x86_64-linux-gnu.
+                        mipsel-linux-gnu, powerpc-linux-gnu, powerpc64-linux-gnu, powerpc64le-linux-gnu,
+                        and x86_64-linux-gnu.
 
                         You can either pass the full target or just the first part (arm, aarch64, x86_64, etc)
                         or all if you want to build all targets (which is the default). It will only add the
@@ -104,6 +106,7 @@ def create_targets(targets):
         "arm": "arm-linux-gnueabi",
         "aarch64": "aarch64-linux-gnu",
         "mipsel": "mipsel-linux-gnu",
+        "powerpc64": "powerpc64-linux-gnu",
         "powerpc64le": "powerpc64le-linux-gnu",
         "powerpc": "powerpc-linux-gnu",
         "x86_64": "x86_64-linux-gnu"
@@ -174,6 +177,8 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
     }
     configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
         'arm-linux-gnueabi'] + ['--enable-ld=default', '--enable-gold']
+    configure_arch_flags['powerpc64-linux-gnu'] = configure_arch_flags[
+        'powerpc-linux-gnu']
     configure_arch_flags['powerpc64le-linux-gnu'] = configure_arch_flags[
         'powerpc-linux-gnu']
 
