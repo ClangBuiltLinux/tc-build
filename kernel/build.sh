@@ -66,7 +66,7 @@ else
     [[ -f ${LINUX_PATCH} ]] && rm -rf ${LINUX}
     [[ -d ${LINUX} ]] || { tar -xf "${LINUX_TARBALL}" || exit ${?}; }
     cd ${LINUX} || exit 1
-    [[ -f ${LINUX_PATCH} ]] && { git apply "${LINUX_PATCH}" || exit ${?}; }
+    [[ -f ${LINUX_PATCH} ]] && { patch -p1 < "${LINUX_PATCH}" || exit ${?}; }
 fi
 
 # Check for all binutils and build them if necessary
