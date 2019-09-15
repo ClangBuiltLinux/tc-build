@@ -716,8 +716,11 @@ def build_cmake_defines(args, dirs, env_vars, stage):
     # Add other stage specific defines
     defines.update(stage_specific_cmake_defines(args, dirs, stage))
 
+    if not stage == get_final_stage(args):
+        defines['CMAKE_C_FLAGS'] = '-march=native -mtune=native'
+        defines['CMAKE_CXX_FLAGS'] = '-march=native -mtune=native'
     # Add {-march,-mtune} flags if the user wants them
-    if args.march:
+    elif args.march:
         defines['CMAKE_C_FLAGS'] = '-march=%s -mtune=%s' % (args.march,
                                                             args.march)
         defines['CMAKE_CXX_FLAGS'] = '-march=%s -mtune=%s' % (args.march,
