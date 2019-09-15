@@ -2,10 +2,10 @@
 # Description: Builds a standalone copy of binutils
 
 import argparse
-import multiprocessing
 import os
 import pathlib
 import platform
+import psutil
 import shutil
 import subprocess
 import utils
@@ -200,7 +200,7 @@ def invoke_make(build_folder, install_folder, target):
     :param install_folder: Directory to install binutils to
     :param target: Target to compile for
     """
-    make = ['make', '-s', '-j' + str(multiprocessing.cpu_count()), 'V=0']
+    make = ['make', '-s', '-j' + str(psutil.cpu_count(logical = True)), 'V=0']
     if host_is_target(target):
         subprocess.run(make + ['configure-host'],
                        check=True,
