@@ -34,6 +34,7 @@ while (( ${#} )); do
     shift
 done
 [[ -z ${TARGETS[*]} ]] && TARGETS=( "arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64le-linux-gnu" "x86_64-linux-gnu" )
+[[ -z ${CONFIG_TARGET} ]] && CONFIG_TARGET=defconfig
 
 # Add the default install bin folder to PATH for binutils
 # Add the stage 2 bin folder to PATH for the instrumented clang
@@ -50,7 +51,7 @@ if [[ -n ${SRC_FOLDER} ]]; then
 else
     LINUX=linux-5.2
     LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.xz
-    LINUX_PATCH=${TC_BLD}/kernel/${LINUX}-${CONFIG_TARGET:=defconfig}.patch
+    LINUX_PATCH=${TC_BLD}/kernel/${LINUX}-${CONFIG_TARGET}.patch
 
     # If we don't have the source tarball, download and verify it
     if [[ ! -f ${LINUX_TARBALL} ]]; then
