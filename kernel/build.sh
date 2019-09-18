@@ -85,7 +85,9 @@ done
 
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
-MAKE=( make -j"$(nproc)" CC=clang O=out )
+MAKE=( make -j"$(nproc)" -s CC=clang O=out )
+
+set -x
 
 for TARGET in "${TARGETS[@]}"; do
     case ${TARGET} in
