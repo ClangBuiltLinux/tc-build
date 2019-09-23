@@ -401,8 +401,8 @@ def fetch_llvm_binutils(root_folder, update, ref):
             if local_ref and local_ref.startswith("refs/heads/"):
                 # This is a branch, pull from remote
                 subprocess.run([
-                    "git", "pull", "origin",
-                    local_ref.strip().replace("refs/heads/", ""), "--rebase"
+                    "git", "pull", "--rebase", "origin",
+                    local_ref.strip().replace("refs/heads/", "")
                 ],
                                check=True,
                                cwd=cwd)
