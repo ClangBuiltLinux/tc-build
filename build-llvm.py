@@ -383,10 +383,10 @@ def fetch_llvm_binutils(root_folder, update, ref):
     :param ref: The ref to checkout the monorepo to
     """
     p = root_folder.joinpath("llvm-project")
+    cwd = p.as_posix()
     if p.is_dir():
         if update:
             utils.print_header("Updating LLVM")
-            cwd = p.as_posix()
             subprocess.run(["git", "fetch", "origin"], check=True, cwd=cwd)
             subprocess.run(["git", "checkout", ref], check=True, cwd=cwd)
             local_ref = None
@@ -409,10 +409,11 @@ def fetch_llvm_binutils(root_folder, update, ref):
     else:
         utils.print_header("Downloading LLVM")
         subprocess.run([
-            "git", "clone", "-b", ref, "git://github.com/llvm/llvm-project",
+            "git", "clone", "git://github.com/llvm/llvm-project",
             p.as_posix()
         ],
                        check=True)
+        subprocess.run(["git", "checkout", ref], check=True, cwd=cwd)
 
     # One might wonder why we are downloading binutils in an LLVM build script :)
     # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
