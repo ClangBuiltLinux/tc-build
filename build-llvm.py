@@ -383,19 +383,17 @@ def fetch_llvm_binutils(root_folder, update, ref):
     :param ref: The ref to checkout the monorepo to
     """
     p = root_folder.joinpath("llvm-project")
+    cwd = p.as_posix()
     if p.is_dir():
         if update:
             utils.print_header("Updating LLVM")
-            subprocess.run(
-                ["git", "-C", p.as_posix(), "fetch", "origin"], check=True)
-            subprocess.run(
-                ["git", "-C", p.as_posix(), "checkout", ref], check=True)
+            subprocess.run(["git", "fetch", "origin"], check=True, cwd=cwd)
+            subprocess.run(["git", "checkout", ref], check=True, cwd=cwd)
             local_ref = None
             try:
                 local_ref = subprocess.check_output(
-                    ["git", "-C",
-                     p.as_posix(), "symbolic-ref", "-q",
-                     "HEAD"]).decode("utf-8")
+                    ["git", "symbolic-ref", "-q", "HEAD"],
+                    cwd=cwd).decode("utf-8")
             except subprocess.CalledProcessError:
                 # This is thrown when we're on a revision that cannot be mapped to a symbolic reference, like a tag
                 # or a git hash. Swallow and move on with the rest of our business.
@@ -403,18 +401,19 @@ def fetch_llvm_binutils(root_folder, update, ref):
             if local_ref and local_ref.startswith("refs/heads/"):
                 # This is a branch, pull from remote
                 subprocess.run([
-                    "git", "-C",
-                    p.as_posix(), "pull", "origin",
-                    local_ref.strip().replace("refs/heads/", ""), "--rebase"
+                    "git", "pull", "--rebase", "origin",
+                    local_ref.strip().replace("refs/heads/", "")
                 ],
-                               check=True)
+                               check=True,
+                               cwd=cwd)
     else:
         utils.print_header("Downloading LLVM")
         subprocess.run([
-            "git", "clone", "-b", ref, "git://github.com/llvm/llvm-project",
+            "git", "clone", "git://github.com/llvm/llvm-project",
             p.as_posix()
         ],
                        check=True)
+        subprocess.run(["git", "checkout", ref], check=True, cwd=cwd)
 
     # One might wonder why we are downloading binutils in an LLVM build script :)
     # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
