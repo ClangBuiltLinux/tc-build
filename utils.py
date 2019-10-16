@@ -22,7 +22,7 @@ def current_binutils():
     Simple getter for current stable binutils release
     :return: The current stable release of binutils
     """
-    return "binutils-2.32"
+    return "binutils-2.33.1"
 
 
 def download_binutils(folder):
@@ -41,23 +41,23 @@ def download_binutils(folder):
                 entity.unlink()
 
         # Download the tarball
-        binutils_tarball = folder.joinpath(binutils + ".tar.gz")
+        binutils_tarball = folder.joinpath(binutils + ".tar.xz")
         subprocess.run([
             "curl", "-LSs", "-o",
             binutils_tarball.as_posix(),
             "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name
         ],
                        check=True)
-        verify_checksum(binutils_tarball)
+        verify_binutils_checksum(binutils_tarball)
         # Extract the tarball then remove it
-        subprocess.run(["tar", "-xzf", binutils_tarball.name],
+        subprocess.run(["tar", "-xJf", binutils_tarball.name],
                        check=True,
                        cwd=folder.as_posix())
         create_gitignore(binutils_folder)
         binutils_tarball.unlink()
 
 
-def verify_checksum(file):
+def verify_binutils_checksum(file):
     # Check the sha256sum of the downloaded package with a known good one
     # To regenerate the sha256sum, download the .tar.gz and .tar.gz.sig files
     # $ gpg --verify *.tar.gz.sig *.tar.gz
@@ -69,7 +69,7 @@ def verify_checksum(file):
             if not data:
                 break
             file_hash.update(data)
-    good_hash = "9b0d97b3d30df184d302bced12f976aa1e5fbf4b0be696cdebc6cca30411a46e"
+    good_hash = "ab66fc2d1c3ec0359b8e08843c9f33b63e8707efdff5e4cc5c200eae24722cbf"
     if file_hash.hexdigest() != good_hash:
         raise RuntimeError("binutils sha256sum does not match known good one!")
 
