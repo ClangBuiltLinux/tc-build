@@ -1,0 +1,224 @@
+From b13d9b282c8959f6232f660af3f9708c286c72ca Mon Sep 17 00:00:00 2001
+From: Nathan Chancellor <natechancellor@gmail.com>
+Date: Mon, 18 Nov 2019 21:57:10 -0700
+Subject: [PATCH 1/3] powerpc: Don't add -mabi= flags when building with Clang
+
+When building pseries_defconfig, building vdso32 errors out:
+
+  error: unknown target ABI 'elfv1'
+
+This happens because -m32 in clang changes the target to 32-bit,
+which does not allow the ABI to be changed.
+
+Commit 4dc831aa8813 ("powerpc: Fix compiling a BE kernel with a
+powerpc64le toolchain") added these flags to fix building big endian
+kernels with a little endian GCC.
+
+Clang doesn't need -mabi because the target triple controls the
+default value. -mlittle-endian and -mbig-endian manipulate the triple
+into either powerpc64-* or powerpc64le-*, which properly sets the
+default ABI.
+
+Adding a debug print out in the PPC64TargetInfo constructor after line
+383 above shows this:
+
+  $ echo | ./clang -E --target=powerpc64-linux -mbig-endian -o /dev/null -
+  Default ABI: elfv1
+
+  $ echo | ./clang -E --target=powerpc64-linux -mlittle-endian -o /dev/null -
+  Default ABI: elfv2
+
+  $ echo | ./clang -E --target=powerpc64le-linux -mbig-endian -o /dev/null -
+  Default ABI: elfv1
+
+  $ echo | ./clang -E --target=powerpc64le-linux -mlittle-endian -o /dev/null -
+  Default ABI: elfv2
+
+Don't specify -mabi when building with clang to avoid the build error
+with -m32 and not change any code generation.
+
+-mcall-aixdesc is not an implemented flag in clang so it can be safely
+excluded as well, see commit 238abecde8ad ("powerpc: Don't use gcc
+specific options on clang").
+
+pseries_defconfig successfully builds after this patch and
+powernv_defconfig and ppc44x_defconfig don't regress.
+
+Reviewed-by: Daniel Axtens <dja@axtens.net>
+Signed-off-by: Nathan Chancellor <natechancellor@gmail.com>
+[mpe: Trim clang links in change log]
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+Link: https://lore.kernel.org/r/20191119045712.39633-2-natechancellor@gmail.com
+Link: https://git.kernel.org/powerpc/c/465bfd9c44dea6b55962b5788a23ac87a467c923
+Signed-off-by: Nathan Chancellor <natechancellor@gmail.com>
+---
+ arch/powerpc/Makefile | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/arch/powerpc/Makefile b/arch/powerpc/Makefile
+index 83522c9fc7b6..37ac731a556b 100644
+--- a/arch/powerpc/Makefile
++++ b/arch/powerpc/Makefile
+@@ -91,11 +91,13 @@ MULTIPLEWORD	:= -mmultiple
+ endif
+ 
+ ifdef CONFIG_PPC64
++ifndef CONFIG_CC_IS_CLANG
+ cflags-$(CONFIG_CPU_BIG_ENDIAN)		+= $(call cc-option,-mabi=elfv1)
+ cflags-$(CONFIG_CPU_BIG_ENDIAN)		+= $(call cc-option,-mcall-aixdesc)
+ aflags-$(CONFIG_CPU_BIG_ENDIAN)		+= $(call cc-option,-mabi=elfv1)
+ aflags-$(CONFIG_CPU_LITTLE_ENDIAN)	+= -mabi=elfv2
+ endif
++endif
+ 
+ ifndef CONFIG_CC_IS_CLANG
+   cflags-$(CONFIG_CPU_LITTLE_ENDIAN)	+= -mno-strict-align
+@@ -141,6 +143,7 @@ endif
+ endif
+ 
+ CFLAGS-$(CONFIG_PPC64)	:= $(call cc-option,-mtraceback=no)
++ifndef CONFIG_CC_IS_CLANG
+ ifdef CONFIG_CPU_LITTLE_ENDIAN
+ CFLAGS-$(CONFIG_PPC64)	+= $(call cc-option,-mabi=elfv2,$(call cc-option,-mcall-aixdesc))
+ AFLAGS-$(CONFIG_PPC64)	+= $(call cc-option,-mabi=elfv2)
+@@ -149,6 +152,7 @@ CFLAGS-$(CONFIG_PPC64)	+= $(call cc-option,-mabi=elfv1)
+ CFLAGS-$(CONFIG_PPC64)	+= $(call cc-option,-mcall-aixdesc)
+ AFLAGS-$(CONFIG_PPC64)	+= $(call cc-option,-mabi=elfv1)
+ endif
++endif
+ CFLAGS-$(CONFIG_PPC64)	+= $(call cc-option,-mcmodel=medium,$(call cc-option,-mminimal-toc))
+ CFLAGS-$(CONFIG_PPC64)	+= $(call cc-option,-mno-pointers-to-nested-functions)
+ 
+-- 
+2.24.0
+
+
+From 34d62752a4bee76c172f33499d2b6b45d53c871d Mon Sep 17 00:00:00 2001
+From: Nathan Chancellor <natechancellor@gmail.com>
+Date: Mon, 18 Nov 2019 21:57:11 -0700
+Subject: [PATCH 2/3] powerpc: Avoid clang warnings around setjmp and longjmp
+
+Commit aea447141c7e ("powerpc: Disable -Wbuiltin-requires-header when
+setjmp is used") disabled -Wbuiltin-requires-header because of a
+warning about the setjmp and longjmp declarations.
+
+r367387 in clang added another diagnostic around this, complaining
+that there is no jmp_buf declaration.
+
+  In file included from ../arch/powerpc/xmon/xmon.c:47:
+  ../arch/powerpc/include/asm/setjmp.h:10:13: error: declaration of
+  built-in function 'setjmp' requires the declaration of the 'jmp_buf'
+  type, commonly provided in the header <setjmp.h>.
+  [-Werror,-Wincomplete-setjmp-declaration]
+  extern long setjmp(long *);
+              ^
+  ../arch/powerpc/include/asm/setjmp.h:11:13: error: declaration of
+  built-in function 'longjmp' requires the declaration of the 'jmp_buf'
+  type, commonly provided in the header <setjmp.h>.
+  [-Werror,-Wincomplete-setjmp-declaration]
+  extern void longjmp(long *, long);
+              ^
+  2 errors generated.
+
+We are not using the standard library's longjmp/setjmp implementations
+for obvious reasons; make this clear to clang by using -ffreestanding
+on these files.
+
+Cc: stable@vger.kernel.org # 4.14+
+Suggested-by: Segher Boessenkool <segher@kernel.crashing.org>
+Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
+Signed-off-by: Nathan Chancellor <natechancellor@gmail.com>
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+Link: https://lore.kernel.org/r/20191119045712.39633-3-natechancellor@gmail.com
+Link: https://git.kernel.org/powerpc/c/c9029ef9c95765e7b63c4d9aa780674447db1ec0
+Signed-off-by: Nathan Chancellor <natechancellor@gmail.com>
+---
+ arch/powerpc/kernel/Makefile | 4 ++--
+ arch/powerpc/xmon/Makefile   | 4 ++--
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/arch/powerpc/kernel/Makefile b/arch/powerpc/kernel/Makefile
+index a7ca8fe62368..f1f362146135 100644
+--- a/arch/powerpc/kernel/Makefile
++++ b/arch/powerpc/kernel/Makefile
+@@ -5,8 +5,8 @@
+ 
+ CFLAGS_ptrace.o		+= -DUTS_MACHINE='"$(UTS_MACHINE)"'
+ 
+-# Disable clang warning for using setjmp without setjmp.h header
+-CFLAGS_crash.o		+= $(call cc-disable-warning, builtin-requires-header)
++# Avoid clang warnings around longjmp/setjmp declarations
++CFLAGS_crash.o		+= -ffreestanding
+ 
+ ifdef CONFIG_PPC64
+ CFLAGS_prom_init.o	+= $(NO_MINIMAL_TOC)
+diff --git a/arch/powerpc/xmon/Makefile b/arch/powerpc/xmon/Makefile
+index f142570ad860..c3842dbeb1b7 100644
+--- a/arch/powerpc/xmon/Makefile
++++ b/arch/powerpc/xmon/Makefile
+@@ -1,8 +1,8 @@
+ # SPDX-License-Identifier: GPL-2.0
+ # Makefile for xmon
+ 
+-# Disable clang warning for using setjmp without setjmp.h header
+-subdir-ccflags-y := $(call cc-disable-warning, builtin-requires-header)
++# Avoid clang warnings around longjmp/setjmp declarations
++subdir-ccflags-y := -ffreestanding
+ 
+ GCOV_PROFILE := n
+ KCOV_INSTRUMENT := n
+-- 
+2.24.0
+
+
+From c97e3235829282ff95736dfe8f9dde06f597cbf4 Mon Sep 17 00:00:00 2001
+From: Nathan Chancellor <natechancellor@gmail.com>
+Date: Mon, 18 Nov 2019 21:57:12 -0700
+Subject: [PATCH 3/3] powerpc/prom_init: Use -ffreestanding to avoid a
+ reference to bcmp
+
+LLVM revision r374662 gives LLVM the ability to convert certain loops
+into a reference to bcmp as an optimization; this breaks
+prom_init_check.sh:
+
+    CALL    arch/powerpc/kernel/prom_init_check.sh
+  Error: External symbol 'bcmp' referenced from prom_init.c
+  make[2]: *** [arch/powerpc/kernel/Makefile:196: prom_init_check] Error 1
+
+bcmp is defined in lib/string.c as a wrapper for memcmp so this could
+be added to the whitelist. However, commit
+450e7dd4001f ("powerpc/prom_init: don't use string functions from
+lib/") copied memcmp as prom_memcmp to avoid KASAN instrumentation so
+having bcmp be resolved to regular memcmp would break that assumption.
+Furthermore, because the compiler is the one that inserted bcmp, we
+cannot provide something like prom_bcmp.
+
+To prevent LLVM from being clever with optimizations like this, use
+-ffreestanding to tell LLVM we are not hosted so it is not free to
+make transformations like this.
+
+Reviewed-by: Nick Desaulners <ndesaulniers@google.com>
+Signed-off-by: Nathan Chancellor <natechancellor@gmail.com>
+Signed-off-by: Michael Ellerman <mpe@ellerman.id.au>
+Link: https://lore.kernel.org/r/20191119045712.39633-4-natechancellor@gmail.com
+Link: https://git.kernel.org/powerpc/c/8dcd71b45df34d9b903450fab147ee8c1e6c16b5
+Signed-off-by: Nathan Chancellor <natechancellor@gmail.com>
+---
+ arch/powerpc/kernel/Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/powerpc/kernel/Makefile b/arch/powerpc/kernel/Makefile
+index f1f362146135..426868bf0f6f 100644
+--- a/arch/powerpc/kernel/Makefile
++++ b/arch/powerpc/kernel/Makefile
+@@ -22,6 +22,7 @@ CFLAGS_btext.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
+ CFLAGS_prom.o += $(DISABLE_LATENT_ENTROPY_PLUGIN)
+ 
+ CFLAGS_prom_init.o += $(call cc-option, -fno-stack-protector)
++CFLAGS_prom_init.o += -ffreestanding
+ 
+ ifdef CONFIG_FUNCTION_TRACER
+ # Do not trace early boot code
+-- 
+2.24.0
+
