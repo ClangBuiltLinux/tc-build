@@ -14,7 +14,7 @@ import utils
 
 # This is a known good revision of LLVM for building the kernel
 # To bump this, run 'PATH_OVERRIDE=<path_to_updated_toolchain>/bin kernel/build.sh --allyesconfig'
-GOOD_REVISION = '6f773205cd05e47912096d7c4091f03c28255ab2'
+GOOD_REVISION = 'b780df052dd2b246a760d00e00f7de9ebdab9d09'
 
 
 class Directories:
