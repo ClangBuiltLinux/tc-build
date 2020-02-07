@@ -77,7 +77,7 @@ def parse_parameters(root_folder):
                         help="""
                         The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
                         mipsel-linux-gnu, powerpc-linux-gnu, powerpc64-linux-gnu, powerpc64le-linux-gnu,
-                        and x86_64-linux-gnu.
+                        s390x-linux-gnu, and x86_64-linux-gnu.
 
                         You can either pass the full target or just the first part (arm, aarch64, x86_64, etc)
                         or all if you want to build all targets (which is the default). It will only add the
@@ -108,6 +108,7 @@ def create_targets(targets):
         "powerpc64": "powerpc64-linux-gnu",
         "powerpc64le": "powerpc64le-linux-gnu",
         "powerpc": "powerpc-linux-gnu",
+        "s390x": "s390x-linux-gnu",
         "x86_64": "x86_64-linux-gnu"
     }
 
@@ -155,10 +156,7 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
             'CXXFLAGS=-O2 -march=%s -mtune=%s' % (host_arch, host_arch)
         ]
     else:
-        configure += [
-            'CFLAGS=-O2',
-            'CXXFLAGS=-O2'
-        ]
+        configure += ['CFLAGS=-O2', 'CXXFLAGS=-O2']
 
     configure_arch_flags = {
         "arm-linux-gnueabi": [
@@ -176,6 +174,12 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
             '--enable-lto', '--enable-relro', '--enable-shared',
             '--enable-threads', '--disable-gdb', '--disable-sim',
             '--disable-werror', '--with-pic', '--with-system-zlib'
+        ],
+        "s390x-linux-gnu": [
+            '--enable-lto', '--enable-relro', '--enable-shared',
+            '--enable-targets=s390-linux-gnu', '--enable-threads',
+            '--disable-gdb', '--disable-werror', '--with-pic',
+            '--with-system-zlib'
         ],
         "x86_64-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-shared',
