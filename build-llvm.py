@@ -669,11 +669,6 @@ def stage_specific_cmake_defines(args, dirs, stage):
         if args.build_type == "Release":
             defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
 
-        # Build with assertions enabled if requested (will slow down compilation
-        # so it is not on by default)
-        if args.assertions:
-            defines['LLVM_ENABLE_ASSERTIONS'] = 'ON'
-
         # Where the toolchain should be installed
         defines['CMAKE_INSTALL_PREFIX'] = dirs.install_folder.as_posix()
 
@@ -689,6 +684,12 @@ def stage_specific_cmake_defines(args, dirs, stage):
                     "profdata.prof").as_posix()
             if args.lto:
                 defines['LLVM_ENABLE_LTO'] = args.lto.capitalize()
+
+            # Build with assertions enabled if requested (will slow down compilation
+            # so it is not on by default)
+            if args.assertions:
+                defines['LLVM_ENABLE_ASSERTIONS'] = 'ON'
+
 
     return defines
 
