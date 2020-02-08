@@ -22,7 +22,7 @@ def current_binutils():
     Simple getter for current stable binutils release
     :return: The current stable release of binutils
     """
-    return "binutils-2.33.1"
+    return "binutils-2.34"
 
 
 def download_binutils(folder):
@@ -59,9 +59,9 @@ def download_binutils(folder):
 
 def verify_binutils_checksum(file):
     # Check the sha256sum of the downloaded package with a known good one
-    # To regenerate the sha256sum, download the .tar.gz and .tar.gz.sig files
-    # $ gpg --verify *.tar.gz.sig *.tar.gz
-    # $ sha256sum *.tar.gz
+    # To regenerate the sha256sum, download the .tar.xz and .tar.xz.sig files
+    # $ gpg --verify *.tar.xz.sig *.tar.xz
+    # $ sha256sum *.tar.xz
     file_hash = hashlib.sha256()
     with file.open("rb") as f:
         while True:
@@ -69,7 +69,7 @@ def verify_binutils_checksum(file):
             if not data:
                 break
             file_hash.update(data)
-    good_hash = "ab66fc2d1c3ec0359b8e08843c9f33b63e8707efdff5e4cc5c200eae24722cbf"
+    good_hash = "f00b0e8803dc9bab1e2165bd568528135be734df3fabf8d0161828cd56028952"
     if file_hash.hexdigest() != good_hash:
         raise RuntimeError("binutils sha256sum does not match known good one!")
 
