@@ -221,15 +221,17 @@ def parse_parameters(root_folder):
                         "--targets",
                         help=textwrap.dedent("""\
                         LLVM is multitargeted by default. Currently, this script only enables the arm32, aarch64,
-                        mips, powerpc, and x86 backends because that's what the Linux kernel is currently concerned
-                        with. If you would like to override this, you can use this parameter and supply a list that is
-                        supported by LLVM_TARGETS_TO_BUILD: https://llvm.org/docs/CMake.html#llvm-specific-variables
+                        mips, powerpc, s390, and x86 backends because that's what the Linux kernel is currently
+                        concerned with. If you would like to override this, you can use this parameter and supply a
+                        list that is supported by LLVM_TARGETS_TO_BUILD:
+
+                        https://llvm.org/docs/CMake.html#llvm-specific-variables
 
                         Example: -t "AArch64;X86"
 
                         """),
                         type=str,
-                        default="AArch64;ARM;Mips;PowerPC;X86")
+                        default="AArch64;ARM;Mips;PowerPC;SystemZ;X86")
     parser.add_argument("--use-good-revision",
                         help=textwrap.dedent("""\
                         By default, the script updates LLVM to the latest tip of tree revision, which may at times be
