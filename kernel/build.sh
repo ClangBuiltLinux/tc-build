@@ -27,6 +27,8 @@ while (( ${#} )); do
                     "AArch64") TARGETS=( "${TARGETS[@]}" "aarch64-linux-gnu" ) ;;
                     "ARM") TARGETS=( "${TARGETS[@]}" "arm-linux-gnueabi" ) ;;
                     "PowerPC") TARGETS=( "${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" ) ;;
+                    # SystemZ is consumed until Linux 5.6
+                    "SystemZ") ;;
                     "X86") TARGETS=( "${TARGETS[@]}" "x86_64-linux-gnu" ) ;;
                 esac
             done
