@@ -27,13 +27,14 @@ while (( ${#} )); do
                     "AArch64") TARGETS=( "${TARGETS[@]}" "aarch64-linux-gnu" ) ;;
                     "ARM") TARGETS=( "${TARGETS[@]}" "arm-linux-gnueabi" ) ;;
                     "PowerPC") TARGETS=( "${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" ) ;;
+                    "SystemZ") TARGETS=( "${TARGETS[@]}" "s390x-linux-gnu" ) ;;
                     "X86") TARGETS=( "${TARGETS[@]}" "x86_64-linux-gnu" ) ;;
                 esac
             done
     esac
     shift
 done
-[[ -z ${TARGETS[*]} ]] && TARGETS=( "arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" "x86_64-linux-gnu" )
+[[ -z ${TARGETS[*]} ]] && TARGETS=( "arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" "s390x-linux-gnu" "x86_64-linux-gnu" )
 [[ -z ${CONFIG_TARGET} ]] && CONFIG_TARGET=defconfig
 
 # Add the default install bin folder to PATH for binutils
@@ -96,6 +97,7 @@ for TARGET in "${TARGETS[@]}"; do
         "powerpc-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean ppc44x_defconfig zImage modules || exit ${?} ;;
         "powerpc64-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean pseries_defconfig vmlinux modules || exit ${?} ;;
         "powerpc64le-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean powernv_defconfig zImage.epapr modules || exit ${?} ;;
+        "s390x-linux-gnu") time "${MAKE[@]}" ARCH=s390 CROSS_COMPILE="${TARGET}-" distclean defconfig bzImage modules || exit ${?} ;;
         "x86_64-linux-gnu") time "${MAKE[@]}" LD=ld.lld O=out distclean "${CONFIG_TARGET}" bzImage modules || exit ${?} ;;
     esac
 done
