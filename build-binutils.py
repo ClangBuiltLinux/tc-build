@@ -108,6 +108,7 @@ def create_targets(targets):
         "powerpc64": "powerpc64-linux-gnu",
         "powerpc64le": "powerpc64le-linux-gnu",
         "powerpc": "powerpc-linux-gnu",
+        "riscv64": "riscv64-linux-gnu",
         "s390x": "s390x-linux-gnu",
         "x86_64": "x86_64-linux-gnu"
     }
@@ -174,6 +175,11 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
             '--enable-lto', '--enable-relro', '--enable-shared',
             '--enable-threads', '--disable-gdb', '--disable-sim',
             '--disable-werror', '--with-pic', '--with-system-zlib'
+        ],
+        "riscv64-linux-gnu": [
+            '--enable-lto', '--enable-relro', '--enable-shared',
+            '--enable-threads', '--disable-sim', '--disable-werror',
+            '--with-pic', '--with-system-zlib'
         ],
         "s390x-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-shared',
