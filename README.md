@@ -19,7 +19,26 @@ These scripts have been tested in a Docker image of the following distributions,
 * ### Debian/Ubuntu
 
   ```
-  apt install bison ca-certificates ccache clang cmake curl file flex gcc g++ git make ninja-build python3 texinfo zlib1g-dev
+  apt install bc \
+              bison \
+              ca-certificates \
+              ccache \
+              clang \
+              cmake \
+              curl \
+              file \
+              flex \
+              gcc \
+              g++ \
+              git \
+              libelf-dev \
+              libssl-dev \
+              make \
+              ninja-build \
+              python3 \
+              texinfo \
+              u-boot-tools \
+              zlib1g-dev
   ```
 
   On Debian Buster or Ubuntu Bionic/Cosmic/Disco, `apt install lld` should be added as well for faster compiles.
@@ -27,16 +46,42 @@ These scripts have been tested in a Docker image of the following distributions,
 * ### Fedora
 
   ```
-  dnf install bison ccache clang cmake flex gcc gcc-c++ git lld make ninja-build python3 zlib-devel
+  dnf install bc \
+              bison \
+              ccache \
+              clang \
+              cmake \
+              elfutils-libelf-devel \
+              flex \
+              gcc \
+              gcc-c++ \
+              git \
+              lld \
+              make \
+              ninja-build \
+              openssl-devel \
+              python3 \
+              uboot-tools \
+              zlib-devel
   ```
 
 * ### Arch Linux
 
   ```
-  pacman -S base-devel bison ccache clang cmake flex git lld ninja python3
+  pacman -S base-devel \
+            bison \
+            ccache \
+            clang \
+            cmake \
+            flex \
+            git \
+            libelf \
+            lld \
+            ninja \
+            openssl \
+            python3 \
+            uboot-tools
   ```
-
-If you intend to compile with PGO, please ensure that you also have `bc` and `libssl-dev` (or equivalent) installed as you will be building some Linux kernels. If you are building for PowerPC (which the script does by default), make sure `mkimage` is available as well; the package is `u-boot-tools` on Debian/Ubuntu.
 
 Python 3.5.3+ is recommended, as that is what the script has been tested against. These scripts should be distribution agnostic. Please feel free to add different distribution install commands here through a pull request.
 
