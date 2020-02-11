@@ -19,7 +19,7 @@ These scripts have been tested in a Docker image of the following distributions,
 * ### Debian/Ubuntu
 
   ```
-  apt install bison ca-certificates ccache clang cmake curl file flex gcc g++ git make ninja-build python3 texinfo zlib1g-dev
+  apt install bison ca-certificates ccache clang cmake curl file flex gcc g++ git make ninja-build python3 texinfo zlib1g-dev libssl-dev libelf-dev
   ```
 
   On Debian Buster or Ubuntu Bionic/Cosmic/Disco, `apt install lld` should be added as well for faster compiles.
@@ -27,13 +27,13 @@ These scripts have been tested in a Docker image of the following distributions,
 * ### Fedora
 
   ```
-  dnf install bison ccache clang cmake flex gcc gcc-c++ git lld make ninja-build python3 zlib-devel
+  dnf install bison ccache clang cmake flex gcc gcc-c++ git lld make ninja-build python3 zlib-devel openssl-devel elfutils-libelf-devel
   ```
 
 * ### Arch Linux
 
   ```
-  pacman -S base-devel bison ccache clang cmake flex git lld ninja python3
+  pacman -S base-devel bison ccache clang cmake flex git lld ninja python3 openssl libelf
   ```
 
 If you intend to compile with PGO, please ensure that you also have `bc` and `libssl-dev` (or equivalent) installed as you will be building some Linux kernels. If you are building for PowerPC (which the script does by default), make sure `mkimage` is available as well; the package is `u-boot-tools` on Debian/Ubuntu.
