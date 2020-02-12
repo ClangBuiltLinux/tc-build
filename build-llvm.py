@@ -11,6 +11,8 @@ import shutil
 import textwrap
 import time
 import utils
+import re
+import urllib.request as request
 
 # This is a known good revision of LLVM for building the kernel
 # To bump this, run 'PATH_OVERRIDE=<path_to_updated_toolchain>/bin kernel/build.sh --allyesconfig'
@@ -265,7 +267,11 @@ def versioned_binaries(binary_name):
     """
 
     # There might be clang-6 to clang-11
-    tot_llvm_ver = 11
+    response = request.urlopen(
+        'https://raw.githubusercontent.com/llvm/llvm-project/master/llvm/CMakeLists.txt'
+    )
+    data = response.read().decode('utf-8')
+    tot_llvm_ver = re.search(r'^.*LLVM_VERSION_MAJOR\ (\d{2})\)', data).group(0)
     return ['%s-%s' % (binary_name, i) for i in range(tot_llvm_ver, 5, -1)]
 
 
