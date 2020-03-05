@@ -282,7 +282,9 @@ def versioned_binaries(binary_name):
         tot_llvm_ver = re.search('\d+', to_parse).group(0)
     except URLError:
         pass
-    return ['%s-%s' % (binary_name, i) for i in range(int(tot_llvm_ver), 6, -1)]
+    return [
+        '%s-%s' % (binary_name, i) for i in range(int(tot_llvm_ver), 6, -1)
+    ]
 
 
 def check_cc_ld_variables(root_folder):
