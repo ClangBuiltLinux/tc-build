@@ -267,17 +267,22 @@ def versioned_binaries(binary_name):
     :return: List of versioned binaries
     """
 
-    # There might be clang-6 to clang-11
+    # There might be clang-7 to clang-11
     tot_llvm_ver = 11
     try:
         response = request.urlopen(
             'https://raw.githubusercontent.com/llvm/llvm-project/master/llvm/CMakeLists.txt'
         )
-        data = response.read().decode('utf-8')
-        tot_llvm_ver = re.search(r'^.*LLVM_VERSION_MAJOR\ (\d{2})\)', data).group(0)
+        to_parse = None
+        data = response.readlines()
+        for line in data:
+            line = line.decode('utf-8').strip()
+            if "set(LLVM_VERSION_MAJOR" in line:
+                to_parse = line
+        tot_llvm_ver = re.search('\d+', to_parse).group(0)
     except URLError:
         pass
-    return ['%s-%s' % (binary_name, i) for i in range(tot_llvm_ver, 5, -1)]
+    return ['%s-%s' % (binary_name, i) for i in range(int(tot_llvm_ver), 6, -1)]
 
 
 def check_cc_ld_variables(root_folder):
