@@ -279,6 +279,7 @@ def versioned_binaries(binary_name):
             line = line.decode('utf-8').strip()
             if "set(LLVM_VERSION_MAJOR" in line:
                 to_parse = line
+                break
         tot_llvm_ver = re.search('\d+', to_parse).group(0)
     except URLError:
         pass
