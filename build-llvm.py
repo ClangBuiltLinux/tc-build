@@ -11,6 +11,9 @@ import shutil
 import textwrap
 import time
 import utils
+import re
+import urllib.request as request
+from urllib.error import URLError
 
 # This is a known good revision of LLVM for building the kernel
 # To bump this, run 'PATH_OVERRIDE=<path_to_updated_toolchain>/bin kernel/build.sh --allyesconfig'
@@ -273,8 +276,25 @@ def versioned_binaries(binary_name):
     :return: List of versioned binaries
     """
 
-    # There might be clang-6 to clang-10
-    return ['%s-%s' % (binary_name, i) for i in range(10, 5, -1)]
+    # There might be clang-7 to clang-11
+    tot_llvm_ver = 11
+    try:
+        response = request.urlopen(
+            'https://raw.githubusercontent.com/llvm/llvm-project/master/llvm/CMakeLists.txt'
+        )
+        to_parse = None
+        data = response.readlines()
+        for line in data:
+            line = line.decode('utf-8').strip()
+            if "set(LLVM_VERSION_MAJOR" in line:
+                to_parse = line
+                break
+        tot_llvm_ver = re.search('\d+', to_parse).group(0)
+    except URLError:
+        pass
+    return [
+        '%s-%s' % (binary_name, i) for i in range(int(tot_llvm_ver), 6, -1)
+    ]
 
 
 def check_cc_ld_variables(root_folder):
