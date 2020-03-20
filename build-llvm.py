@@ -220,7 +220,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default="clang;lld;compiler-rt")
+                        default="clang;compiler-rt;lld;polly")
     parser.add_argument("--pgo",
                         help=textwrap.dedent("""\
                         Build the final compiler with PGO, which can improve compile time performance.
