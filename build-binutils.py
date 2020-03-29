@@ -104,6 +104,7 @@ def create_targets(targets):
     targets_dict = {
         "arm": "arm-linux-gnueabi",
         "aarch64": "aarch64-linux-gnu",
+        "mips": "mips-linux-gnu",
         "mipsel": "mipsel-linux-gnu",
         "powerpc64": "powerpc64-linux-gnu",
         "powerpc64le": "powerpc64le-linux-gnu",
@@ -164,6 +165,12 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
             '--disable-multilib', '--disable-nls', '--with-gnu-as',
             '--with-gnu-ld',
             '--with-sysroot=%s' % install_folder.joinpath(target).as_posix()
+        ],
+        "mips-linux-gnu": [
+            '--disable-compressed-debug-sections', '--enable-new-dtags',
+            '--enable-shared',
+            '--enable-targets=mips64-linux-gnuabi64,mips64-linux-gnuabin32',
+            '--enable-threads'
         ],
         "mipsel-linux-gnu": [
             '--disable-compressed-debug-sections', '--enable-new-dtags',
