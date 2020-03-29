@@ -27,6 +27,8 @@ while (( ${#} )); do
                     "AArch64") TARGETS=( "${TARGETS[@]}" "aarch64-linux-gnu" ) ;;
                     "ARM") TARGETS=( "${TARGETS[@]}" "arm-linux-gnueabi" ) ;;
                     "PowerPC") TARGETS=( "${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" ) ;;
+                    # RISCV is consumed until Linux 5.7 to avoid carrying a patch file
+                    "RISCV") ;;
                     "SystemZ") TARGETS=( "${TARGETS[@]}" "s390x-linux-gnu" ) ;;
                     "X86") TARGETS=( "${TARGETS[@]}" "x86_64-linux-gnu" ) ;;
                 esac
