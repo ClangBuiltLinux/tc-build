@@ -77,7 +77,7 @@ def parse_parameters(root_folder):
                         help="""
                         The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
                         mipsel-linux-gnu, powerpc-linux-gnu, powerpc64-linux-gnu, powerpc64le-linux-gnu,
-                        s390x-linux-gnu, and x86_64-linux-gnu.
+                        riscv64-linux-gnu, s390x-linux-gnu, and x86_64-linux-gnu.
 
                         You can either pass the full target or just the first part (arm, aarch64, x86_64, etc)
                         or all if you want to build all targets (which is the default). It will only add the
