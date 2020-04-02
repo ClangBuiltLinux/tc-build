@@ -98,6 +98,7 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
+    # yapf: disable
     parser.add_argument("--build-type",
                         metavar='BUILD_TYPE',
                         help=textwrap.dedent("""\
@@ -111,6 +112,7 @@ def parse_parameters(root_folder):
                         type=str,
                         choices=['Release', 'Debug', 'RelWithDebInfo', 'MinSizeRel'],
                         default="Release")
+    # yapf: enable
     parser.add_argument("--check-targets",
                         help=textwrap.dedent("""\
                         By default, no testing is run on the toolchain. If you would like to run unit/regression
@@ -722,7 +724,6 @@ def stage_specific_cmake_defines(args, dirs, stage):
             if args.assertions:
                 defines['LLVM_ENABLE_ASSERTIONS'] = 'ON'
 
-
     return defines
 
 
@@ -913,7 +914,8 @@ def main():
         ref = GOOD_REVISION
     else:
         ref = args.branch
-    fetch_llvm_binutils(root_folder, not args.no_update, args.shallow_clone, ref)
+    fetch_llvm_binutils(root_folder, not args.no_update, args.shallow_clone,
+                        ref)
     cleanup(build_folder, args.incremental)
     dirs = Directories(build_folder, install_folder, root_folder)
     do_multistage_build(args, dirs, env_vars)
