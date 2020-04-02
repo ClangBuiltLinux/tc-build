@@ -17,7 +17,7 @@ from urllib.error import URLError
 
 # This is a known good revision of LLVM for building the kernel
 # To bump this, run 'PATH_OVERRIDE=<path_to_updated_toolchain>/bin kernel/build.sh --allyesconfig'
-GOOD_REVISION = 'b780df052dd2b246a760d00e00f7de9ebdab9d09'
+GOOD_REVISION = 'ebad678857a94c32ce7b6931e9c642b32d278b67'
 
 
 class Directories:
@@ -233,15 +233,17 @@ def parse_parameters(root_folder):
                         "--targets",
                         help=textwrap.dedent("""\
                         LLVM is multitargeted by default. Currently, this script only enables the arm32, aarch64,
-                        mips, powerpc, and x86 backends because that's what the Linux kernel is currently concerned
-                        with. If you would like to override this, you can use this parameter and supply a list that is
-                        supported by LLVM_TARGETS_TO_BUILD: https://llvm.org/docs/CMake.html#llvm-specific-variables
+                        mips, powerpc, riscv, s390, and x86 backends because that's what the Linux kernel is
+                        currently concerned with. If you would like to override this, you can use this parameter
+                        and supply a list that is supported by LLVM_TARGETS_TO_BUILD:
+
+                        https://llvm.org/docs/CMake.html#llvm-specific-variables
 
                         Example: -t "AArch64;X86"
 
                         """),
                         type=str,
-                        default="AArch64;ARM;Mips;PowerPC;X86")
+                        default="AArch64;ARM;Mips;PowerPC;RISCV;SystemZ;X86")
     parser.add_argument("--use-good-revision",
                         help=textwrap.dedent("""\
                         By default, the script updates LLVM to the latest tip of tree revision, which may at times be
