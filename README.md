@@ -38,6 +38,7 @@ These scripts have been tested in a Docker image of the following distributions,
               python3 \
               texinfo \
               u-boot-tools \
+              xz-utils \
               zlib1g-dev
   ```
 
@@ -61,7 +62,9 @@ These scripts have been tested in a Docker image of the following distributions,
               ninja-build \
               openssl-devel \
               python3 \
+              texinfo-tex \
               uboot-tools \
+              xz \
               zlib-devel
   ```
 
