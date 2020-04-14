@@ -53,6 +53,8 @@ def parse_parameters(root_folder):
     """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
+    clone_options = parser.add_mutually_exclusive_group()
+
     parser.add_argument("--assertions",
                         help=textwrap.dedent("""\
                         In a release configuration, assertions are not enabled. Assertions can help catch
@@ -222,9 +224,9 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
-    parser.add_argument("-s",
-                        "--shallow-clone",
-                        help=textwrap.dedent("""\
+    clone_options.add_argument("-s",
+                               "--shallow-clone",
+                               help=textwrap.dedent("""\
                         Only fetch the required objects and omit history when cloning the LLVM repo. This
                         option is only used for the initial clone, not subsequent fetches. This can break
                         the script's ability to automatically update the repo to newer revisions or branches
@@ -234,11 +236,15 @@ def parse_parameters(root_folder):
 
                         https://github.com/ClangBuiltLinux/tc-build#build-llvmpy
 
-                        NOTE: When no '--branch' is specified, only master is fetched. To work with other branches,
-                              a branch other than master needs to be specified when the repo is first cloned.
+                        A couple of notes:
 
-                        """),
-                        action="store_true")
+                        1. This cannot be used with '--use-good-revision'.
+
+                        2. When no '--branch' is specified, only master is fetched. To work with other branches,
+                           a branch other than master needs to be specified when the repo is first cloned.
+
+                               """),
+                               action="store_true")
     parser.add_argument("-t",
                         "--targets",
                         help=textwrap.dedent("""\
@@ -254,15 +260,18 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="AArch64;ARM;Mips;PowerPC;RISCV;SystemZ;X86")
-    parser.add_argument("--use-good-revision",
-                        help=textwrap.dedent("""\
+    clone_options.add_argument("--use-good-revision",
+                               help=textwrap.dedent("""\
                         By default, the script updates LLVM to the latest tip of tree revision, which may at times be
                         broken or not work right. With this option, it will checkout a known good revision of LLVM
                         that builds and works properly. If you use this option often, please remember to update the
                         script as the known good revision will change.
 
-                        """),
-                        action="store_true")
+                        NOTE: This option cannot be used with '--shallow-clone'.
+
+                               """),
+                               action="store_true")
+
     return parser.parse_args()
 
 
