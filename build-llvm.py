@@ -200,15 +200,6 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
-    parser.add_argument("-s",
-                        "--shallow-clone",
-                        help=textwrap.dedent("""\
-                        Only fetch the required objects and omit history when cloning the LLVM repo. This
-                        speeds up the initial clone, but may break updating to later revisions and thus
-                        necessitate a re-clone in the future.
-
-                        """),
-                        action="store_true")
     parser.add_argument("-p",
                         "--projects",
                         help=textwrap.dedent("""\
@@ -228,6 +219,23 @@ def parse_parameters(root_folder):
                         Build the final compiler with PGO, which can improve compile time performance.
 
                         See https://llvm.org/docs/HowToBuildWithPGO.html for more information.
+
+                        """),
+                        action="store_true")
+    parser.add_argument("-s",
+                        "--shallow-clone",
+                        help=textwrap.dedent("""\
+                        Only fetch the required objects and omit history when cloning the LLVM repo. This
+                        option is only used for the initial clone, not subsequent fetches. This can break
+                        the script's ability to automatically update the repo to newer revisions or branches
+                        so be careful using this. This option is really designed for continuous integration
+                        runs, where a one off clone is necessary. A better option is usually managing the repo
+                        yourself:
+
+                        https://github.com/ClangBuiltLinux/tc-build#build-llvmpy
+
+                        NOTE: When no '--branch' is specified, only master is fetched. To work with other branches,
+                              a branch other than master needs to be specified when the repo is first cloned.
 
                         """),
                         action="store_true")
