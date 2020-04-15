@@ -68,7 +68,8 @@ def parse_parameters(root_folder):
                         By default, the script builds the master branch (tip of tree) of LLVM. If you would
                         like to build an older branch, use this parameter. This may be helpful in tracking
                         down an older bug to properly bisect. This value is just passed along to 'git checkout'
-                        so it can be a branch name, tag name, or hash.
+                        so it can be a branch name, tag name, or hash (unless '--shallow-clone' is used, which
+                        means a hash cannot be used because GitHub does not allow it).
 
                         """),
                         type=str,
@@ -425,6 +426,30 @@ def check_dependencies():
         print(output)
 
 
+def repo_is_shallow(repo):
+    """
+    Check if repo is a shallow clone already (looks for <repo>/.git/shallow)
+    :param repo: The path to the repo to check
+    :return: True if the repo is shallow, False if not
+    """
+    git_dir = subprocess.check_output(["git", "rev-parse", "--git-dir"],
+                                      cwd=repo.as_posix()).decode().strip()
+    return pathlib.Path(repo).resolve().joinpath(git_dir, "shallow").exists()
+
+
+def ref_exists(repo, ref):
+    """
+    Check if ref exists using show-branch (works for branches, tags, and raw SHAs)
+    :param repo: The path to the repo to check
+    :param ref: The ref to check
+    :return: True if ref exits, False if not
+    """
+    return subprocess.run(["git", "show-branch", ref],
+                          stderr=subprocess.STDOUT,
+                          stdout=subprocess.DEVNULL,
+                          cwd=repo.as_posix()).returncode == 0
+
+
 def fetch_llvm_binutils(root_folder, update, shallow, ref):
     """
     Download llvm and binutils or update them if they exist
@@ -437,7 +462,29 @@ def fetch_llvm_binutils(root_folder, update, shallow, ref):
     if p.is_dir():
         if update:
             utils.print_header("Updating LLVM")
+
+            # Make sure repo is up to date before trying to see if checkout is possible
             subprocess.run(["git", "fetch", "origin"], check=True, cwd=cwd)
+
+            # Explain to the user how to avoid issues if their ref does not exist with
+            # a shallow clone.
+            if repo_is_shallow(p) and not ref_exists(p, ref):
+                utils.print_error(
+                    "\nSupplied ref (%s) does not exist, cannot checkout." %
+                    ref)
+                utils.print_error("To proceed, either:")
+                utils.print_error(
+                    "\t1. Manage the repo yourself and pass '--no-update' to the script."
+                )
+                utils.print_error(
+                    "\t2. Run 'git -C %s fetch --unshallow origin' to get a complete repository."
+                    % cwd)
+                utils.print_error(
+                    "\t3. Delete '%s' and re-run the script with '-s' + '-b <ref>' to get a full set of refs."
+                    % cwd)
+                exit(1)
+
+            # Do the update
             subprocess.run(["git", "checkout", ref], check=True, cwd=cwd)
             local_ref = None
             try:

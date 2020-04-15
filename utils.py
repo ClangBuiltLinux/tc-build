@@ -79,8 +79,9 @@ def print_header(string):
     Prints a fancy header
     :param string: String to print inside the header
     """
-    # Use bold red for the header
-    print("\033[01;31m")
+    # Use bold cyan for the header so that the headers
+    # are not intepreted as success (green) or failed (red)
+    print("\033[01;36m")
     for x in range(0, len(string) + 6):
         print("=", end="")
     print("\n== %s ==" % string)
@@ -88,3 +89,12 @@ def print_header(string):
         print("=", end="")
     # \033[0m resets the color back to the user's default
     print("\n\033[0m")
+
+
+def print_error(string):
+    """
+    Prints a error in bold red
+    :param string: String to print
+    """
+    # Use bold red for error
+    print("\033[01;31m%s\n\033[0m" % string)
