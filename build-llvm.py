@@ -53,6 +53,8 @@ def parse_parameters(root_folder):
     """
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
+    clone_options = parser.add_mutually_exclusive_group()
+
     parser.add_argument("--assertions",
                         help=textwrap.dedent("""\
                         In a release configuration, assertions are not enabled. Assertions can help catch
@@ -66,7 +68,8 @@ def parse_parameters(root_folder):
                         By default, the script builds the master branch (tip of tree) of LLVM. If you would
                         like to build an older branch, use this parameter. This may be helpful in tracking
                         down an older bug to properly bisect. This value is just passed along to 'git checkout'
-                        so it can be a branch name, tag name, or hash.
+                        so it can be a branch name, tag name, or hash (unless '--shallow-clone' is used, which
+                        means a hash cannot be used because GitHub does not allow it).
 
                         """),
                         type=str,
@@ -200,15 +203,6 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
-    parser.add_argument("-s",
-                        "--shallow-clone",
-                        help=textwrap.dedent("""\
-                        Only fetch the required objects and omit history when cloning the LLVM repo. This
-                        speeds up the initial clone, but may break updating to later revisions and thus
-                        necessitate a re-clone in the future.
-
-                        """),
-                        action="store_true")
     parser.add_argument("-p",
                         "--projects",
                         help=textwrap.dedent("""\
@@ -231,6 +225,27 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
+    clone_options.add_argument("-s",
+                               "--shallow-clone",
+                               help=textwrap.dedent("""\
+                        Only fetch the required objects and omit history when cloning the LLVM repo. This
+                        option is only used for the initial clone, not subsequent fetches. This can break
+                        the script's ability to automatically update the repo to newer revisions or branches
+                        so be careful using this. This option is really designed for continuous integration
+                        runs, where a one off clone is necessary. A better option is usually managing the repo
+                        yourself:
+
+                        https://github.com/ClangBuiltLinux/tc-build#build-llvmpy
+
+                        A couple of notes:
+
+                        1. This cannot be used with '--use-good-revision'.
+
+                        2. When no '--branch' is specified, only master is fetched. To work with other branches,
+                           a branch other than master needs to be specified when the repo is first cloned.
+
+                               """),
+                               action="store_true")
     parser.add_argument("-t",
                         "--targets",
                         help=textwrap.dedent("""\
@@ -246,15 +261,18 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="AArch64;ARM;Mips;PowerPC;RISCV;SystemZ;X86")
-    parser.add_argument("--use-good-revision",
-                        help=textwrap.dedent("""\
+    clone_options.add_argument("--use-good-revision",
+                               help=textwrap.dedent("""\
                         By default, the script updates LLVM to the latest tip of tree revision, which may at times be
                         broken or not work right. With this option, it will checkout a known good revision of LLVM
                         that builds and works properly. If you use this option often, please remember to update the
                         script as the known good revision will change.
 
-                        """),
-                        action="store_true")
+                        NOTE: This option cannot be used with '--shallow-clone'.
+
+                               """),
+                               action="store_true")
+
     return parser.parse_args()
 
 
@@ -408,6 +426,30 @@ def check_dependencies():
         print(output)
 
 
+def repo_is_shallow(repo):
+    """
+    Check if repo is a shallow clone already (looks for <repo>/.git/shallow)
+    :param repo: The path to the repo to check
+    :return: True if the repo is shallow, False if not
+    """
+    git_dir = subprocess.check_output(["git", "rev-parse", "--git-dir"],
+                                      cwd=repo.as_posix()).decode().strip()
+    return pathlib.Path(repo).resolve().joinpath(git_dir, "shallow").exists()
+
+
+def ref_exists(repo, ref):
+    """
+    Check if ref exists using show-branch (works for branches, tags, and raw SHAs)
+    :param repo: The path to the repo to check
+    :param ref: The ref to check
+    :return: True if ref exits, False if not
+    """
+    return subprocess.run(["git", "show-branch", ref],
+                          stderr=subprocess.STDOUT,
+                          stdout=subprocess.DEVNULL,
+                          cwd=repo.as_posix()).returncode == 0
+
+
 def fetch_llvm_binutils(root_folder, update, shallow, ref):
     """
     Download llvm and binutils or update them if they exist
@@ -420,7 +462,29 @@ def fetch_llvm_binutils(root_folder, update, shallow, ref):
     if p.is_dir():
         if update:
             utils.print_header("Updating LLVM")
+
+            # Make sure repo is up to date before trying to see if checkout is possible
             subprocess.run(["git", "fetch", "origin"], check=True, cwd=cwd)
+
+            # Explain to the user how to avoid issues if their ref does not exist with
+            # a shallow clone.
+            if repo_is_shallow(p) and not ref_exists(p, ref):
+                utils.print_error(
+                    "\nSupplied ref (%s) does not exist, cannot checkout." %
+                    ref)
+                utils.print_error("To proceed, either:")
+                utils.print_error(
+                    "\t1. Manage the repo yourself and pass '--no-update' to the script."
+                )
+                utils.print_error(
+                    "\t2. Run 'git -C %s fetch --unshallow origin' to get a complete repository."
+                    % cwd)
+                utils.print_error(
+                    "\t3. Delete '%s' and re-run the script with '-s' + '-b <ref>' to get a full set of refs."
+                    % cwd)
+                exit(1)
+
+            # Do the update
             subprocess.run(["git", "checkout", ref], check=True, cwd=cwd)
             local_ref = None
             try:
@@ -440,8 +504,13 @@ def fetch_llvm_binutils(root_folder, update, shallow, ref):
                                check=True,
                                cwd=cwd)
     else:
-        extra_args = ("--depth", "1") if shallow else ()
         utils.print_header("Downloading LLVM")
+
+        extra_args = ()
+        if shallow:
+            extra_args = ("--depth", "1")
+            if ref != "master":
+                extra_args += ("--no-single-branch", )
         subprocess.run([
             "git", "clone", *extra_args, "git://github.com/llvm/llvm-project",
             p.as_posix()
