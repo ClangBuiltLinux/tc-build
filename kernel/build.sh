@@ -5,38 +5,43 @@ TC_BLD=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"/.. && pwd)
 [[ -z ${TC_BLD} ]] && exit 1
 
 # Parse parameters
-while (( ${#} )); do
+while ((${#})); do
     case ${1} in
         "--allyesconfig")
-            CONFIG_TARGET=allyesconfig ;;
-        "-b"|"--build-folder")
+            CONFIG_TARGET=allyesconfig
+            ;;
+        "-b" | "--build-folder")
             shift
-            BUILD_FOLDER=${1} ;;
-        "-p"|"--path-override")
+            BUILD_FOLDER=${1}
+            ;;
+        "-p" | "--path-override")
             shift
-            PATH_OVERRIDE=${1} ;;
-        "-s"|"--src-folder")
+            PATH_OVERRIDE=${1}
+            ;;
+        "-s" | "--src-folder")
             shift
-            SRC_FOLDER=${1} ;;
-        "-t"|"--targets")
+            SRC_FOLDER=${1}
+            ;;
+        "-t" | "--targets")
             shift
-            IFS=";" read -ra LLVM_TARGETS <<< "${1}"
+            IFS=";" read -ra LLVM_TARGETS <<<"${1}"
             # Convert LLVM targets into GNU triples
             for LLVM_TARGET in "${LLVM_TARGETS[@]}"; do
                 case ${LLVM_TARGET} in
-                    "AArch64") TARGETS=( "${TARGETS[@]}" "aarch64-linux-gnu" ) ;;
-                    "ARM") TARGETS=( "${TARGETS[@]}" "arm-linux-gnueabi" ) ;;
-                    "PowerPC") TARGETS=( "${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" ) ;;
-                    # RISCV is consumed until Linux 5.7 to avoid carrying a patch file
+                    "AArch64") TARGETS=("${TARGETS[@]}" "aarch64-linux-gnu") ;;
+                    "ARM") TARGETS=("${TARGETS[@]}" "arm-linux-gnueabi") ;;
+                    "PowerPC") TARGETS=("${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu") ;;
+                        # RISCV is consumed until Linux 5.7 to avoid carrying a patch file
                     "RISCV") ;;
-                    "SystemZ") TARGETS=( "${TARGETS[@]}" "s390x-linux-gnu" ) ;;
-                    "X86") TARGETS=( "${TARGETS[@]}" "x86_64-linux-gnu" ) ;;
+                    "SystemZ") TARGETS=("${TARGETS[@]}" "s390x-linux-gnu") ;;
+                    "X86") TARGETS=("${TARGETS[@]}" "x86_64-linux-gnu") ;;
                 esac
             done
+            ;;
     esac
     shift
 done
-[[ -z ${TARGETS[*]} ]] && TARGETS=( "arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" "s390x-linux-gnu" "x86_64-linux-gnu" )
+[[ -z ${TARGETS[*]} ]] && TARGETS=("arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" "s390x-linux-gnu" "x86_64-linux-gnu")
 [[ -z ${CONFIG_TARGET} ]] && CONFIG_TARGET=defconfig
 
 # Add the default install bin folder to PATH for binutils
@@ -60,7 +65,10 @@ else
     if [[ ! -f ${LINUX_TARBALL} ]]; then
         curl -LSso "${LINUX_TARBALL}" https://cdn.kernel.org/pub/linux/kernel/v5.x/"${LINUX_TARBALL##*/}"
 
-        ( cd "${LINUX_TARBALL%/*}" || exit 1; sha256sum -c "${LINUX_TARBALL}".sha256 --quiet ) || {
+        (
+            cd "${LINUX_TARBALL%/*}" || exit 1
+            sha256sum -c "${LINUX_TARBALL}".sha256 --quiet
+        ) || {
             echo "Linux tarball verification failed! Please remove '${LINUX_TARBALL}' and try again."
             exit 1
         }
@@ -70,7 +78,7 @@ else
     [[ -f ${LINUX_PATCH} ]] && rm -rf ${LINUX}
     [[ -d ${LINUX} ]] || { tar -xf "${LINUX_TARBALL}" || exit ${?}; }
     cd ${LINUX} || exit 1
-    [[ -f ${LINUX_PATCH} ]] && { patch -p1 < "${LINUX_PATCH}" || exit ${?}; }
+    [[ -f ${LINUX_PATCH} ]] && { patch -p1 <"${LINUX_PATCH}" || exit ${?}; }
 fi
 
 # Check for all binutils and build them if necessary
@@ -82,13 +90,13 @@ for PREFIX in "${TARGETS[@]}"; do
     else
         COMMAND="${PREFIX}"-as
     fi
-    command -v "${COMMAND}" &>/dev/null || BINUTILS_TARGETS=( "${BINUTILS_TARGETS[@]}" "${PREFIX}" )
+    command -v "${COMMAND}" &>/dev/null || BINUTILS_TARGETS=("${BINUTILS_TARGETS[@]}" "${PREFIX}")
 done
 [[ -n "${BINUTILS_TARGETS[*]}" ]] && { "${TC_BLD}"/build-binutils.py -t "${BINUTILS_TARGETS[@]}" || exit ${?}; }
 
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
-MAKE=( make -j"$(nproc)" -s CC=clang O=out )
+MAKE=(make -j"$(nproc)" -s CC=clang O=out)
 
 set -x
 
