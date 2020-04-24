@@ -8,9 +8,9 @@
 
 compiler="$*"
 
-if ! ( $compiler --version | grep -q clang) ; then
-	echo 0
-	exit 1
+if ! ($compiler --version | grep -q clang); then
+    echo 0
+    exit 1
 fi
 
 MAJOR=$(echo __clang_major__ | $compiler -E -x c - | tail -n 1)
