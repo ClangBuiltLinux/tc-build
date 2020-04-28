@@ -168,8 +168,12 @@ def parse_parameters(root_folder):
     parser.add_argument("--lto",
                         metavar="LTO_TYPE",
                         help=textwrap.dedent("""\
-                        Build the final compiler with either full LTO (full) or ThinLTO (thin), which can
+                        Build the final compiler with either ThinLTO (thin) or  full LTO (full), which can
                         improve compile time performance.
+
+                        Only use full LTO if you have more than 64 GB of memory. ThinLTO uses way less memory,
+                        compiles faster because it is fully multithreaded, and it has almost identical
+                        performance (within 1%% usually) to full LTO.
 
                         See the two links below for more information.
 
@@ -178,7 +182,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        choices=['full', 'thin'])
+                        choices=['thin', 'full'])
     parser.add_argument("-m",
                         "--march",
                         metavar="ARCH",
