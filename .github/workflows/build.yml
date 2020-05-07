@@ -6,10 +6,10 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: sudo apt-get install -y --no-install-recommends bc bison ca-certificates clang cmake curl file flex gcc g++ git libelf-dev libssl-dev make ninja-build python3 texinfo xz-utils zlib1g-dev
+      run: bash ci.sh deps
     - name: Build LLVM
-      run: python3 build-llvm.py --assertions --branch "release/10.x" --build-stage1-only --install-stage1-only --no-ccache --projects "clang;lld" --shallow-clone --targets X86
+      run: bash ci.sh llvm
     - name: Build binutils
-      run: python3 build-binutils.py -t x86_64
+      run: bash ci.sh binutils
     - name: Build kernel
-      run: bash kernel/build.sh -t X86
+      run: bash ci.sh kernel
