@@ -1,0 +1,15 @@
+name: Build test
+on: [push, pull_request]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: sudo apt-get install -y --no-install-recommends bc bison ca-certificates clang cmake curl file flex gcc g++ git libelf-dev libssl-dev make ninja-build python3 texinfo xz-utils zlib1g-dev
+    - name: Build LLVM
+      run: python3 build-llvm.py --assertions --branch "release/10.x" --build-stage1-only --install-stage1-only --no-ccache --projects "clang;lld" --shallow-clone --targets X86
+    - name: Build binutils
+      run: python3 build-binutils.py -t x86_64
+    - name: Build kernel
+      run: bash kernel/build.sh -t X86
