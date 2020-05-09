@@ -4,6 +4,11 @@
 TC_BLD=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"/.. && pwd)
 [[ -z ${TC_BLD} ]] && exit 1
 
+function header() {
+    BORDER="====$(for _ in $(seq ${#1}); do printf '='; done)===="
+    printf '\033[1m\n%s\n%s\n%s\n\n\033[0m' "${BORDER}" "==  ${1}  ==" "${BORDER}"
+}
+
 # Parse parameters
 while ((${#})); do
     case ${1} in
@@ -94,9 +99,22 @@ for PREFIX in "${TARGETS[@]}"; do
 done
 [[ -n "${BINUTILS_TARGETS[*]}" ]] && { "${TC_BLD}"/build-binutils.py -t "${BINUTILS_TARGETS[@]}" || exit ${?}; }
 
+# Print final toolchain information
+header "Toolchain information"
+clang --version
+for PREFIX in "${TARGETS[@]}"; do
+    echo
+    case ${PREFIX} in
+        x86_64-linux-gnu) as --version ;;
+        *) "${PREFIX}"-as --version ;;
+    esac
+done
+
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
 MAKE=(make -j"$(nproc)" -s CC=clang O=out)
+
+header "Building kernels"
 
 set -x
 
