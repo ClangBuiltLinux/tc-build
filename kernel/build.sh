@@ -23,6 +23,10 @@ while ((${#})); do
             shift
             PATH_OVERRIDE=${1}
             ;;
+        "--pgo")
+            shift
+            PGO=${1}
+            ;;
         "-s" | "--src-folder")
             shift
             SRC_FOLDER=${1}
@@ -50,11 +54,9 @@ done
 [[ -z ${CONFIG_TARGET} ]] && CONFIG_TARGET=defconfig
 
 # Add the default install bin folder to PATH for binutils
-# Add the stage 2 bin folder to PATH for the instrumented clang
-for BIN_FOLDER in ${TC_BLD}/install/bin ${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin; do
-    export PATH=${BIN_FOLDER}:${PATH}
-done
-
+export PATH=${TC_BLD}/install/bin:${PATH}
+# Add the stage 2 bin folder to PATH for the instrumented clang if we are doing PGO
+${PGO:=false} && export PATH=${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin:${PATH}
 # If the user wants to add another folder to PATH, they can do it with the PATH_OVERRIDE variable
 [[ -n ${PATH_OVERRIDE} ]] && export PATH=${PATH_OVERRIDE}:${PATH}
 

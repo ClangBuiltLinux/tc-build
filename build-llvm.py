@@ -943,7 +943,8 @@ def generate_pgo_profiles(args, dirs):
     # Run kernel/build.sh
     subprocess.run([
         dirs.root_folder.joinpath("kernel", "build.sh"), '-b',
-        dirs.build_folder, '-t', args.targets
+        dirs.build_folder, '--pgo',
+        str(args.pgo).lower(), '-t', args.targets
     ],
                    check=True,
                    cwd=dirs.build_folder.as_posix())
