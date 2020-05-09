@@ -55,16 +55,18 @@ function do_kernel() {
 }
 
 function do_llvm() {
+    EXTRA_ARGS=()
+    [[ -n ${GITHUB_ACTIONS:-} ]] && EXTRA_ARGS+=(--no-ccache)
     "${BASE}"/build-llvm.py \
         --assertions \
         --branch "release/10.x" \
         --build-stage1-only \
         --check-targets clang lld llvm \
         --install-stage1-only \
-        --no-ccache \
         --projects "clang;lld" \
         --shallow-clone \
-        --targets X86
+        --targets X86 \
+        "${EXTRA_ARGS[@]}"
 }
 
 parse_parameters "${@}"
