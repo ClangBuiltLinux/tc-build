@@ -51,7 +51,8 @@ function do_deps() {
 }
 
 function do_kernel() {
-    "${BASE}"/kernel/build.sh -t X86
+    cd "${BASE}"/kernel
+    ./build.sh -t X86
 }
 
 function do_llvm() {
