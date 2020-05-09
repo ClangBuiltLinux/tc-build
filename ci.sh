@@ -42,6 +42,7 @@ function do_deps() {
         git \
         libelf-dev \
         libssl-dev \
+        lld \
         make \
         ninja-build \
         python3 \
