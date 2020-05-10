@@ -27,7 +27,7 @@ function do_binutils() {
 
 function do_deps() {
     # We only run this when running on GitHub Actions
-    [[ -z ${GITHUB_ACTIONS} ]] && return 0
+    [[ -z ${GITHUB_ACTIONS:-} ]] && return 0
     sudo apt-get install -y --no-install-recommends \
         bc \
         bison \
@@ -42,6 +42,7 @@ function do_deps() {
         git \
         libelf-dev \
         libssl-dev \
+        lld \
         make \
         ninja-build \
         python3 \
@@ -51,20 +52,23 @@ function do_deps() {
 }
 
 function do_kernel() {
-    "${BASE}"/kernel/build.sh -t X86
+    cd "${BASE}"/kernel
+    ./build.sh -t X86
 }
 
 function do_llvm() {
+    EXTRA_ARGS=()
+    [[ -n ${GITHUB_ACTIONS:-} ]] && EXTRA_ARGS+=(--no-ccache)
     "${BASE}"/build-llvm.py \
         --assertions \
         --branch "release/10.x" \
         --build-stage1-only \
         --check-targets clang lld llvm \
         --install-stage1-only \
-        --no-ccache \
         --projects "clang;lld" \
         --shallow-clone \
-        --targets X86
+        --targets X86 \
+        "${EXTRA_ARGS[@]}"
 }
 
 parse_parameters "${@}"
