@@ -4,6 +4,11 @@
 TC_BLD=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"/.. && pwd)
 [[ -z ${TC_BLD} ]] && exit 1
 
+function header() {
+    BORDER="====$(for _ in $(seq ${#1}); do printf '='; done)===="
+    printf '\033[1m\n%s\n%s\n%s\n\n\033[0m' "${BORDER}" "==  ${1}  ==" "${BORDER}"
+}
+
 # Parse parameters
 while ((${#})); do
     case ${1} in
@@ -17,6 +22,10 @@ while ((${#})); do
         "-p" | "--path-override")
             shift
             PATH_OVERRIDE=${1}
+            ;;
+        "--pgo")
+            shift
+            PGO=${1}
             ;;
         "-s" | "--src-folder")
             shift
@@ -45,11 +54,9 @@ done
 [[ -z ${CONFIG_TARGET} ]] && CONFIG_TARGET=defconfig
 
 # Add the default install bin folder to PATH for binutils
-# Add the stage 2 bin folder to PATH for the instrumented clang
-for BIN_FOLDER in ${TC_BLD}/install/bin ${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin; do
-    export PATH=${BIN_FOLDER}:${PATH}
-done
-
+export PATH=${TC_BLD}/install/bin:${PATH}
+# Add the stage 2 bin folder to PATH for the instrumented clang if we are doing PGO
+${PGO:=false} && export PATH=${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin:${PATH}
 # If the user wants to add another folder to PATH, they can do it with the PATH_OVERRIDE variable
 [[ -n ${PATH_OVERRIDE} ]] && export PATH=${PATH_OVERRIDE}:${PATH}
 
@@ -94,9 +101,22 @@ for PREFIX in "${TARGETS[@]}"; do
 done
 [[ -n "${BINUTILS_TARGETS[*]}" ]] && { "${TC_BLD}"/build-binutils.py -t "${BINUTILS_TARGETS[@]}" || exit ${?}; }
 
+# Print final toolchain information
+header "Toolchain information"
+clang --version
+for PREFIX in "${TARGETS[@]}"; do
+    echo
+    case ${PREFIX} in
+        x86_64-linux-gnu) as --version ;;
+        *) "${PREFIX}"-as --version ;;
+    esac
+done
+
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
 MAKE=(make -j"$(nproc)" -s CC=clang O=out)
+
+header "Building kernels"
 
 set -x
 
