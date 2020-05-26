@@ -134,7 +134,8 @@ def parse_parameters(root_folder):
                         "Android clang version..."). Useful when reverting or applying patches on top
                         of upstream clang to differentiate a toolchain built with this script from
                         upstream clang or to distinguish a toolchain built with this script from the
-                        system's clang. Defaults to ClangBuiltLinux.
+                        system's clang. Defaults to ClangBuiltLinux, can be set to an empty string to
+                        override this and have no vendor in the version string.
 
                         """),
                         type=str,
