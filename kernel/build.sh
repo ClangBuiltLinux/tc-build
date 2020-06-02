@@ -64,7 +64,7 @@ ${PGO:=false} && export PATH=${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin:${
 if [[ -n ${SRC_FOLDER} ]]; then
     cd "${SRC_FOLDER}" || exit 1
 else
-    LINUX=linux-5.6
+    LINUX=linux-5.7
     LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.xz
     LINUX_PATCH=${TC_BLD}/kernel/${LINUX}-${CONFIG_TARGET}.patch
 
