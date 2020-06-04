@@ -98,7 +98,7 @@ Run `./build-llvm.py -h` for more options and information.
 
 ## build-binutils.py
 
-This script builds a standalone copy of binutils. By default, `./build-binutils.py` will download binutils 2.32, build for all architectures we currently care about (arm32, aarch64, powerpc32, powerpc64le, and x86_64), and install them into `install`. Run `./build-binutils.py -h` for more options.
+This script builds a standalone copy of binutils. By default, `./build-binutils.py` will download the [latest stable version](https://www.gnu.org/software/binutils/) of binutils, build for all architectures we currently care about (see the help text or script for the full list), and install them into `install`. Run `./build-binutils.py -h` for more options.
 
 Building a standalone copy of binutils might be needed because certain distributions like Arch Linux (whose options the script uses) might symlink `/usr/lib/LLVMgold.so` to `/usr/lib/bfd-plugins` ([source](https://bugs.archlinux.org/task/28479)), which can cause issues when using the system's linker for LTO (even with `LD_LIBRARY_PATH`):
 
