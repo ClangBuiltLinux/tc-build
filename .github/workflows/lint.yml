@@ -9,13 +9,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: shellcheck
-      uses: bewuethr/shellcheck-action@v1
+      uses: bewuethr/shellcheck-action@v2
   yapf:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: yapf
-      uses: AlexanderMelde/yapf-action@master
+      uses: AlexanderMelde/yapf-action@v1.0
   shfmt-check:
     runs-on: ubuntu-latest
     steps:
@@ -23,7 +23,7 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: '1.14.2'
-    - uses: actions/cache@v2.0.0
+    - uses: actions/cache@v2
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go
