@@ -39,6 +39,7 @@ while ((${#})); do
                 case ${LLVM_TARGET} in
                     "AArch64") TARGETS=("${TARGETS[@]}" "aarch64-linux-gnu") ;;
                     "ARM") TARGETS=("${TARGETS[@]}" "arm-linux-gnueabi") ;;
+                    "Mips") TARGETS=("${TARGETS[@]}" "mipsel-linux-gnu") ;;
                     "PowerPC") TARGETS=("${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu") ;;
                     "RISCV") TARGETS=("${TARGETS[@]}" "riscv64-linux-gnu") ;;
                     "SystemZ") TARGETS=("${TARGETS[@]}" "s390x-linux-gnu") ;;
@@ -49,7 +50,17 @@ while ((${#})); do
     esac
     shift
 done
-[[ -z ${TARGETS[*]} ]] && TARGETS=("arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" "riscv64-linux-gnu" "s390x-linux-gnu" "x86_64-linux-gnu")
+[[ -z ${TARGETS[*]} ]] && TARGETS=(
+    "arm-linux-gnueabi"
+    "aarch64-linux-gnu"
+    "mipsel-linux-gnu"
+    "powerpc-linux-gnu"
+    "powerpc64-linux-gnu"
+    "powerpc64le-linux-gnu"
+    "riscv64-linux-gnu"
+    "s390x-linux-gnu"
+    "x86_64-linux-gnu"
+)
 [[ -z ${CONFIG_TARGET} ]] && CONFIG_TARGET=defconfig
 
 # Add the default install bin folder to PATH for binutils
@@ -138,6 +149,14 @@ for TARGET in "${TARGETS[@]}"; do
                 KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
                 LLVM=1 \
                 distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?}
+            ;;
+        "mipsel-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=mips \
+                CROSS_COMPILE="${TARGET}-" \
+                LLVM=1 \
+                distclean malta_kvm_guest_defconfig vmlinux modules || exit ${?}
             ;;
         "powerpc-linux-gnu")
             time \
