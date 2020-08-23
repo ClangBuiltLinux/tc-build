@@ -114,7 +114,7 @@ done
 
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
-MAKE=(make -j"$(nproc)" -s O=out)
+MAKE=(make -skj"$(nproc)" O=out)
 
 header "Building kernels"
 
