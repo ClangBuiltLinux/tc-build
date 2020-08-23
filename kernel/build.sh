@@ -114,7 +114,7 @@ done
 
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
-MAKE=(make -j"$(nproc)" -s CC=clang O=out)
+MAKE=(make -j"$(nproc)" -s O=out)
 
 header "Building kernels"
 
@@ -128,7 +128,7 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=arm \
                 CROSS_COMPILE="${TARGET}-" \
                 KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
-                LD=ld.lld \
+                LLVM=1 \
                 distclean "${CONFIG_TARGET}" zImage modules || exit ${?}
             ;;
         "aarch64-linux-gnu")
@@ -137,7 +137,7 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=arm64 \
                 CROSS_COMPILE="${TARGET}-" \
                 KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
-                LD=ld.lld \
+                LLVM=1 \
                 distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?}
             ;;
         "powerpc-linux-gnu")
@@ -145,13 +145,16 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=powerpc \
                 CROSS_COMPILE="${TARGET}-" \
+                LLVM=1 \
                 distclean ppc44x_defconfig zImage modules || exit ${?}
             ;;
         "powerpc64-linux-gnu")
             time \
                 "${MAKE[@]}" \
                 ARCH=powerpc \
+                LD="${TARGET}-ld" \
                 CROSS_COMPILE="${TARGET}-" \
+                LLVM=1 \
                 distclean pseries_defconfig vmlinux modules || exit ${?}
             ;;
         "powerpc64le-linux-gnu")
@@ -159,6 +162,7 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=powerpc \
                 CROSS_COMPILE="${TARGET}-" \
+                LLVM=1 \
                 distclean powernv_defconfig zImage.epapr modules || exit ${?}
             ;;
         "s390x-linux-gnu")
@@ -166,12 +170,16 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=s390 \
                 CROSS_COMPILE="${TARGET}-" \
+                LD="${TARGET}-ld" \
+                LLVM=1 \
+                OBJCOPY="${TARGET}-objcopy" \
+                OBJDUMP="${TARGET}-objdump" \
                 distclean defconfig bzImage modules || exit ${?}
             ;;
         "x86_64-linux-gnu")
             time \
                 "${MAKE[@]}" \
-                LD=ld.lld \
+                LLVM=1 \
                 distclean "${CONFIG_TARGET}" bzImage modules || exit ${?}
             ;;
     esac
