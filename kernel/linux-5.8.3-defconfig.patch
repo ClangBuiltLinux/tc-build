@@ -1,0 +1,51 @@
+From 90d6336ca012035b03f42be55a9e8ad86e4e77b4 Mon Sep 17 00:00:00 2001
+From: Nick Desaulniers <ndesaulniers@google.com>
+Date: Wed, 19 Aug 2020 12:16:50 -0700
+Subject: [PATCH] Makefile: add -fno-builtin-stpcpy
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+LLVM implemented a recent "libcall optimization" that lowers calls to
+`sprintf(dest, "%s", str)` where the return value is used to
+`stpcpy(dest, str) - dest`. This generally avoids the machinery involved
+in parsing format strings. This optimization was introduced into
+clang-12. Because the kernel does not provide an implementation of
+stpcpy, we observe linkage failures for almost all targets when building
+with ToT clang.
+
+The interface is unsafe as it does not perform any bounds checking.
+Disable this "libcall optimization" via `-fno-builtin-stpcpy`.
+
+Reported-by: Sami Tolvanen <samitolvanen@google.com>
+Suggested-by: Dávid Bolvanský <david.bolvansky@gmail.com>
+Suggested-by: Kees Cook <keescook@chromium.org>
+Signed-off-by: Nick Desaulniers <ndesaulniers@google.com>
+Tested-by: Nathan Chancellor <natechancellor@gmail.com>
+Reviewed-by: Kees Cook <keescook@chromium.org>
+Reviewed-by: Nathan Chancellor <natechancellor@gmail.com>
+Cc: stable@vger.kernel.org # 4.4
+Link: https://bugs.llvm.org/show_bug.cgi?id=47162
+Link: https://github.com/ClangBuiltLinux/linux/issues/1126
+Link: https://reviews.llvm.org/D85963
+Link: https://lore.kernel.org/r/20200819191654.1130563-2-ndesaulniers@google.com
+Signed-off-by: Nathan Chancellor <natechancellor@gmail.com>
+---
+ Makefile | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Makefile b/Makefile
+index 6001ed2b14c3..c7d0f10e30c4 100644
+--- a/Makefile
++++ b/Makefile
+@@ -577,6 +577,7 @@ ifneq ($(LLVM_IAS),1)
+ CLANG_FLAGS	+= -no-integrated-as
+ endif
+ CLANG_FLAGS	+= -Werror=unknown-warning-option
++CLANG_FLAGS	+= -fno-builtin-stpcpy
+ KBUILD_CFLAGS	+= $(CLANG_FLAGS)
+ KBUILD_AFLAGS	+= $(CLANG_FLAGS)
+ export CLANG_FLAGS
+-- 
+2.28.0
+
