@@ -122,12 +122,57 @@ set -x
 
 for TARGET in "${TARGETS[@]}"; do
     case ${TARGET} in
-        "arm-linux-gnueabi") time "${MAKE[@]}" ARCH=arm CROSS_COMPILE="${TARGET}-" KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config LD=ld.lld distclean "${CONFIG_TARGET}" zImage modules || exit ${?} ;;
-        "aarch64-linux-gnu") time "${MAKE[@]}" ARCH=arm64 CROSS_COMPILE="${TARGET}-" KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config LD=ld.lld distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?} ;;
-        "powerpc-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean ppc44x_defconfig zImage modules || exit ${?} ;;
-        "powerpc64-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean pseries_defconfig vmlinux modules || exit ${?} ;;
-        "powerpc64le-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean powernv_defconfig zImage.epapr modules || exit ${?} ;;
-        "s390x-linux-gnu") time "${MAKE[@]}" ARCH=s390 CROSS_COMPILE="${TARGET}-" distclean defconfig bzImage modules || exit ${?} ;;
-        "x86_64-linux-gnu") time "${MAKE[@]}" LD=ld.lld O=out distclean "${CONFIG_TARGET}" bzImage modules || exit ${?} ;;
+        "arm-linux-gnueabi")
+            time \
+                "${MAKE[@]}" \
+                ARCH=arm \
+                CROSS_COMPILE="${TARGET}-" \
+                KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
+                LD=ld.lld \
+                distclean "${CONFIG_TARGET}" zImage modules || exit ${?}
+            ;;
+        "aarch64-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=arm64 \
+                CROSS_COMPILE="${TARGET}-" \
+                KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
+                LD=ld.lld \
+                distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?}
+            ;;
+        "powerpc-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=powerpc \
+                CROSS_COMPILE="${TARGET}-" \
+                distclean ppc44x_defconfig zImage modules || exit ${?}
+            ;;
+        "powerpc64-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=powerpc \
+                CROSS_COMPILE="${TARGET}-" \
+                distclean pseries_defconfig vmlinux modules || exit ${?}
+            ;;
+        "powerpc64le-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=powerpc \
+                CROSS_COMPILE="${TARGET}-" \
+                distclean powernv_defconfig zImage.epapr modules || exit ${?}
+            ;;
+        "s390x-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=s390 \
+                CROSS_COMPILE="${TARGET}-" \
+                distclean defconfig bzImage modules || exit ${?}
+            ;;
+        "x86_64-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                LD=ld.lld \
+                distclean "${CONFIG_TARGET}" bzImage modules || exit ${?}
+            ;;
     esac
 done
