@@ -39,9 +39,9 @@ while ((${#})); do
                 case ${LLVM_TARGET} in
                     "AArch64") TARGETS=("${TARGETS[@]}" "aarch64-linux-gnu") ;;
                     "ARM") TARGETS=("${TARGETS[@]}" "arm-linux-gnueabi") ;;
+                    "Mips") TARGETS=("${TARGETS[@]}" "mipsel-linux-gnu") ;;
                     "PowerPC") TARGETS=("${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu") ;;
-                        # RISCV is consumed until Linux 5.7 to avoid carrying a patch file
-                    "RISCV") ;;
+                    "RISCV") TARGETS=("${TARGETS[@]}" "riscv64-linux-gnu") ;;
                     "SystemZ") TARGETS=("${TARGETS[@]}" "s390x-linux-gnu") ;;
                     "X86") TARGETS=("${TARGETS[@]}" "x86_64-linux-gnu") ;;
                 esac
@@ -50,7 +50,17 @@ while ((${#})); do
     esac
     shift
 done
-[[ -z ${TARGETS[*]} ]] && TARGETS=("arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" "s390x-linux-gnu" "x86_64-linux-gnu")
+[[ -z ${TARGETS[*]} ]] && TARGETS=(
+    "arm-linux-gnueabi"
+    "aarch64-linux-gnu"
+    "mipsel-linux-gnu"
+    "powerpc-linux-gnu"
+    "powerpc64-linux-gnu"
+    "powerpc64le-linux-gnu"
+    "riscv64-linux-gnu"
+    "s390x-linux-gnu"
+    "x86_64-linux-gnu"
+)
 [[ -z ${CONFIG_TARGET} ]] && CONFIG_TARGET=defconfig
 
 # Add the default install bin folder to PATH for binutils
@@ -114,7 +124,7 @@ done
 
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
-MAKE=(make -j"$(nproc)" -s CC=clang O=out)
+MAKE=(make -skj"$(nproc)" O=out)
 
 header "Building kernels"
 
@@ -122,12 +132,83 @@ set -x
 
 for TARGET in "${TARGETS[@]}"; do
     case ${TARGET} in
-        "arm-linux-gnueabi") time "${MAKE[@]}" ARCH=arm CROSS_COMPILE="${TARGET}-" KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config LD=ld.lld distclean "${CONFIG_TARGET}" zImage modules || exit ${?} ;;
-        "aarch64-linux-gnu") time "${MAKE[@]}" ARCH=arm64 CROSS_COMPILE="${TARGET}-" KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config LD=ld.lld distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?} ;;
-        "powerpc-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean ppc44x_defconfig zImage modules || exit ${?} ;;
-        "powerpc64-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean pseries_defconfig vmlinux modules || exit ${?} ;;
-        "powerpc64le-linux-gnu") time "${MAKE[@]}" ARCH=powerpc CROSS_COMPILE="${TARGET}-" distclean powernv_defconfig zImage.epapr modules || exit ${?} ;;
-        "s390x-linux-gnu") time "${MAKE[@]}" ARCH=s390 CROSS_COMPILE="${TARGET}-" distclean defconfig bzImage modules || exit ${?} ;;
-        "x86_64-linux-gnu") time "${MAKE[@]}" LD=ld.lld O=out distclean "${CONFIG_TARGET}" bzImage modules || exit ${?} ;;
+        "arm-linux-gnueabi")
+            time \
+                "${MAKE[@]}" \
+                ARCH=arm \
+                CROSS_COMPILE="${TARGET}-" \
+                KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
+                LLVM=1 \
+                distclean "${CONFIG_TARGET}" zImage modules || exit ${?}
+            ;;
+        "aarch64-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=arm64 \
+                CROSS_COMPILE="${TARGET}-" \
+                KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
+                LLVM=1 \
+                distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?}
+            ;;
+        "mipsel-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=mips \
+                CROSS_COMPILE="${TARGET}-" \
+                LLVM=1 \
+                distclean malta_kvm_guest_defconfig vmlinux modules || exit ${?}
+            ;;
+        "powerpc-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=powerpc \
+                CROSS_COMPILE="${TARGET}-" \
+                LLVM=1 \
+                distclean ppc44x_defconfig zImage modules || exit ${?}
+            ;;
+        "powerpc64-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=powerpc \
+                LD="${TARGET}-ld" \
+                CROSS_COMPILE="${TARGET}-" \
+                LLVM=1 \
+                distclean pseries_defconfig vmlinux modules || exit ${?}
+            ;;
+        "powerpc64le-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=powerpc \
+                CROSS_COMPILE="${TARGET}-" \
+                LLVM=1 \
+                distclean powernv_defconfig zImage.epapr modules || exit ${?}
+            ;;
+        "riscv64-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=riscv \
+                CROSS_COMPILE="${TARGET}-" \
+                LD="${TARGET}-ld" \
+                LLVM=1 \
+                LLVM_IAS=1 \
+                distclean defconfig Image.gz modules || exit ${?}
+            ;;
+        "s390x-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=s390 \
+                CROSS_COMPILE="${TARGET}-" \
+                LD="${TARGET}-ld" \
+                LLVM=1 \
+                OBJCOPY="${TARGET}-objcopy" \
+                OBJDUMP="${TARGET}-objdump" \
+                distclean defconfig bzImage modules || exit ${?}
+            ;;
+        "x86_64-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                LLVM=1 \
+                distclean "${CONFIG_TARGET}" bzImage modules || exit ${?}
+            ;;
     esac
 done
