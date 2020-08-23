@@ -40,8 +40,7 @@ while ((${#})); do
                     "AArch64") TARGETS=("${TARGETS[@]}" "aarch64-linux-gnu") ;;
                     "ARM") TARGETS=("${TARGETS[@]}" "arm-linux-gnueabi") ;;
                     "PowerPC") TARGETS=("${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu") ;;
-                        # RISCV is consumed until Linux 5.7 to avoid carrying a patch file
-                    "RISCV") ;;
+                    "RISCV") TARGETS=("${TARGETS[@]}" "riscv64-linux-gnu") ;;
                     "SystemZ") TARGETS=("${TARGETS[@]}" "s390x-linux-gnu") ;;
                     "X86") TARGETS=("${TARGETS[@]}" "x86_64-linux-gnu") ;;
                 esac
@@ -50,7 +49,7 @@ while ((${#})); do
     esac
     shift
 done
-[[ -z ${TARGETS[*]} ]] && TARGETS=("arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" "s390x-linux-gnu" "x86_64-linux-gnu")
+[[ -z ${TARGETS[*]} ]] && TARGETS=("arm-linux-gnueabi" "aarch64-linux-gnu" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu" "riscv64-linux-gnu" "s390x-linux-gnu" "x86_64-linux-gnu")
 [[ -z ${CONFIG_TARGET} ]] && CONFIG_TARGET=defconfig
 
 # Add the default install bin folder to PATH for binutils
@@ -164,6 +163,16 @@ for TARGET in "${TARGETS[@]}"; do
                 CROSS_COMPILE="${TARGET}-" \
                 LLVM=1 \
                 distclean powernv_defconfig zImage.epapr modules || exit ${?}
+            ;;
+        "riscv64-linux-gnu")
+            time \
+                "${MAKE[@]}" \
+                ARCH=riscv \
+                CROSS_COMPILE="${TARGET}-" \
+                LD="${TARGET}-ld" \
+                LLVM=1 \
+                LLVM_IAS=1 \
+                distclean defconfig Image.gz modules || exit ${?}
             ;;
         "s390x-linux-gnu")
             time \
