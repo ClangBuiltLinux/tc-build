@@ -182,11 +182,13 @@ def parse_parameters(root_folder):
                         metavar="LTO_TYPE",
                         help=textwrap.dedent("""\
                         Build the final compiler with either ThinLTO (thin) or full LTO (full), which can
-                        improve compile time performance.
+                        often improve compile time performance by 3-5%% on average.
 
                         Only use full LTO if you have more than 64 GB of memory. ThinLTO uses way less memory,
                         compiles faster because it is fully multithreaded, and it has almost identical
-                        performance (within 1%% usually) to full LTO.
+                        performance (within 1%% usually) to full LTO. The compile time impact of ThinLTO is about
+                        5x the speed of a '--build-stage1-only' build and 3.5x the speed of a default build. LTO
+                        is much worse and is not worth considering unless you have a server available to build on.
 
                         This option should not be used with '--build-stage1-only' unless you know that your
                         host compiler and linker support it. See the two links below for more information.
@@ -237,11 +239,27 @@ def parse_parameters(root_folder):
                         default="clang;compiler-rt;lld;polly")
     opt_options.add_argument("--pgo",
                              help=textwrap.dedent("""\
-                        Build the final compiler with PGO, which can improve compile time performance. The
-                        process involves building an instrumented version of LLVM and building kernels with
-                        it to get profile data then using that data to build the final compiler. Since three
-                        distinct builds of LLVM (bootstrap, instrumented, and final) are required, this option
-                        cannot be used with '--build-stage1-only'.
+                        Build the final compiler with Profile Guided Optimization, which can often improve compile
+                        time performance by 15-20%% on average. The script will:
+
+                        1. Build a small bootstrap compiler like usual (stage 1).
+
+                        2. Build an instrumented compiler with that compiler (stage 2).
+
+                        3. Download and extract kernel source from kernel.org (unless '--linux-src' is
+                           specified), build the necessary binutils if not found in PATH, and build some
+                           defconfig kernels with the instrumented compiler (based on the '--targets' option).
+                           If there is a build error with one of the kernels, build-llvm.py will fail as well.
+
+                        4. Build a final compiler with the profile data generated from step 3 (stage 3).
+
+                        Due to the nature of this process, '--build-stage1-only' cannot be used. There will be
+                        three distinct LLVM build folders/compilers and several kernel builds done by default so
+                        ensure that you have enough space on your disk to hold this (25GB should be enough) and the
+                        time/patience to build three toolchains and kernels (will often take 5x the amount of time
+                        as '--build-stage1-only' and 4x the amount of time as the default two-stage build that the
+                        script does). When combined with '--lto', the compile time impact is about 9-10x of a one or
+                        two stage builds.
 
                         See https://llvm.org/docs/HowToBuildWithPGO.html for more information.
 
