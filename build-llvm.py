@@ -170,14 +170,15 @@ def parse_parameters(root_folder):
     parser.add_argument("--lto",
                         metavar="LTO_TYPE",
                         help=textwrap.dedent("""\
-                        Build the final compiler with either ThinLTO (thin) or  full LTO (full), which can
+                        Build the final compiler with either ThinLTO (thin) or full LTO (full), which can
                         improve compile time performance.
 
                         Only use full LTO if you have more than 64 GB of memory. ThinLTO uses way less memory,
                         compiles faster because it is fully multithreaded, and it has almost identical
                         performance (within 1%% usually) to full LTO.
 
-                        See the two links below for more information.
+                        This option should not be used with '--build-stage1-only' unless you know that your
+                        host compiler and linker support it. See the two links below for more information.
 
                         https://llvm.org/docs/LinkTimeOptimization.html
                         https://clang.llvm.org/docs/ThinLTO.html
