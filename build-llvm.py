@@ -54,6 +54,7 @@ def parse_parameters(root_folder):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter)
     clone_options = parser.add_mutually_exclusive_group()
+    opt_options = parser.add_mutually_exclusive_group()
 
     parser.add_argument("--assertions",
                         help=textwrap.dedent("""\
@@ -86,8 +87,8 @@ def parse_parameters(root_folder):
                         type=str,
                         default=os.path.join(root_folder.as_posix(), "build",
                                              "llvm"))
-    parser.add_argument("--build-stage1-only",
-                        help=textwrap.dedent("""\
+    opt_options.add_argument("--build-stage1-only",
+                             help=textwrap.dedent("""\
                         By default, the script does a multi-stage build: it builds a more lightweight version of
                         LLVM first (stage 1) then uses that build to build the full toolchain (stage 2). This
                         is also known as bootstrapping.
@@ -99,8 +100,8 @@ def parse_parameters(root_folder):
                         handle 2+ stage builds, you may need this flag. If you would like to install a toolchain
                         built with this flag, see '--install-stage1-only' below.
 
-                        """),
-                        action="store_true")
+                             """),
+                             action="store_true")
     # yapf: disable
     parser.add_argument("--build-type",
                         metavar='BUILD_TYPE',
@@ -222,14 +223,18 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="clang;compiler-rt;lld;polly")
-    parser.add_argument("--pgo",
-                        help=textwrap.dedent("""\
-                        Build the final compiler with PGO, which can improve compile time performance.
+    opt_options.add_argument("--pgo",
+                             help=textwrap.dedent("""\
+                        Build the final compiler with PGO, which can improve compile time performance. The
+                        process involves building an instrumented version of LLVM and building kernels with
+                        it to get profile data then using that data to build the final compiler. Since three
+                        distinct builds of LLVM (bootstrap, instrumented, and final) are required, this option
+                        cannot be used with '--build-stage1-only'.
 
                         See https://llvm.org/docs/HowToBuildWithPGO.html for more information.
 
-                        """),
-                        action="store_true")
+                             """),
+                             action="store_true")
     clone_options.add_argument("-s",
                                "--shallow-clone",
                                help=textwrap.dedent("""\
