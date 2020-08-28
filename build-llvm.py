@@ -21,9 +21,11 @@ GOOD_REVISION = '5a4cd55e5d1452db7043ef9e9f1211172a6a10e1'
 
 
 class Directories:
-    def __init__(self, build_folder, install_folder, root_folder):
+    def __init__(self, build_folder, install_folder, linux_folder,
+                 root_folder):
         self.build_folder = build_folder
         self.install_folder = install_folder
+        self.linux_folder = linux_folder
         self.root_folder = root_folder
 
 
@@ -167,6 +169,15 @@ def parse_parameters(root_folder):
 
                         """),
                         action="store_true")
+    parser.add_argument("-L",
+                        "--linux-folder",
+                        help=textwrap.dedent("""\
+                        If building with PGO, use this kernel source for building profiles instead of downloading
+                        a tarball from kernel.org. This should be the full or relative path to a complete kernel
+                        source directory, not a tarball or zip file.
+
+                        """),
+                        type=str)
     parser.add_argument("--lto",
                         metavar="LTO_TYPE",
                         help=textwrap.dedent("""\
@@ -948,13 +959,14 @@ def generate_pgo_profiles(args, dirs):
     utils.print_header("Building PGO profiles")
 
     # Run kernel/build.sh
-    subprocess.run([
+    build_sh = [
         dirs.root_folder.joinpath("kernel", "build.sh"), '-b',
         dirs.build_folder, '--pgo',
         str(args.pgo).lower(), '-t', args.targets
-    ],
-                   check=True,
-                   cwd=dirs.build_folder.as_posix())
+    ]
+    if dirs.linux_folder:
+        build_sh += ['-s', dirs.linux_folder.as_posix()]
+    subprocess.run(build_sh, check=True, cwd=dirs.build_folder.as_posix())
 
     # Combine profiles
     subprocess.run([
@@ -997,6 +1009,16 @@ def main():
     if not install_folder.is_absolute():
         install_folder = root_folder.joinpath(install_folder)
 
+    linux_folder = None
+    if args.linux_folder:
+        linux_folder = pathlib.Path(args.linux_folder)
+        if not linux_folder.is_absolute():
+            linux_folder = root_folder.joinpath(linux_folder)
+        if not linux_folder.exists():
+            utils.print_error("\nSupplied kernel source (%s) does not exist!" %
+                              linux_folder.as_posix())
+            exit(1)
+
     env_vars = EnvVars(*check_cc_ld_variables(root_folder))
     check_dependencies()
     if args.use_good_revision:
@@ -1006,7 +1028,7 @@ def main():
     fetch_llvm_binutils(root_folder, not args.no_update, args.shallow_clone,
                         ref)
     cleanup(build_folder, args.incremental)
-    dirs = Directories(build_folder, install_folder, root_folder)
+    dirs = Directories(build_folder, install_folder, linux_folder, root_folder)
     do_multistage_build(args, dirs, env_vars)
 
 
