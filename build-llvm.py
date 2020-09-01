@@ -219,7 +219,14 @@ def parse_parameters(root_folder):
                         action="store_true")
     parser.add_argument("--no-ccache",
                         help=textwrap.dedent("""\
-                        Don't enable LLVM_CCACHE_BUILD. Useful for benchmarking clean builds.
+                        By default, the script adds LLVM_CCACHE_BUILD to the cmake options so that ccache is
+                        used for the stage one build. This helps speed up compiles but it is only useful for
+                        stage one, which is built using the host compiler, which usually does not change,
+                        resulting in more cache hits. Subsequent stages will be always completely clean builds
+                        since ccache will have no hits due to using a new compiler and it will unnecessarily
+                        fill up the cache with files that will never be called again due to changing compilers
+                        on the next build. This option prevents ccache from being used even at stage one, which
+                        could be useful for benchmarking clean builds.
 
                         """),
                         action="store_true")
