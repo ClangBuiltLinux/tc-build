@@ -246,7 +246,7 @@ def parse_parameters(root_folder):
 
                         2. Build an instrumented compiler with that compiler (stage 2).
 
-                        3. Download and extract kernel source from kernel.org (unless '--linux-src' is
+                        3. Download and extract kernel source from kernel.org (unless '--linux-folder' is
                            specified), build the necessary binutils if not found in PATH, and build some
                            defconfig kernels with the instrumented compiler (based on the '--targets' option).
                            If there is a build error with one of the kernels, build-llvm.py will fail as well.
