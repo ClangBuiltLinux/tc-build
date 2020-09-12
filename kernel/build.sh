@@ -6,7 +6,7 @@ TC_BLD=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"/.. && pwd)
 
 function header() {
     BORDER="====$(for _ in $(seq ${#1}); do printf '='; done)===="
-    printf '\033[1m\n%s\n%s\n%s\n\n\033[0m' "${BORDER}" "==  ${1}  ==" "${BORDER}"
+    printf '\033[1m\n%s\n%s\n%s\n\n\033[0m' "${BORDER}" "== ${1} ==" "${BORDER}"
 }
 
 # Parse parameters
