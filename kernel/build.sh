@@ -125,6 +125,16 @@ done
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
 MAKE=(make -skj"$(nproc)" LLVM=1 O=out)
+case "$(uname -m)" in
+    arm*) [[ ${TARGETS[*]} =~ arm ]] || NEED_GCC=true ;;
+    aarch64) [[ ${TARGETS[*]} =~ aarch64 ]] || NEED_GCC=true ;;
+    mips*) [[ ${TARGETS[*]} =~ mips ]] || NEED_GCC=true ;;
+    ppc*) [[ ${TARGETS[*]} =~ powerpc ]] || NEED_GCC=true ;;
+    s390*) [[ ${TARGETS[*]} =~ s390 ]] || NEED_GCC=true ;;
+    riscv*) [[ ${TARGETS[*]} =~ riscv ]] || NEED_GCC=true ;;
+    i*86 | x86*) [[ ${TARGETS[*]} =~ x86_64 ]] || NEED_GCC=true ;;
+esac
+${NEED_GCC:=false} && MAKE+=(HOSTCC=gcc HOSTCXX=g++)
 
 header "Building kernels"
 
