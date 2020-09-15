@@ -124,7 +124,17 @@ done
 
 # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
 # shellcheck disable=SC2191
-MAKE=(make -skj"$(nproc)" O=out)
+MAKE=(make -skj"$(nproc)" LLVM=1 O=out)
+case "$(uname -m)" in
+    arm*) [[ ${TARGETS[*]} =~ arm ]] || NEED_GCC=true ;;
+    aarch64) [[ ${TARGETS[*]} =~ aarch64 ]] || NEED_GCC=true ;;
+    mips*) [[ ${TARGETS[*]} =~ mips ]] || NEED_GCC=true ;;
+    ppc*) [[ ${TARGETS[*]} =~ powerpc ]] || NEED_GCC=true ;;
+    s390*) [[ ${TARGETS[*]} =~ s390 ]] || NEED_GCC=true ;;
+    riscv*) [[ ${TARGETS[*]} =~ riscv ]] || NEED_GCC=true ;;
+    i*86 | x86*) [[ ${TARGETS[*]} =~ x86_64 ]] || NEED_GCC=true ;;
+esac
+${NEED_GCC:=false} && MAKE+=(HOSTCC=gcc HOSTCXX=g++)
 
 header "Building kernels"
 
@@ -138,7 +148,6 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=arm \
                 CROSS_COMPILE="${TARGET}-" \
                 KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
-                LLVM=1 \
                 distclean "${CONFIG_TARGET}" zImage modules || exit ${?}
             ;;
         "aarch64-linux-gnu")
@@ -147,7 +156,6 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=arm64 \
                 CROSS_COMPILE="${TARGET}-" \
                 KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
-                LLVM=1 \
                 distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?}
             ;;
         "mipsel-linux-gnu")
@@ -155,7 +163,6 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=mips \
                 CROSS_COMPILE="${TARGET}-" \
-                LLVM=1 \
                 distclean malta_kvm_guest_defconfig vmlinux modules || exit ${?}
             ;;
         "powerpc-linux-gnu")
@@ -163,7 +170,6 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=powerpc \
                 CROSS_COMPILE="${TARGET}-" \
-                LLVM=1 \
                 distclean ppc44x_defconfig zImage modules || exit ${?}
             ;;
         "powerpc64-linux-gnu")
@@ -172,7 +178,6 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=powerpc \
                 LD="${TARGET}-ld" \
                 CROSS_COMPILE="${TARGET}-" \
-                LLVM=1 \
                 distclean pseries_defconfig vmlinux modules || exit ${?}
             ;;
         "powerpc64le-linux-gnu")
@@ -180,7 +185,6 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=powerpc \
                 CROSS_COMPILE="${TARGET}-" \
-                LLVM=1 \
                 distclean powernv_defconfig zImage.epapr modules || exit ${?}
             ;;
         "riscv64-linux-gnu")
@@ -189,7 +193,6 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=riscv \
                 CROSS_COMPILE="${TARGET}-" \
                 LD="${TARGET}-ld" \
-                LLVM=1 \
                 LLVM_IAS=1 \
                 distclean defconfig Image.gz modules || exit ${?}
             ;;
@@ -199,7 +202,6 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=s390 \
                 CROSS_COMPILE="${TARGET}-" \
                 LD="${TARGET}-ld" \
-                LLVM=1 \
                 OBJCOPY="${TARGET}-objcopy" \
                 OBJDUMP="${TARGET}-objdump" \
                 distclean defconfig bzImage modules || exit ${?}
@@ -207,7 +209,6 @@ for TARGET in "${TARGETS[@]}"; do
         "x86_64-linux-gnu")
             time \
                 "${MAKE[@]}" \
-                LLVM=1 \
                 distclean "${CONFIG_TARGET}" bzImage modules || exit ${?}
             ;;
     esac
