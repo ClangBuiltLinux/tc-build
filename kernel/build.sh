@@ -147,7 +147,7 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=arm \
                 CROSS_COMPILE="${TARGET}-" \
-                KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
+                KCONFIG_ALLCONFIG=<(echo CONFIG_CPU_BIG_ENDIAN=n) \
                 distclean "${CONFIG_TARGET}" zImage modules || exit ${?}
             ;;
         "aarch64-linux-gnu")
@@ -155,7 +155,7 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=arm64 \
                 CROSS_COMPILE="${TARGET}-" \
-                KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
+                KCONFIG_ALLCONFIG=<(echo CONFIG_CPU_BIG_ENDIAN=n) \
                 distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?}
             ;;
         "mipsel-linux-gnu")
