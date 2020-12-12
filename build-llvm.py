@@ -68,7 +68,7 @@ def parse_parameters(root_folder):
     parser.add_argument("-b",
                         "--branch",
                         help=textwrap.dedent("""\
-                        By default, the script builds the master branch (tip of tree) of LLVM. If you would
+                        By default, the script builds the main branch (tip of tree) of LLVM. If you would
                         like to build an older branch, use this parameter. This may be helpful in tracking
                         down an older bug to properly bisect. This value is just passed along to 'git checkout'
                         so it can be a branch name, tag name, or hash (unless '--shallow-clone' is used, which
@@ -76,7 +76,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default="master")
+                        default="main")
     parser.add_argument("-B",
                         "--build-folder",
                         help=textwrap.dedent("""\
@@ -288,8 +288,8 @@ def parse_parameters(root_folder):
 
                         1. This cannot be used with '--use-good-revision'.
 
-                        2. When no '--branch' is specified, only master is fetched. To work with other branches,
-                           a branch other than master needs to be specified when the repo is first cloned.
+                        2. When no '--branch' is specified, only main is fetched. To work with other branches,
+                           a branch other than main needs to be specified when the repo is first cloned.
 
                                """),
                                action="store_true")
@@ -349,7 +349,7 @@ def versioned_binaries(binary_name):
     tot_llvm_ver = 11
     try:
         response = request.urlopen(
-            'https://raw.githubusercontent.com/llvm/llvm-project/master/llvm/CMakeLists.txt'
+            'https://raw.githubusercontent.com/llvm/llvm-project/main/llvm/CMakeLists.txt'
         )
         to_parse = None
         data = response.readlines()
@@ -554,7 +554,7 @@ def fetch_llvm_binutils(root_folder, update, shallow, ref):
         extra_args = ()
         if shallow:
             extra_args = ("--depth", "1")
-            if ref != "master":
+            if ref != "main":
                 extra_args += ("--no-single-branch", )
         subprocess.run([
             "git", "clone", *extra_args,
