@@ -74,7 +74,7 @@ ${PGO:=false} && export PATH=${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin:${
 if [[ -n ${SRC_FOLDER} ]]; then
     cd "${SRC_FOLDER}" || exit 1
 else
-    LINUX=linux-5.9
+    LINUX=linux-5.10
     LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.xz
     LINUX_PATCH=${TC_BLD}/kernel/${LINUX}-${CONFIG_TARGET}.patch
 
@@ -147,7 +147,7 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=arm \
                 CROSS_COMPILE="${TARGET}-" \
-                KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
+                KCONFIG_ALLCONFIG=<(echo CONFIG_CPU_BIG_ENDIAN=n) \
                 distclean "${CONFIG_TARGET}" zImage modules || exit ${?}
             ;;
         "aarch64-linux-gnu")
@@ -155,7 +155,7 @@ for TARGET in "${TARGETS[@]}"; do
                 "${MAKE[@]}" \
                 ARCH=arm64 \
                 CROSS_COMPILE="${TARGET}-" \
-                KCONFIG_ALLCONFIG="${TC_BLD}"/kernel/le.config \
+                KCONFIG_ALLCONFIG=<(echo CONFIG_CPU_BIG_ENDIAN=n) \
                 distclean "${CONFIG_TARGET}" Image.gz modules || exit ${?}
             ;;
         "mipsel-linux-gnu")
@@ -188,13 +188,17 @@ for TARGET in "${TARGETS[@]}"; do
                 distclean powernv_defconfig zImage.epapr modules || exit ${?}
             ;;
         "riscv64-linux-gnu")
-            time \
-                "${MAKE[@]}" \
-                ARCH=riscv \
-                CROSS_COMPILE="${TARGET}-" \
-                LD="${TARGET}-ld" \
-                LLVM_IAS=1 \
-                distclean defconfig Image.gz modules || exit ${?}
+            RISCV_MAKE=(
+                "${MAKE[@]}"
+                ARCH=riscv
+                CROSS_COMPILE="${TARGET}-"
+                LD="${TARGET}-ld"
+                LLVM_IAS=1
+            )
+            time "${RISCV_MAKE[@]}" distclean defconfig || exit ${?}
+            # https://github.com/ClangBuiltLinux/linux/issues/1143
+            grep -q "config EFI" arch/riscv/Kconfig && scripts/config --file out/.config -d EFI
+            time "${RISCV_MAKE[@]}" Image.gz modules || exit ${?}
             ;;
         "s390x-linux-gnu")
             time \
