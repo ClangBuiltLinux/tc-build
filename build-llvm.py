@@ -143,6 +143,18 @@ def parse_parameters(root_folder):
                         """),
                         type=str,
                         default="ClangBuiltLinux")
+    parser.add_argument("-D",
+                        "--defines",
+                        help=textwrap.dedent("""\
+                        Specify additional cmake values. These will be applied to all cmake invocations.
+
+                        Example: -D LLVM_PARALLEL_COMPILE_JOBS=2 LLVM_PARALLEL_LINK_JOBS=2
+
+                        See https://llvm.org/docs/CMake.html for various cmake values. Note that some of
+                        the options to this script correspond to cmake values.
+
+                        """),
+                        nargs="+")
     parser.add_argument("-i",
                         "--incremental",
                         help=textwrap.dedent("""\
@@ -895,6 +907,9 @@ def invoke_cmake(args, dirs, env_vars, stage):
     for key in defines:
         newdef = '-D' + key + '=' + defines[key]
         cmake += [newdef]
+    if args.defines:
+        for d in args.defines:
+            cmake += ['-D' + d]
     cmake += [dirs.root_folder.joinpath("llvm-project", "llvm").as_posix()]
 
     cwd = dirs.build_folder.joinpath("stage%d" % stage).as_posix()
