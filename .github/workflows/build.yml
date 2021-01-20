@@ -2,7 +2,7 @@ name: Build test
 on:
   push:
     branches:
-      - master
+      - main
 jobs:
   build-test:
     runs-on: ubuntu-latest
