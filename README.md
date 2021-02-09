@@ -20,6 +20,7 @@ These scripts have been tested in a Docker image of the following distributions,
 
   ```
   apt install bc \
+              binutils-dev \
               bison \
               ca-certificates \
               ccache \
@@ -48,6 +49,7 @@ These scripts have been tested in a Docker image of the following distributions,
 
   ```
   dnf install bc \
+              binutils-devel \
               bison \
               ccache \
               clang \
