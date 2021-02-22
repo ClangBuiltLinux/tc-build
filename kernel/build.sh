@@ -178,7 +178,7 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=powerpc \
                 LD="${TARGET}-ld" \
                 CROSS_COMPILE="${TARGET}-" \
-                distclean pseries_defconfig vmlinux modules || exit ${?}
+                distclean pseries_defconfig disable-werror.config vmlinux modules || exit ${?}
             ;;
         "powerpc64le-linux-gnu")
             time \
