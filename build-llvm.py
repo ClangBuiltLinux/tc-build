@@ -750,6 +750,22 @@ def cc_ld_cmake_defines(dirs, env_vars, stage):
     return defines
 
 
+def distro_cmake_defines():
+    """
+    Generate distribution specific cmake defines
+    :return: A set of defines
+    """
+    defines = {}
+
+    # Clear Linux needs a different target to find all of the C++ header files, otherwise
+    # stage 2+ compiles will fail without this
+    # We figure this out based on the existence of x86_64-generic-linux in the C++ headers path
+    if glob.glob("/usr/include/c++/*/x86_64-generic-linux"):
+        defines['LLVM_HOST_TRIPLE'] = "x86_64-generic-linux"
+
+    return defines
+
+
 def project_target_cmake_defines(args, stage):
     """
     Generate project and target cmake defines, which change depending on what
@@ -870,6 +886,9 @@ def build_cmake_defines(args, dirs, env_vars, stage):
 
     # Add compiler/linker defines, which change based on stage
     defines.update(cc_ld_cmake_defines(dirs, env_vars, stage))
+
+    # Add distribution specific defines
+    defines.update(distro_cmake_defines())
 
     # Add project and target defines, which change based on stage
     defines.update(project_target_cmake_defines(args, stage))
