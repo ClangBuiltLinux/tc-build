@@ -138,6 +138,10 @@ ${NEED_GCC:=false} && MAKE+=(HOSTCC=gcc HOSTCXX=g++)
 
 header "Building kernels"
 
+# If the user has any CFLAGS in their environment, they can cause issues when building tools/
+# Ideally, the kernel would always clobber user flags via ':=' but that is not always the case
+unset CFLAGS
+
 set -x
 
 for TARGET in "${TARGETS[@]}"; do
