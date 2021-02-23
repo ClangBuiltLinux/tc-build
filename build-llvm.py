@@ -844,6 +844,14 @@ def stage_specific_cmake_defines(args, dirs, stage):
             if args.lto:
                 defines['LLVM_ENABLE_LTO'] = args.lto.capitalize()
 
+        # If the user did not specify CMAKE_C_FLAGS or CMAKE_CXX_FLAGS, add them as empty
+        # to paste stage 2 to ensure there are no environment issues (since CFLAGS and CXXFLAGS
+        # are taken into account by cmake)
+        keys = ['CMAKE_C_FLAGS', 'CMAKE_CXX_FLAGS']
+        for key in keys:
+            if not key in str(args.defines):
+                defines[key] = ''
+
     return defines
 
 
