@@ -148,7 +148,8 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
     :param host_arch: Host architecture to optimize for
     """
     configure = [
-        root_folder.joinpath(utils.current_binutils(), "configure").as_posix(),
+        root_folder.joinpath(utils.current_binutils(),
+                             "configure").as_posix(), 'CC=gcc', 'CXX=g++',
         '--prefix=%s' % install_folder.as_posix(),
         '--enable-deterministic-archives', '--enable-plugins', '--quiet'
     ]
@@ -174,30 +175,29 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         ],
         "mipsel-linux-gnu": [
             '--disable-compressed-debug-sections', '--enable-new-dtags',
-            '--enable-shared',
             '--enable-targets=mips64el-linux-gnuabi64,mips64el-linux-gnuabin32',
             '--enable-threads'
         ],
         "powerpc-linux-gnu": [
-            '--enable-lto', '--enable-relro', '--enable-shared',
-            '--enable-threads', '--disable-gdb', '--disable-sim',
-            '--disable-werror', '--with-pic', '--with-system-zlib'
+            '--enable-lto', '--enable-relro', '--enable-threads',
+            '--disable-gdb', '--disable-sim', '--disable-werror', '--with-pic',
+            '--with-system-zlib'
         ],
         "riscv64-linux-gnu": [
-            '--enable-lto', '--enable-relro', '--enable-shared',
-            '--enable-threads', '--disable-sim', '--disable-werror',
-            '--with-pic', '--with-system-zlib'
+            '--enable-lto', '--enable-relro', '--enable-threads',
+            '--disable-sim', '--disable-werror', '--with-pic',
+            '--with-system-zlib'
         ],
         "s390x-linux-gnu": [
-            '--enable-lto', '--enable-relro', '--enable-shared',
+            '--enable-lto', '--enable-relro',
             '--enable-targets=s390-linux-gnu', '--enable-threads',
             '--disable-gdb', '--disable-werror', '--with-pic',
             '--with-system-zlib'
         ],
         "x86_64-linux-gnu": [
-            '--enable-lto', '--enable-relro', '--enable-shared',
-            '--enable-targets=x86_64-pep', '--enable-threads', '--disable-gdb',
-            '--disable-werror', '--with-pic', '--with-system-zlib'
+            '--enable-lto', '--enable-relro', '--enable-targets=x86_64-pep',
+            '--enable-threads', '--disable-gdb', '--disable-werror',
+            '--with-pic', '--with-system-zlib'
         ]
     }
     configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
