@@ -17,7 +17,7 @@ from urllib.error import URLError
 
 # This is a known good revision of LLVM for building the kernel
 # To bump this, run 'PATH_OVERRIDE=<path_to_updated_toolchain>/bin kernel/build.sh --allyesconfig'
-GOOD_REVISION = '4830d458dd0d133354cbe1a616e38dfda8e096b8'
+GOOD_REVISION = 'ecdae5df7da03c56d72796c0b1629edd0995548e'
 
 
 class Directories:

@@ -74,7 +74,7 @@ ${PGO:=false} && export PATH=${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin:${
 if [[ -n ${SRC_FOLDER} ]]; then
     cd "${SRC_FOLDER}" || exit 1
 else
-    LINUX=linux-5.10.14
+    LINUX=linux-5.11.3
     LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.xz
     LINUX_PATCH=${TC_BLD}/kernel/${LINUX}-${CONFIG_TARGET}.patch
 
@@ -182,7 +182,7 @@ for TARGET in "${TARGETS[@]}"; do
                 ARCH=powerpc \
                 LD="${TARGET}-ld" \
                 CROSS_COMPILE="${TARGET}-" \
-                distclean pseries_defconfig vmlinux modules || exit ${?}
+                distclean pseries_defconfig disable-werror.config vmlinux modules || exit ${?}
             ;;
         "powerpc64le-linux-gnu")
             time \
