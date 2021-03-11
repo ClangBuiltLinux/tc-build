@@ -169,7 +169,6 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         ],
         "mips-linux-gnu": [
             '--disable-compressed-debug-sections', '--enable-new-dtags',
-            '--enable-shared',
             '--enable-targets=mips64-linux-gnuabi64,mips64-linux-gnuabin32',
             '--enable-threads'
         ],
