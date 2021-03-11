@@ -152,7 +152,7 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
                              "configure").as_posix(), 'CC=gcc', 'CXX=g++',
         '--prefix=%s' % install_folder.as_posix(),
         '--enable-deterministic-archives', '--enable-plugins', '--quiet',
-        '--disable-gdb', '--disable-werror'
+        '--disable-gdb', '--disable-werror', '--with-system-zlib'
     ]
     if host_arch:
         configure += [
@@ -180,22 +180,19 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         ],
         "powerpc-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-threads',
-            '--disable-sim', '--with-pic',
-            '--with-system-zlib'
+            '--disable-sim', '--with-pic'
         ],
         "riscv64-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-threads',
-            '--disable-sim', '--with-pic', '--with-system-zlib'
+            '--disable-sim', '--with-pic'
         ],
         "s390x-linux-gnu": [
             '--enable-lto', '--enable-relro',
-            '--enable-targets=s390-linux-gnu', '--enable-threads',
-            '--with-pic', '--with-system-zlib'
+            '--enable-targets=s390-linux-gnu', '--enable-threads', '--with-pic'
         ],
         "x86_64-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-targets=x86_64-pep',
-            '--enable-threads', '--with-pic',
-            '--with-system-zlib'
+            '--enable-threads', '--with-pic'
         ]
     }
     configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
