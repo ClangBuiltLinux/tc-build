@@ -172,16 +172,6 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         ],
         "powerpc-linux-gnu":
         ['--enable-lto', '--enable-relro', '--disable-sim', '--with-pic'],
-        "riscv64-linux-gnu":
-        ['--enable-lto', '--enable-relro', '--disable-sim', '--with-pic'],
-        "s390x-linux-gnu": [
-            '--enable-lto', '--enable-relro',
-            '--enable-targets=s390-linux-gnu', '--with-pic'
-        ],
-        "x86_64-linux-gnu": [
-            '--enable-lto', '--enable-relro', '--enable-targets=x86_64-pep',
-            '--with-pic'
-        ]
     }
     configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
         'arm-linux-gnueabi'] + ['--enable-ld=default', '--enable-gold']
@@ -189,6 +179,12 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         'powerpc-linux-gnu']
     configure_arch_flags['powerpc64le-linux-gnu'] = configure_arch_flags[
         'powerpc-linux-gnu']
+    configure_arch_flags['riscv64-linux-gnu'] = configure_arch_flags[
+        'powerpc-linux-gnu']
+    configure_arch_flags['s390x-linux-gnu'] = configure_arch_flags[
+        'powerpc-linux-gnu'] + ['--enable-targets=s390-linux-gnu']
+    configure_arch_flags['x86_64-linux-gnu'] = configure_arch_flags[
+        'powerpc-linux-gnu'] + ['--enable-targets=x86_64-pep']
 
     for endian in ["", "el"]:
         configure_arch_flags['mips%s-linux-gnu' % (endian)] = [
