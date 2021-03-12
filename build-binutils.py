@@ -152,7 +152,8 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
                              "configure").as_posix(), 'CC=gcc', 'CXX=g++',
         '--prefix=%s' % install_folder.as_posix(),
         '--enable-deterministic-archives', '--enable-plugins', '--quiet',
-        '--disable-gdb', '--disable-werror', '--with-system-zlib'
+        '--disable-gdb', '--disable-werror', '--with-system-zlib',
+        '--enable-threads'
     ]
     if host_arch:
         configure += [
@@ -170,29 +171,23 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         ],
         "mips-linux-gnu": [
             '--disable-compressed-debug-sections', '--enable-new-dtags',
-            '--enable-targets=mips64-linux-gnuabi64,mips64-linux-gnuabin32',
-            '--enable-threads'
+            '--enable-targets=mips64-linux-gnuabi64,mips64-linux-gnuabin32'
         ],
         "mipsel-linux-gnu": [
             '--disable-compressed-debug-sections', '--enable-new-dtags',
-            '--enable-targets=mips64el-linux-gnuabi64,mips64el-linux-gnuabin32',
-            '--enable-threads'
+            '--enable-targets=mips64el-linux-gnuabi64,mips64el-linux-gnuabin32'
         ],
-        "powerpc-linux-gnu": [
-            '--enable-lto', '--enable-relro', '--enable-threads',
-            '--disable-sim', '--with-pic'
-        ],
-        "riscv64-linux-gnu": [
-            '--enable-lto', '--enable-relro', '--enable-threads',
-            '--disable-sim', '--with-pic'
-        ],
+        "powerpc-linux-gnu":
+        ['--enable-lto', '--enable-relro', '--disable-sim', '--with-pic'],
+        "riscv64-linux-gnu":
+        ['--enable-lto', '--enable-relro', '--disable-sim', '--with-pic'],
         "s390x-linux-gnu": [
             '--enable-lto', '--enable-relro',
-            '--enable-targets=s390-linux-gnu', '--enable-threads', '--with-pic'
+            '--enable-targets=s390-linux-gnu', '--with-pic'
         ],
         "x86_64-linux-gnu": [
             '--enable-lto', '--enable-relro', '--enable-targets=x86_64-pep',
-            '--enable-threads', '--with-pic'
+            '--with-pic'
         ]
     }
     configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
