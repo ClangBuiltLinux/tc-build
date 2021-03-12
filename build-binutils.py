@@ -148,13 +148,12 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
     :param host_arch: Host architecture to optimize for
     """
     configure = [
-        root_folder.joinpath(utils.current_binutils(),
-                             "configure").as_posix(), 'CC=gcc', 'CXX=g++',
-        '--prefix=%s' % install_folder.as_posix(),
-        '--enable-deterministic-archives', '--enable-plugins', '--quiet',
-        '--disable-gdb', '--disable-werror', '--with-system-zlib',
-        '--enable-threads', '--disable-compressed-debug-sections',
-        '--enable-new-dtags'
+        root_folder.joinpath(utils.current_binutils(), "configure").as_posix(),
+        'CC=gcc', 'CXX=g++', '--disable-compressed-debug-sections',
+        '--disable-gdb', '--disable-werror', '--enable-deterministic-archives',
+        '--enable-new-dtags', '--enable-plugins', '--enable-threads',
+        '--prefix=%s' % install_folder.as_posix(), '--quiet',
+        '--with-system-zlib'
     ]
     if host_arch:
         configure += [
@@ -171,10 +170,10 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
             '--with-sysroot=%s' % install_folder.joinpath(target).as_posix()
         ],
         "powerpc-linux-gnu":
-        ['--enable-lto', '--enable-relro', '--disable-sim', '--with-pic'],
+        ['--disable-sim', '--enable-lto', '--enable-relro', '--with-pic'],
     }
     configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
-        'arm-linux-gnueabi'] + ['--enable-ld=default', '--enable-gold']
+        'arm-linux-gnueabi'] + ['--enable-gold', '--enable-ld=default']
     configure_arch_flags['powerpc64-linux-gnu'] = configure_arch_flags[
         'powerpc-linux-gnu']
     configure_arch_flags['powerpc64le-linux-gnu'] = configure_arch_flags[
