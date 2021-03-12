@@ -153,7 +153,8 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         '--prefix=%s' % install_folder.as_posix(),
         '--enable-deterministic-archives', '--enable-plugins', '--quiet',
         '--disable-gdb', '--disable-werror', '--with-system-zlib',
-        '--enable-threads', '--disable-compressed-debug-sections'
+        '--enable-threads', '--disable-compressed-debug-sections',
+        '--enable-new-dtags'
     ]
     if host_arch:
         configure += [
@@ -169,14 +170,10 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
             '--with-gnu-ld',
             '--with-sysroot=%s' % install_folder.joinpath(target).as_posix()
         ],
-        "mips-linux-gnu": [
-            '--enable-new-dtags',
-            '--enable-targets=mips64-linux-gnuabi64,mips64-linux-gnuabin32'
-        ],
-        "mipsel-linux-gnu": [
-            '--enable-new-dtags',
-            '--enable-targets=mips64el-linux-gnuabi64,mips64el-linux-gnuabin32'
-        ],
+        "mips-linux-gnu":
+        ['--enable-targets=mips64-linux-gnuabi64,mips64-linux-gnuabin32'],
+        "mipsel-linux-gnu":
+        ['--enable-targets=mips64el-linux-gnuabi64,mips64el-linux-gnuabin32'],
         "powerpc-linux-gnu":
         ['--enable-lto', '--enable-relro', '--disable-sim', '--with-pic'],
         "riscv64-linux-gnu":
