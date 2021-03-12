@@ -170,10 +170,6 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
             '--with-gnu-ld',
             '--with-sysroot=%s' % install_folder.joinpath(target).as_posix()
         ],
-        "mips-linux-gnu":
-        ['--enable-targets=mips64-linux-gnuabi64,mips64-linux-gnuabin32'],
-        "mipsel-linux-gnu":
-        ['--enable-targets=mips64el-linux-gnuabi64,mips64el-linux-gnuabin32'],
         "powerpc-linux-gnu":
         ['--enable-lto', '--enable-relro', '--disable-sim', '--with-pic'],
         "riscv64-linux-gnu":
@@ -193,6 +189,12 @@ def invoke_configure(build_folder, install_folder, root_folder, target,
         'powerpc-linux-gnu']
     configure_arch_flags['powerpc64le-linux-gnu'] = configure_arch_flags[
         'powerpc-linux-gnu']
+
+    for endian in ["", "el"]:
+        configure_arch_flags['mips%s-linux-gnu' % (endian)] = [
+            '--enable-targets=mips64%s-linux-gnuabi64,mips64%s-linux-gnuabin32'
+            % (endian, endian)
+        ]
 
     configure += configure_arch_flags.get(target, [])
 
