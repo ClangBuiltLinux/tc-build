@@ -10,6 +10,7 @@ function header() {
 
 # Parse parameters
 function parse_parameters() {
+    TARGETS=()
     while ((${#})); do
         case ${1} in
             "--allmodconfig")
@@ -40,13 +41,13 @@ function parse_parameters() {
                 # Convert LLVM targets into GNU triples
                 for LLVM_TARGET in "${LLVM_TARGETS[@]}"; do
                     case ${LLVM_TARGET} in
-                        "AArch64") TARGETS=("${TARGETS[@]}" "aarch64-linux-gnu") ;;
-                        "ARM") TARGETS=("${TARGETS[@]}" "arm-linux-gnueabi") ;;
-                        "Mips") TARGETS=("${TARGETS[@]}" "mipsel-linux-gnu") ;;
-                        "PowerPC") TARGETS=("${TARGETS[@]}" "powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu") ;;
-                        "RISCV") TARGETS=("${TARGETS[@]}" "riscv64-linux-gnu") ;;
-                        "SystemZ") TARGETS=("${TARGETS[@]}" "s390x-linux-gnu") ;;
-                        "X86") TARGETS=("${TARGETS[@]}" "x86_64-linux-gnu") ;;
+                        "AArch64") TARGETS+=("aarch64-linux-gnu") ;;
+                        "ARM") TARGETS+=("arm-linux-gnueabi") ;;
+                        "Mips") TARGETS+=("mipsel-linux-gnu") ;;
+                        "PowerPC") TARGETS+=("powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu") ;;
+                        "RISCV") TARGETS+=("riscv64-linux-gnu") ;;
+                        "SystemZ") TARGETS+=("s390x-linux-gnu") ;;
+                        "X86") TARGETS+=("x86_64-linux-gnu") ;;
                     esac
                 done
                 ;;
@@ -119,7 +120,7 @@ function check_binutils() {
         else
             COMMAND="${PREFIX}"-as
         fi
-        command -v "${COMMAND}" &>/dev/null || BINUTILS_TARGETS=("${BINUTILS_TARGETS[@]}" "${PREFIX}")
+        command -v "${COMMAND}" &>/dev/null || BINUTILS_TARGETS+=("${PREFIX}")
     done
     [[ -n "${BINUTILS_TARGETS[*]}" ]] && { "${TC_BLD}"/build-binutils.py -t "${BINUTILS_TARGETS[@]}" || exit ${?}; }
 }
