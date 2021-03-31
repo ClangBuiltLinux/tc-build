@@ -28,8 +28,7 @@ function parse_parameters() {
                 PATH_OVERRIDE=${1}
                 ;;
             "--pgo")
-                shift
-                PGO=${1}
+                PGO=true
                 ;;
             "-s" | "--src-folder")
                 shift
