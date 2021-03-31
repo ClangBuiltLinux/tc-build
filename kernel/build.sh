@@ -12,6 +12,9 @@ function header() {
 # Parse parameters
 while ((${#})); do
     case ${1} in
+        "--allmodconfig")
+            CONFIG_TARGET=allmodconfig
+            ;;
         "--allyesconfig")
             CONFIG_TARGET=allyesconfig
             ;;
