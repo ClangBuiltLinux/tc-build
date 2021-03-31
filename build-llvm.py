@@ -650,11 +650,10 @@ def instrumented_stage(args, stage):
     return args.pgo and stage == 2
 
 
-def base_cmake_defines(dirs):
+def base_cmake_defines():
     """
     Generate base cmake defines, which will always be present, regardless of
     user input and stage
-    :param dirs: An instance of the Directories class with the paths to use
     :return: A set of defines
     """
     # yapf: disable
@@ -669,12 +668,8 @@ def base_cmake_defines(dirs):
         # We don't use the plugin system and it will remove unused symbols:
         # https://crbug.com/917404
         'CLANG_PLUGIN_SUPPORT': 'OFF',
-        # For LLVMgold.so, which is used for LTO with ld.gold
-        'LLVM_BINUTILS_INCDIR': dirs.root_folder.joinpath(utils.current_binutils(), "include").as_posix(),
         # Don't build bindings; they are for other languages that the kernel does not use
         'LLVM_ENABLE_BINDINGS': 'OFF',
-        # We need to enable LLVM plugin support so that LLVMgold.so is loadable
-        'LLVM_ENABLE_PLUGINS': 'ON',
         # Don't build Ocaml documentation
         'LLVM_ENABLE_OCAMLDOC': 'OFF',
         # Removes system dependency on terminfo and almost every major clang provider turns this off
@@ -684,8 +679,7 @@ def base_cmake_defines(dirs):
         # Don't include documentation build targets because it is available on the web
         'LLVM_INCLUDE_DOCS': 'OFF',
         # Don't include example build targets to save on cmake cycles
-        'LLVM_INCLUDE_EXAMPLES': 'OFF',
-
+        'LLVM_INCLUDE_EXAMPLES': 'OFF'
     }
     # yapf: enable
 
@@ -876,6 +870,11 @@ def stage_specific_cmake_defines(args, dirs, stage):
             if not key in str(args.defines):
                 defines[key] = ''
 
+        # For LLVMgold.so, which is used for LTO with ld.gold
+        defines['LLVM_BINUTILS_INCDIR'] = dirs.root_folder.joinpath(
+            utils.current_binutils(), "include").as_posix()
+        defines['LLVM_ENABLE_PLUGINS'] = 'ON'
+
     return defines
 
 
@@ -890,7 +889,7 @@ def build_cmake_defines(args, dirs, env_vars, stage):
     """
 
     # Get base defines, which don't depend on any user inputs
-    defines = base_cmake_defines(dirs)
+    defines = base_cmake_defines()
 
     # Add compiler/linker defines, which change based on stage
     defines.update(cc_ld_cmake_defines(dirs, env_vars, stage))
