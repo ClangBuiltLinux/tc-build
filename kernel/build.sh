@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
-# Get the tc-build folder's absolute path, which is the directory above this one
-TC_BLD=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"/.. && pwd)
-[[ -z ${TC_BLD} ]] && exit 1
+KRNL=$(dirname "$(readlink -f "${0}")")
+TC_BLD=${KRNL%/*}
 
 function header() {
     BORDER="====$(for _ in $(seq ${#1}); do printf '='; done)===="
@@ -78,8 +77,8 @@ if [[ -n ${SRC_FOLDER} ]]; then
     cd "${SRC_FOLDER}" || exit 1
 else
     LINUX=linux-5.11.3
-    LINUX_TARBALL=${TC_BLD}/kernel/${LINUX}.tar.xz
-    LINUX_PATCH=${TC_BLD}/kernel/${LINUX}-${CONFIG_TARGET}.patch
+    LINUX_TARBALL=${KRNL}/${LINUX}.tar.xz
+    LINUX_PATCH=${KRNL}/${LINUX}-${CONFIG_TARGET}.patch
 
     # If we don't have the source tarball, download and verify it
     if [[ ! -f ${LINUX_TARBALL} ]]; then
