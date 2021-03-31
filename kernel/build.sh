@@ -85,7 +85,7 @@ function setup_krnl_src() {
     if [[ -n ${SRC_FOLDER} ]]; then
         cd "${SRC_FOLDER}" || exit 1
     else
-        LINUX=linux-5.11.3
+        LINUX=linux-5.11.11
         LINUX_TARBALL=${KRNL}/${LINUX}.tar.xz
         LINUX_PATCH=${KRNL}/${LINUX}-${CONFIG_TARGET}.patch
 
