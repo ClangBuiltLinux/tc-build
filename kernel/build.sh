@@ -184,7 +184,7 @@ function build_kernels() {
                     "${MAKE[@]}" \
                     ARCH=mips \
                     CROSS_COMPILE="${TARGET}-" \
-                    distclean malta_kvm_guest_defconfig vmlinux modules || exit ${?}
+                    distclean malta_defconfig vmlinux modules || exit ${?}
                 ;;
             "powerpc-linux-gnu")
                 time \
