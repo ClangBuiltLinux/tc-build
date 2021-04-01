@@ -50,7 +50,7 @@ while ((${#})); do
     esac
     shift
 done
-[[ -z ${TARGETS[*]} ]] && TARGETS=(
+[[ -z ${TARGETS[*]} || ${TARGETS[*]} = "all" ]] && TARGETS=(
     "arm-linux-gnueabi"
     "aarch64-linux-gnu"
     "mipsel-linux-gnu"
