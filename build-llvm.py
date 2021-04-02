@@ -155,6 +155,21 @@ def parse_parameters(root_folder):
 
                         """),
                         nargs="+")
+    parser.add_argument("-f",
+                        "--full-toolchain",
+                        help=textwrap.dedent("""\
+                        By default, the script tunes LLVM for building the Linux kernel by disabling several
+                        projects, targets, and configuration options, which speeds up build times but limits
+                        how the toolchain could be used.
+
+                        With this option, all projects and targets are enabled and the script tries to avoid
+                        unnecessarily turning off configuration options. The '--projects' and '--targets' options
+                        to the script can still be used to change the list of projects and targets. This is
+                        useful when using the script to do upstream LLVM development or trying to use LLVM as a
+                        system-wide toolchain.
+
+                        """),
+                        action="store_true")
     parser.add_argument("-i",
                         "--incremental",
                         help=textwrap.dedent("""\
@@ -236,8 +251,8 @@ def parse_parameters(root_folder):
     parser.add_argument("-p",
                         "--projects",
                         help=textwrap.dedent("""\
-                        Currently, the script only enables the clang, compiler-rt, and lld folders in LLVM. If
-                        you would like to override this, you can use this parameter and supply a list that is
+                        Currently, the script only enables the clang, compiler-rt, lld, and polly folders in LLVM.
+                        If you would like to override this, you can use this parameter and supply a list that is
                         supported by LLVM_ENABLE_PROJECTS.
 
                         See step #5 here: https://llvm.org/docs/GettingStarted.html#getting-started-quickly-a-summary
@@ -245,9 +260,9 @@ def parse_parameters(root_folder):
                         Example: -p \"clang;lld;libcxx\"
 
                         """),
-                        type=str,
-                        default="clang;compiler-rt;lld;polly")
+                        type=str)
     opt_options.add_argument("--pgo",
+                             metavar="PGO_BENCHMARK",
                              help=textwrap.dedent("""\
                         Build the final compiler with Profile Guided Optimization, which can often improve compile
                         time performance by 15-20%% on average. The script will:
@@ -256,10 +271,20 @@ def parse_parameters(root_folder):
 
                         2. Build an instrumented compiler with that compiler (stage 2).
 
-                        3. Download and extract kernel source from kernel.org (unless '--linux-folder' is
+                        3. Run the specified benchmark(s).
+
+                           kernel-defconfig, kernel-allmodconfig, kernel-allyesconfig:
+
+                           Download and extract kernel source from kernel.org (unless '--linux-folder' is
                            specified), build the necessary binutils if not found in PATH, and build some
-                           defconfig kernels with the instrumented compiler (based on the '--targets' option).
-                           If there is a build error with one of the kernels, build-llvm.py will fail as well.
+                           kernels based on the requested config with the instrumented compiler (based on the
+                           '--targets' option). If there is a build error with one of the kernels, build-llvm.py
+                           will fail as well.
+
+                           llvm:
+
+                           The script will run the LLVM tests if they were requested via '--check-targets' then
+                           build a full LLVM toolchain with the instrumented compiler.
 
                         4. Build a final compiler with the profile data generated from step 3 (stage 3).
 
@@ -274,7 +299,11 @@ def parse_parameters(root_folder):
                         See https://llvm.org/docs/HowToBuildWithPGO.html for more information.
 
                              """),
-                             action="store_true")
+                             nargs="+",
+                             choices=[
+                                 'kernel-defconfig', 'kernel-allmodconfig',
+                                 'kernel-allyesconfig', 'llvm'
+                             ])
     clone_options.add_argument("-s",
                                "--shallow-clone",
                                help=textwrap.dedent("""\
@@ -296,7 +325,14 @@ def parse_parameters(root_folder):
 
                                """),
                                action="store_true")
-    # yapf: disable
+    parser.add_argument("--show-build-commands",
+                        help=textwrap.dedent("""\
+                        By default, the script only shows the output of the comands it is running. When this option
+                        is enabled, the invocations of cmake, ninja, and kernel/build.sh will be shown to help with
+                        reproducing issues outside of the script.
+
+                        """),
+                        action="store_true")
     parser.add_argument("-t",
                         "--targets",
                         help=textwrap.dedent("""\
@@ -310,9 +346,7 @@ def parse_parameters(root_folder):
                         Example: -t "AArch64;X86"
 
                         """),
-                        type=str,
-                        default="AArch64;ARM;BPF;Mips;PowerPC;RISCV;SystemZ;X86")
-    # yapf: enable
+                        type=str)
     clone_options.add_argument("--use-good-revision",
                                help=textwrap.dedent("""\
                         By default, the script updates LLVM to the latest tip of tree revision, which may at times be
@@ -642,11 +676,17 @@ def instrumented_stage(args, stage):
     return args.pgo and stage == 2
 
 
-def base_cmake_defines(dirs):
+def pgo_stage(stage):
     """
-    Generate base cmake defines, which will always be present, regardless of
-    user input and stage
-    :param dirs: An instance of the Directories class with the paths to use
+    Returns true if LLVM is being built as a PGO benchmark
+    :return: True if LLVM is being built as a PGO benchmark, false if not
+    """
+    return stage == "pgo"
+
+
+def slim_cmake_defines():
+    """
+    Generate a set of cmake defines to slim down the LLVM toolchain
     :return: A set of defines
     """
     # yapf: disable
@@ -661,37 +701,47 @@ def base_cmake_defines(dirs):
         # We don't use the plugin system and it will remove unused symbols:
         # https://crbug.com/917404
         'CLANG_PLUGIN_SUPPORT': 'OFF',
-        # For LLVMgold.so, which is used for LTO with ld.gold
-        'LLVM_BINUTILS_INCDIR': dirs.root_folder.joinpath(utils.current_binutils(), "include").as_posix(),
         # Don't build bindings; they are for other languages that the kernel does not use
         'LLVM_ENABLE_BINDINGS': 'OFF',
-        # We need to enable LLVM plugin support so that LLVMgold.so is loadable
-        'LLVM_ENABLE_PLUGINS': 'ON',
         # Don't build Ocaml documentation
         'LLVM_ENABLE_OCAMLDOC': 'OFF',
-        # Removes system dependency on terminfo and almost every major clang provider turns this off
-        'LLVM_ENABLE_TERMINFO': 'OFF',
         # Don't build clang-tools-extras to cut down on build targets (about 400 files or so)
         'LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR': '',
         # Don't include documentation build targets because it is available on the web
         'LLVM_INCLUDE_DOCS': 'OFF',
         # Don't include example build targets to save on cmake cycles
-        'LLVM_INCLUDE_EXAMPLES': 'OFF',
-
+        'LLVM_INCLUDE_EXAMPLES': 'OFF'
     }
     # yapf: enable
 
     return defines
 
 
-def get_stage1_binary(binary, dirs):
+def get_stage_binary(binary, dirs, stage):
     """
-    Generate a path from the stage 1 bin directory for the requested binary
+    Generate a path from the stage bin directory for the requested binary
     :param binary: Name of the binary
     :param dirs: An instance of the Directories class with the paths to use
+    :param stage: The staged binary to use
     :return: A path suitable for a cmake define
     """
-    return dirs.build_folder.joinpath("stage1", "bin", binary).as_posix()
+    return dirs.build_folder.joinpath("stage%d" % stage, "bin",
+                                      binary).as_posix()
+
+
+def if_binary_exists(binary_name, cc):
+    """
+    Returns the path of the requested binary if it exists and clang is being used, None if not
+    :param binary_name: Name of the binary
+    :param cc: Path to CC binary
+    :return: A path to binary if it exists and clang is being used, None if either condition is false
+    """
+    binary = None
+    if "clang" in cc:
+        binary = shutil.which(binary_name,
+                              path=os.path.dirname(cc) + ":" +
+                              os.environ['PATH'])
+    return binary
 
 
 def cc_ld_cmake_defines(dirs, env_vars, stage):
@@ -706,21 +756,28 @@ def cc_ld_cmake_defines(dirs, env_vars, stage):
     defines = {}
 
     if stage == 1:
-        ar = None
+        # Already figured out above
         cc = env_vars.cc
-        clang_tblgen = None
         cxx = env_vars.cxx
         ld = env_vars.ld
+        # Optional to have
+        ar = if_binary_exists("llvm-ar", cc)
+        ranlib = if_binary_exists("llvm-ranlib", cc)
+        # Cannot be used from host due to potential incompatibilities
+        clang_tblgen = None
         llvm_tblgen = None
-        ranlib = None
     else:
-        ar = get_stage1_binary("llvm-ar", dirs)
-        cc = get_stage1_binary("clang", dirs)
-        clang_tblgen = get_stage1_binary("clang-tblgen", dirs)
-        cxx = get_stage1_binary("clang++", dirs)
-        ld = get_stage1_binary("ld.lld", dirs)
-        llvm_tblgen = get_stage1_binary("llvm-tblgen", dirs)
-        ranlib = get_stage1_binary("llvm-ranlib", dirs)
+        if pgo_stage(stage):
+            stage = 2
+        else:
+            stage = 1
+        ar = get_stage_binary("llvm-ar", dirs, stage)
+        cc = get_stage_binary("clang", dirs, stage)
+        clang_tblgen = get_stage_binary("clang-tblgen", dirs, stage)
+        cxx = get_stage_binary("clang++", dirs, stage)
+        ld = get_stage_binary("ld.lld", dirs, stage)
+        llvm_tblgen = get_stage_binary("llvm-tblgen", dirs, stage)
+        ranlib = get_stage_binary("llvm-ranlib", dirs, stage)
 
     # Use llvm-ar for stage 2+ builds to avoid errors with bfd plugin
     # bfd plugin: LLVM gold plugin has failed to create LTO module: Unknown attribute kind (60) (Producer: 'LLVM9.0.0svn' Reader: 'LLVM 8.0.0')
@@ -766,9 +823,69 @@ def distro_cmake_defines():
     return defines
 
 
-def project_target_cmake_defines(args, stage):
+def project_cmake_defines(args, stage):
     """
-    Generate project and target cmake defines, which change depending on what
+    Generate lists of projects, depending on whether a full or
+    kernel-focused LLVM build is being done and the stage
+    :param args: The args variable generated by parse_parameters
+    :param stage: What stage we are at
+    :return: A set of defines
+    """
+    defines = {}
+
+    if args.full_toolchain:
+        if args.projects:
+            projects = args.projects
+        else:
+            projects = "all"
+    else:
+        if bootstrap_stage(args, stage):
+            projects = "clang;lld"
+            if args.pgo:
+                projects += ';compiler-rt'
+        else:
+            if instrumented_stage(args, stage):
+                projects = "clang;lld"
+            else:
+                projects = "clang;compiler-rt;lld;polly"
+
+    defines['LLVM_ENABLE_PROJECTS'] = projects
+
+    if "compiler-rt" in projects:
+        if not args.full_toolchain:
+            # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
+            defines['COMPILER_RT_BUILD_LIBFUZZER'] = 'OFF'
+            # We only use compiler-rt for the sanitizers, disable some extra stuff we don't need
+            # Chromium OS also does this: https://crrev.com/c/1629950
+            defines['COMPILER_RT_BUILD_BUILTINS'] = 'OFF'
+            defines['COMPILER_RT_BUILD_CRT'] = 'OFF'
+            defines['COMPILER_RT_BUILD_XRAY'] = 'OFF'
+        # We don't need the sanitizers for the stage 1 bootstrap
+        if bootstrap_stage(args, stage):
+            defines['COMPILER_RT_BUILD_SANITIZERS'] = 'OFF'
+
+    return defines
+
+
+def get_targets(args):
+    """
+    Gets the list of targets for cmake and kernel/build.sh
+    :param args: The args variable generated by parse_parameters
+    :return: A string of targets suitable for cmake or kernel/build.sh
+    """
+    if args.targets:
+        targets = args.targets
+    elif args.full_toolchain:
+        targets = "all"
+    else:
+        targets = "AArch64;ARM;BPF;Mips;PowerPC;RISCV;SystemZ;X86"
+
+    return targets
+
+
+def target_cmake_defines(args, stage):
+    """
+    Generate target cmake define, which change depending on what
     stage we are at
     :param args: The args variable generated by parse_parameters
     :param stage: What stage we are at
@@ -777,34 +894,11 @@ def project_target_cmake_defines(args, stage):
     defines = {}
 
     if bootstrap_stage(args, stage):
-        projects = "clang;lld"
-        if args.pgo:
-            projects += ';compiler-rt'
         targets = "host"
     else:
-        if instrumented_stage(args, stage):
-            projects = "clang;lld"
-        else:
-            projects = args.projects
-        targets = args.targets
+        targets = get_targets(args)
 
-    # The projects to build
-    defines['LLVM_ENABLE_PROJECTS'] = projects
-
-    # The architectures to build backends for
     defines['LLVM_TARGETS_TO_BUILD'] = targets
-
-    if "compiler-rt" in projects:
-        # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
-        defines['COMPILER_RT_BUILD_LIBFUZZER'] = 'OFF'
-        # We only use compiler-rt for the sanitizers, disable some extra stuff we don't need
-        # Chromium OS also does this: https://crrev.com/c/1629950
-        defines['COMPILER_RT_BUILD_BUILTINS'] = 'OFF'
-        defines['COMPILER_RT_BUILD_CRT'] = 'OFF'
-        defines['COMPILER_RT_BUILD_XRAY'] = 'OFF'
-        # We don't need the sanitizers for the stage 1 bootstrap
-        if bootstrap_stage(args, stage):
-            defines['COMPILER_RT_BUILD_SANITIZERS'] = 'OFF'
 
     return defines
 
@@ -826,11 +920,12 @@ def stage_specific_cmake_defines(args, dirs, stage):
 
     if bootstrap_stage(args, stage):
         # Based on clang/cmake/caches/Apple-stage1.cmake
+        defines.update(slim_cmake_defines())
         defines['CMAKE_BUILD_TYPE'] = 'Release'
+        defines['LLVM_BUILD_UTILS'] = 'OFF'
         defines['LLVM_ENABLE_BACKTRACES'] = 'OFF'
         defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
         defines['LLVM_INCLUDE_TESTS'] = 'OFF'
-        defines['LLVM_INCLUDE_UTILS'] = 'OFF'
     else:
         # https://llvm.org/docs/CMake.html#frequently-used-cmake-variables
         defines['CMAKE_BUILD_TYPE'] = args.build_type
@@ -868,6 +963,11 @@ def stage_specific_cmake_defines(args, dirs, stage):
             if not key in str(args.defines):
                 defines[key] = ''
 
+        # For LLVMgold.so, which is used for LTO with ld.gold
+        defines['LLVM_BINUTILS_INCDIR'] = dirs.root_folder.joinpath(
+            utils.current_binutils(), "include").as_posix()
+        defines['LLVM_ENABLE_PLUGINS'] = 'ON'
+
     return defines
 
 
@@ -880,9 +980,11 @@ def build_cmake_defines(args, dirs, env_vars, stage):
     :param stage: What stage we are at
     :return: A set of defines
     """
+    defines = {}
 
-    # Get base defines, which don't depend on any user inputs
-    defines = base_cmake_defines(dirs)
+    # Get slim defines if we are not building a full toolchain
+    if not args.full_toolchain:
+        defines.update(slim_cmake_defines())
 
     # Add compiler/linker defines, which change based on stage
     defines.update(cc_ld_cmake_defines(dirs, env_vars, stage))
@@ -891,7 +993,8 @@ def build_cmake_defines(args, dirs, env_vars, stage):
     defines.update(distro_cmake_defines())
 
     # Add project and target defines, which change based on stage
-    defines.update(project_target_cmake_defines(args, stage))
+    defines.update(project_cmake_defines(args, stage))
+    defines.update(target_cmake_defines(args, stage))
 
     # Add other stage specific defines
     defines.update(stage_specific_cmake_defines(args, dirs, stage))
@@ -900,7 +1003,30 @@ def build_cmake_defines(args, dirs, env_vars, stage):
     if args.clang_vendor:
         defines['CLANG_VENDOR'] = args.clang_vendor
 
+    # Removes system dependency on terminfo to keep the dynamic library dependencies slim
+    defines['LLVM_ENABLE_TERMINFO'] = 'OFF'
+
     return defines
+
+
+def show_command(args, command):
+    """
+    :param args: The args variable generated by parse_parameters
+    :param command: The command being run
+    """
+    if args.show_build_commands:
+        print("$ %s" % " ".join([str(element) for element in command]))
+
+
+def get_pgo_header_folder(stage):
+    if pgo_stage(stage):
+        header_string = "for PGO"
+        sub_folder = "pgo"
+    else:
+        header_string = "stage %d" % stage
+        sub_folder = "stage%d" % stage
+
+    return (header_string, sub_folder)
 
 
 def invoke_cmake(args, dirs, env_vars, stage):
@@ -923,10 +1049,13 @@ def invoke_cmake(args, dirs, env_vars, stage):
             cmake += ['-D' + d]
     cmake += [dirs.root_folder.joinpath("llvm-project", "llvm").as_posix()]
 
-    cwd = dirs.build_folder.joinpath("stage%d" % stage).as_posix()
+    header_string, sub_folder = get_pgo_header_folder(stage)
 
-    utils.print_header("Configuring LLVM stage %d" % stage)
+    cwd = dirs.build_folder.joinpath(sub_folder).as_posix()
 
+    utils.print_header("Configuring LLVM %s" % header_string)
+
+    show_command(args, cmake)
     subprocess.run(cmake, check=True, cwd=cwd)
 
 
@@ -954,6 +1083,19 @@ def print_install_info(install_folder):
                 print()
 
 
+def ninja_check(args, build_folder):
+    """
+    Invoke ninja with check targets if they are present
+    :param args: The args variable generated by parse_parameters
+    :param build_folder: The build folder that ninja should be run in
+    :return:
+    """
+    if args.check_targets:
+        ninja_check = ['ninja'] + ['check-%s' % s for s in args.check_targets]
+        show_command(args, ninja_check)
+        subprocess.run(ninja_check, check=True, cwd=build_folder)
+
+
 def invoke_ninja(args, dirs, stage):
     """
     Invoke ninja to run the actual build
@@ -962,9 +1104,11 @@ def invoke_ninja(args, dirs, stage):
     :param stage: The current stage we're building
     :return:
     """
-    utils.print_header("Building LLVM stage %d" % stage)
+    header_string, sub_folder = get_pgo_header_folder(stage)
 
-    build_folder = dirs.build_folder.joinpath("stage%d" % stage)
+    utils.print_header("Building LLVM %s" % header_string)
+
+    build_folder = dirs.build_folder.joinpath(sub_folder)
 
     install_folder = None
     if should_install_toolchain(args, stage):
@@ -976,13 +1120,11 @@ def invoke_ninja(args, dirs, stage):
 
     time_started = time.time()
 
+    show_command(args, ["ninja"])
     subprocess.run('ninja', check=True, cwd=build_folder)
 
-    if args.check_targets and stage == get_final_stage(args):
-        subprocess.run(['ninja'] +
-                       ['check-%s' % s for s in args.check_targets],
-                       check=True,
-                       cwd=build_folder)
+    if stage == get_final_stage(args):
+        ninja_check(args, build_folder)
 
     print()
     print("LLVM build duration: " +
@@ -1001,6 +1143,44 @@ def invoke_ninja(args, dirs, stage):
         print_install_info(install_folder)
 
 
+def kernel_build_sh(args, config, dirs):
+    """
+    Run kernel/build.sh to generate PGO profiles
+    :param args: The args variable generated by parse_parameters
+    :param config: The config to build (defconfig, allmodconfig, allyesconfig)
+    :param dirs: An instance of the Directories class with the paths to use
+    :return:
+    """
+    # Run kernel/build.sh
+    build_sh = [
+        dirs.root_folder.joinpath("kernel", "build.sh"), '-b',
+        dirs.build_folder, '--pgo', '-t',
+        get_targets(args)
+    ]
+    if config != "defconfig":
+        build_sh += ['--%s' % config]
+    if dirs.linux_folder:
+        build_sh += ['-s', dirs.linux_folder.as_posix()]
+    show_command(args, build_sh)
+    subprocess.run(build_sh, check=True, cwd=dirs.build_folder.as_posix())
+
+
+def pgo_llvm_build(args, dirs):
+    """
+    Builds LLVM as a PGO benchmark
+    :param args: The args variable generated by parse_parameters
+    :param dirs: An instance of the Directories class with the paths to use
+    :return:
+    """
+    # Run check targets if the user requested them for PGO coverage
+    ninja_check(args, dirs.build_folder.joinpath("stage2").as_posix())
+    # Then, build LLVM as if it were the full final toolchain
+    stage = "pgo"
+    dirs.build_folder.joinpath(stage).mkdir(parents=True, exist_ok=True)
+    invoke_cmake(args, dirs, None, stage)
+    invoke_ninja(args, dirs, stage)
+
+
 def generate_pgo_profiles(args, dirs):
     """
     Build a set of kernels across a few architectures to generate PGO profiles
@@ -1011,15 +1191,12 @@ def generate_pgo_profiles(args, dirs):
 
     utils.print_header("Building PGO profiles")
 
-    # Run kernel/build.sh
-    build_sh = [
-        dirs.root_folder.joinpath("kernel", "build.sh"), '-b',
-        dirs.build_folder, '--pgo',
-        str(args.pgo).lower(), '-t', args.targets
-    ]
-    if dirs.linux_folder:
-        build_sh += ['-s', dirs.linux_folder.as_posix()]
-    subprocess.run(build_sh, check=True, cwd=dirs.build_folder.as_posix())
+    # Run PGO benchmarks
+    for pgo in args.pgo:
+        if pgo.split("-")[0] == "kernel":
+            kernel_build_sh(args, pgo.split("-")[1], dirs)
+        if pgo == "llvm":
+            pgo_llvm_build(args, dirs)
 
     # Combine profiles
     subprocess.run([
