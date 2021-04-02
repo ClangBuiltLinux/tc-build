@@ -729,6 +729,21 @@ def get_stage_binary(binary, dirs, stage):
                                       binary).as_posix()
 
 
+def if_binary_exists(binary_name, cc):
+    """
+    Returns the path of the requested binary if it exists and clang is being used, None if not
+    :param binary_name: Name of the binary
+    :param cc: Path to CC binary
+    :return: A path to binary if it exists and clang is being used, None if either condition is false
+    """
+    binary = None
+    if "clang" in cc:
+        binary = shutil.which(binary_name,
+                              path=os.path.dirname(cc) + ":" +
+                              os.environ['PATH'])
+    return binary
+
+
 def cc_ld_cmake_defines(dirs, env_vars, stage):
     """
     Generate compiler and linker cmake defines, which change depending on what
@@ -741,13 +756,16 @@ def cc_ld_cmake_defines(dirs, env_vars, stage):
     defines = {}
 
     if stage == 1:
-        ar = None
+        # Already figured out above
         cc = env_vars.cc
-        clang_tblgen = None
         cxx = env_vars.cxx
         ld = env_vars.ld
+        # Optional to have
+        ar = if_binary_exists("llvm-ar", cc)
+        ranlib = if_binary_exists("llvm-ranlib", cc)
+        # Cannot be used from host due to potential incompatibilities
+        clang_tblgen = None
         llvm_tblgen = None
-        ranlib = None
     else:
         if pgo_stage(stage):
             stage = 2
