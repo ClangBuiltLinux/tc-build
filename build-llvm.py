@@ -857,7 +857,6 @@ def project_cmake_defines(args, stage):
             defines['COMPILER_RT_BUILD_LIBFUZZER'] = 'OFF'
             # We only use compiler-rt for the sanitizers, disable some extra stuff we don't need
             # Chromium OS also does this: https://crrev.com/c/1629950
-            defines['COMPILER_RT_BUILD_BUILTINS'] = 'OFF'
             defines['COMPILER_RT_BUILD_CRT'] = 'OFF'
             defines['COMPILER_RT_BUILD_XRAY'] = 'OFF'
         # We don't need the sanitizers for the stage 1 bootstrap
