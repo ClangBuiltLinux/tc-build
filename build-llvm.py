@@ -1159,7 +1159,7 @@ def kernel_build_sh(args, config, dirs):
     if config != "defconfig":
         build_sh += ['--%s' % config]
     if dirs.linux_folder:
-        build_sh += ['-s', dirs.linux_folder.as_posix()]
+        build_sh += ['-k', dirs.linux_folder.as_posix()]
     show_command(args, build_sh)
     subprocess.run(build_sh, check=True, cwd=dirs.build_folder.as_posix())
 

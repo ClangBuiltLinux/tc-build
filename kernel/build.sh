@@ -23,16 +23,16 @@ function parse_parameters() {
                 shift
                 BUILD_FOLDER=${1}
                 ;;
+            "-k" | "--kernel-src")
+                shift
+                KERNEL_SRC=${1}
+                ;;
             "-p" | "--path-override")
                 shift
                 PATH_OVERRIDE=${1}
                 ;;
             "--pgo")
                 PGO=true
-                ;;
-            "-s" | "--src-folder")
-                shift
-                SRC_FOLDER=${1}
                 ;;
             "-t" | "--targets")
                 shift
@@ -80,9 +80,9 @@ function setup_up_path() {
 }
 
 function setup_krnl_src() {
-    # A kernel folder can be supplied via '-f' for testing the script
-    if [[ -n ${SRC_FOLDER} ]]; then
-        cd "${SRC_FOLDER}" || exit 1
+    # A kernel folder can be supplied via '-k' for testing the script
+    if [[ -n ${KERNEL_SRC} ]]; then
+        cd "${KERNEL_SRC}" || exit 1
     else
         LINUX=linux-5.11.11
         LINUX_TARBALL=${KRNL}/${LINUX}.tar.xz
