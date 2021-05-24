@@ -843,11 +843,12 @@ def project_cmake_defines(args, stage):
             projects = "clang;lld"
             if args.pgo:
                 projects += ';compiler-rt'
+        elif instrumented_stage(args, stage):
+            projects = "clang;lld"
+        elif args.projects:
+            projects = args.projects
         else:
-            if instrumented_stage(args, stage):
-                projects = "clang;lld"
-            else:
-                projects = "clang;compiler-rt;lld;polly"
+            projects = "clang;compiler-rt;lld;polly"
 
     defines['LLVM_ENABLE_PROJECTS'] = projects
 
