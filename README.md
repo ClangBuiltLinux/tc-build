@@ -70,7 +70,7 @@ These scripts have been tested in a Docker image of the following distributions,
               zlib-devel
   ```
 
-* ### Arch Linux
+* ### Arch Linux/Manjaro
 
   ```
   pacman -S base-devel \
@@ -85,7 +85,9 @@ These scripts have been tested in a Docker image of the following distributions,
             ninja \
             openssl \
             python3 \
-            uboot-tools
+            uboot-tools \
+            cpio \
+            zlib 
   ```
 
 * ### Clear Linux

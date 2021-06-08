@@ -84,7 +84,7 @@ function setup_krnl_src() {
     if [[ -n ${KERNEL_SRC} ]]; then
         cd "${KERNEL_SRC}" || exit 1
     else
-        LINUX=linux-5.12
+        LINUX=linux-5.12.9
         LINUX_TARBALL=${KRNL}/${LINUX}.tar.xz
         LINUX_PATCH=${KRNL}/${LINUX}-${CONFIG_TARGET}.patch
 
