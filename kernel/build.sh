@@ -84,9 +84,8 @@ function setup_krnl_src() {
     if [[ -n ${KERNEL_SRC} ]]; then
         cd "${KERNEL_SRC}" || exit 1
     else
-        LINUX=linux-5.12
+        LINUX=linux-5.12.9
         LINUX_TARBALL=${KRNL}/${LINUX}.tar.xz
-        LINUX_PATCH=${KRNL}/${LINUX}-${CONFIG_TARGET}.patch
 
         # If we don't have the source tarball, download and verify it
         if [[ ! -f ${LINUX_TARBALL} ]]; then
@@ -102,10 +101,16 @@ function setup_krnl_src() {
         fi
 
         # If there is a patch to apply, remove the folder so that we can patch it accurately (we cannot assume it has already been patched)
-        [[ -f ${LINUX_PATCH} ]] && rm -rf ${LINUX}
+        PATCH_FILES=()
+        for SRC_FILE in "${KRNL}"/*; do
+            [[ ${SRC_FILE##*/} = *.patch ]] && PATCH_FILES+=("${SRC_FILE}")
+        done
+        [[ -n "${PATCHES[*]}" ]] && rm -rf ${LINUX}
         [[ -d ${LINUX} ]] || { tar -xf "${LINUX_TARBALL}" || exit ${?}; }
         cd ${LINUX} || exit 1
-        [[ -f ${LINUX_PATCH} ]] && { patch -p1 <"${LINUX_PATCH}" || exit ${?}; }
+        for PATCH_FILE in "${PATCH_FILES[@]}"; do
+            patch -p1 <"${PATCH_FILE}" || exit ${?}
+        done
     fi
 }
 
