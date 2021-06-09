@@ -1,0 +1,54 @@
+From 153e0fb7237d4ab23e0a074afc0d04f4ab5e79ae Mon Sep 17 00:00:00 2001
+From: Nathan Chancellor <nathan@kernel.org>
+Date: Fri, 28 May 2021 11:27:52 -0700
+Subject: [PATCH] powerpc/barrier: Avoid collision with clang's __lwsync macro
+
+A change in clang 13 results in the __lwsync macro being defined as
+__builtin_ppc_lwsync, which emits 'lwsync' or 'msync' depending on what
+the target supports. This breaks the build because of -Werror in
+arch/powerpc, along with thousands of warnings:
+
+ In file included from arch/powerpc/kernel/pmc.c:12:
+ In file included from include/linux/bug.h:5:
+ In file included from arch/powerpc/include/asm/bug.h:109:
+ In file included from include/asm-generic/bug.h:20:
+ In file included from include/linux/kernel.h:12:
+ In file included from include/linux/bitops.h:32:
+ In file included from arch/powerpc/include/asm/bitops.h:62:
+ arch/powerpc/include/asm/barrier.h:49:9: error: '__lwsync' macro redefined [-Werror,-Wmacro-redefined]
+ #define __lwsync()      __asm__ __volatile__ (stringify_in_c(LWSYNC) : : :"memory")
+        ^
+ <built-in>:308:9: note: previous definition is here
+ #define __lwsync __builtin_ppc_lwsync
+        ^
+ 1 error generated.
+
+Undefine this macro so that the runtime patching introduced by
+commit 2d1b2027626d ("powerpc: Fixup lwsync at runtime") continues to
+work properly with clang and the build no longer breaks.
+
+Cc: stable@vger.kernel.org
+Link: https://github.com/ClangBuiltLinux/linux/issues/1386
+Link: https://github.com/llvm/llvm-project/commit/62b5df7fe2b3fda1772befeda15598fbef96a614
+Signed-off-by: Nathan Chancellor <nathan@kernel.org>
+Link: https://lore.kernel.org/r/20210528182752.1852002-1-nathan@kernel.org
+---
+ arch/powerpc/include/asm/barrier.h | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/arch/powerpc/include/asm/barrier.h b/arch/powerpc/include/asm/barrier.h
+index aecfde829d5d..6274b864f363 100644
+--- a/arch/powerpc/include/asm/barrier.h
++++ b/arch/powerpc/include/asm/barrier.h
+@@ -46,6 +46,8 @@
+ #    define SMPWMB      eieio
+ #endif
+ 
++/* clang defines this macro for a builtin, which will not work with runtime patching */
++#undef __lwsync
+ #define __lwsync()	__asm__ __volatile__ (stringify_in_c(LWSYNC) : : :"memory")
+ #define dma_rmb()	__lwsync()
+ #define dma_wmb()	__asm__ __volatile__ (stringify_in_c(SMPWMB) : : :"memory")
+-- 
+2.32.0
+
