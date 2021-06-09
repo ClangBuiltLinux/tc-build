@@ -74,6 +74,7 @@ These scripts have been tested in a Docker image of the following distributions,
 
   ```
   pacman -S base-devel \
+            bc \
             bison \
             ccache \
             clang \
@@ -83,6 +84,7 @@ These scripts have been tested in a Docker image of the following distributions,
             git \
             libelf \
             lld \
+            llvm \
             ninja \
             openssl \
             python3 \
