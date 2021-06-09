@@ -70,18 +70,21 @@ These scripts have been tested in a Docker image of the following distributions,
               zlib-devel
   ```
 
-* ### Arch Linux
+* ### Arch Linux / Manjaro
 
   ```
   pacman -S base-devel \
+            bc \
             bison \
             ccache \
             clang \
+            cpio \
             cmake \
             flex \
             git \
             libelf \
             lld \
+            llvm \
             ninja \
             openssl \
             python3 \
