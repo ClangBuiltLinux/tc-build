@@ -79,6 +79,20 @@ function setup_up_path() {
     [[ -n ${PATH_OVERRIDE} ]] && export PATH=${PATH_OVERRIDE}:${PATH}
 }
 
+# Turns 'patch -N' from a fatal error to an informational message
+function apply_patch {
+    PATCH_FILE=${1:?}
+    if ! PATCH_OUT=$(patch -Np1 <"${PATCH_FILE}"); then
+        PATCH_OUT_OK=$(echo "${PATCH_OUT}" | grep "Reversed (or previously applied) patch detected")
+        if [[ -n ${PATCH_OUT_OK} ]]; then
+            echo "${PATCH_FILE##*/}: ${PATCH_OUT_OK}"
+        else
+            echo "${PATCH_OUT}"
+            exit 2
+        fi
+    fi
+}
+
 function setup_krnl_src() {
     # A kernel folder can be supplied via '-k' for testing the script
     if [[ -n ${KERNEL_SRC} ]]; then
@@ -109,7 +123,7 @@ function setup_krnl_src() {
         [[ -d ${LINUX} ]] || { tar -xf "${LINUX_TARBALL}" || exit ${?}; }
         cd ${LINUX} || exit 1
         for PATCH_FILE in "${PATCH_FILES[@]}"; do
-            patch -p1 <"${PATCH_FILE}" || exit ${?}
+            apply_patch "${PATCH_FILE}"
         done
     fi
 }
