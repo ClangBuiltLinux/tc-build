@@ -29,14 +29,13 @@ These scripts have been tested in a Docker image of the following distributions,
               curl \
               file \
               flex \
-              gcc \
-              g++ \
+              build-essential \
               git \
               libelf-dev \
               libssl-dev \
               make \
               ninja-build \
-              python3 \
+              python3-dev \
               texinfo \
               u-boot-tools \
               xz-utils \
