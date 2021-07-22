@@ -14,7 +14,7 @@ There are times where a tip of tree LLVM build will have some issue fixed and it
 
 ## Getting started
 
-These scripts have been tested in a Docker image of the following distributions, with the following packages installed:
+These scripts have been tested in a Docker image of the following distributions with the following packages installed. LLVM has [minimum host tool version requirements](https://llvm.org/docs/GettingStarted.html#software) so the latest stable version of the chosen distribution should be used whenever possible to ensure recent versions of the tools are used. Build errors from within LLVM are expected if the tool version is not recent enough, in which case it will need to be built from source or installed through other means.
 
 * ### Debian/Ubuntu
 
@@ -33,6 +33,7 @@ These scripts have been tested in a Docker image of the following distributions,
               git \
               libelf-dev \
               libssl-dev \
+              lld \
               make \
               ninja-build \
               python3-dev \
@@ -41,8 +42,6 @@ These scripts have been tested in a Docker image of the following distributions,
               xz-utils \
               zlib1g-dev
   ```
-
-  On Debian Buster or Ubuntu Bionic/Cosmic/Disco, `apt install lld` should be added as well for faster compiles.
 
 * ### Fedora
 
