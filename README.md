@@ -22,6 +22,7 @@ These scripts have been tested in a Docker image of the following distributions,
   apt install bc \
               binutils-dev \
               bison \
+              build-essential \
               ca-certificates \
               ccache \
               clang \
@@ -29,7 +30,6 @@ These scripts have been tested in a Docker image of the following distributions,
               curl \
               file \
               flex \
-              build-essential \
               git \
               libelf-dev \
               libssl-dev \
