@@ -42,6 +42,7 @@ function parse_parameters() {
                     case ${LLVM_TARGET} in
                         "AArch64") TARGETS+=("aarch64-linux-gnu") ;;
                         "ARM") TARGETS+=("arm-linux-gnueabi") ;;
+                        "Hexagon") TARGETS+=("hexagon-linux-gnu") ;;
                         "Mips") TARGETS+=("mipsel-linux-gnu") ;;
                         "PowerPC") TARGETS+=("powerpc-linux-gnu" "powerpc64-linux-gnu" "powerpc64le-linux-gnu") ;;
                         "RISCV") TARGETS+=("riscv64-linux-gnu") ;;
@@ -59,6 +60,7 @@ function set_default_values() {
     [[ -z ${TARGETS[*]} || ${TARGETS[*]} = "all" ]] && TARGETS=(
         "arm-linux-gnueabi"
         "aarch64-linux-gnu"
+        "hexagon-linux-gnu"
         "mipsel-linux-gnu"
         "powerpc-linux-gnu"
         "powerpc64-linux-gnu"
@@ -132,6 +134,8 @@ function check_binutils() {
     # Check for all binutils and build them if necessary
     BINUTILS_TARGETS=()
     for PREFIX in "${TARGETS[@]}"; do
+        # Hexagon does not build binutils
+        [[ ${PREFIX} = "hexagon-linux-gnu" ]] && continue
         # We assume an x86_64 host, should probably make this more generic in the future
         if [[ ${PREFIX} = "x86_64-linux-gnu" ]]; then
             COMMAND=as
@@ -163,6 +167,7 @@ function build_kernels() {
     case "$(uname -m)" in
         arm*) [[ ${TARGETS[*]} =~ arm ]] || NEED_GCC=true ;;
         aarch64) [[ ${TARGETS[*]} =~ aarch64 ]] || NEED_GCC=true ;;
+        hexagon) [[ ${TARGETS[*]} =~ hexagon ]] || NEED_GCC=true ;;
         mips*) [[ ${TARGETS[*]} =~ mips ]] || NEED_GCC=true ;;
         ppc*) [[ ${TARGETS[*]} =~ powerpc ]] || NEED_GCC=true ;;
         s390*) [[ ${TARGETS[*]} =~ s390 ]] || NEED_GCC=true ;;
@@ -206,6 +211,14 @@ function build_kernels() {
                     CROSS_COMPILE="${TARGET}-" \
                     KCONFIG_ALLCONFIG=<(echo CONFIG_CPU_BIG_ENDIAN=n) \
                     distclean "${CONFIG_TARGET}" all || exit ${?}
+                ;;
+            "hexagon-linux-gnu")
+                time \
+                    "${MAKE[@]}" \
+                    ARCH=hexagon \
+                    CROSS_COMPILE="${TARGET}-" \
+                    LLVM_IAS=1 \
+                    distclean defconfig all || exit ${?}
                 ;;
             "mipsel-linux-gnu")
                 time \
