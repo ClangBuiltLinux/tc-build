@@ -98,7 +98,7 @@ function setup_krnl_src() {
     if [[ -n ${KERNEL_SRC} ]]; then
         cd "${KERNEL_SRC}" || exit 1
     else
-        LINUX=linux-5.12.9
+        LINUX=linux-5.13.6
         LINUX_TARBALL=${KRNL}/${LINUX}.tar.xz
 
         # If we don't have the source tarball, download and verify it
