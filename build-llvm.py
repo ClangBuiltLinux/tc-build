@@ -16,7 +16,7 @@ import urllib.request as request
 from urllib.error import URLError
 
 # This is a known good revision of LLVM for building the kernel
-GOOD_REVISION = '54588bcc052e5b08f90e672c33d0c1ad4eda2424'
+GOOD_REVISION = '4b1fde8a2b681dad2ce0c082a5d6422caa06b0bc'
 
 
 class Directories:
