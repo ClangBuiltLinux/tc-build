@@ -105,7 +105,7 @@ function setup_krnl_src() {
 
         # If we don't have the source tarball, download and verify it
         if [[ ! -f ${LINUX_TARBALL} ]]; then
-            curl -LSso "${LINUX_TARBALL}" https://cdn.kernel.org/pub/linux/kernel/v5.x/"${LINUX_TARBALL##*/}"
+            wget "${LINUX_TARBALL}" https://cdn.kernel.org/pub/linux/kernel/v5.x/"${LINUX_TARBALL##*/}"
 
             (
                 cd "${LINUX_TARBALL%/*}" || exit 1
