@@ -155,6 +155,7 @@ function print_tc_info() {
         echo
         case ${PREFIX} in
             x86_64-linux-gnu) as --version ;;
+            hexagon-linux-gnu) ;;
             *) "${PREFIX}"-as --version ;;
         esac
     done
