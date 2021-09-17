@@ -121,7 +121,7 @@ function setup_krnl_src() {
         for SRC_FILE in "${KRNL}"/*; do
             [[ ${SRC_FILE##*/} = *.patch ]] && PATCH_FILES+=("${SRC_FILE}")
         done
-        [[ -n "${PATCHES[*]}" ]] && rm -rf ${LINUX}
+        [[ -n "${PATCH_FILES[*]}" ]] && rm -rf ${LINUX}
         [[ -d ${LINUX} ]] || { tar -xf "${LINUX_TARBALL}" || exit ${?}; }
         cd ${LINUX} || exit 1
         for PATCH_FILE in "${PATCH_FILES[@]}"; do
@@ -155,6 +155,7 @@ function print_tc_info() {
         echo
         case ${PREFIX} in
             x86_64-linux-gnu) as --version ;;
+            hexagon-linux-gnu) ;;
             *) "${PREFIX}"-as --version ;;
         esac
     done
