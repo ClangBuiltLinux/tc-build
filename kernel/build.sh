@@ -109,7 +109,7 @@ function setup_krnl_src() {
 
             (
                 cd "${LINUX_TARBALL%/*}" || exit 1
-                sha256sum -c "${LINUX_TARBALL}".sha256 --quiet
+                curl -Ls https://cdn.kernel.org/pub/linux/kernel/v5.x/sha256sums.asc | sha256sum -c --quiet --ignore-missing -
             ) || {
                 echo "Linux tarball verification failed! Please remove '${LINUX_TARBALL}' and try again."
                 exit 1

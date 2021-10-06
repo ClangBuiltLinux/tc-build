@@ -1,3 +1,2 @@
 linux-*
 !*.patch
-!*.sha256
