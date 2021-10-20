@@ -61,7 +61,7 @@ function do_llvm() {
     [[ -n ${GITHUB_ACTIONS:-} ]] && EXTRA_ARGS+=(--no-ccache)
     "${BASE}"/build-llvm.py \
         --assertions \
-        --branch "release/12.x" \
+        --branch "release/13.x" \
         --build-stage1-only \
         --check-targets clang lld llvm \
         --install-stage1-only \
