@@ -956,6 +956,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
         if instrumented_stage(args, stage):
             defines['LLVM_BUILD_INSTRUMENTED'] = 'IR'
             defines['LLVM_BUILD_RUNTIME'] = 'OFF'
+            defines['LLVM_VP_COUNTERS_PER_SITE'] = '6'
 
         # If we are at the final stage, use PGO/Thin LTO if requested
         if stage == get_final_stage(args):
