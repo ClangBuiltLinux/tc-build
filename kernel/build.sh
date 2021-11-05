@@ -164,7 +164,7 @@ function print_tc_info() {
 function build_kernels() {
     # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
     # shellcheck disable=SC2191
-    MAKE=(make -skj"$(nproc)" LLVM=1 O=out)
+    MAKE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
     case "$(uname -m)" in
         arm*) [[ ${TARGETS[*]} =~ arm ]] || NEED_GCC=true ;;
         aarch64) [[ ${TARGETS[*]} =~ aarch64 ]] || NEED_GCC=true ;;
