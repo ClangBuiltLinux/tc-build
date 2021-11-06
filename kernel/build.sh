@@ -199,53 +199,49 @@ function build_kernels() {
                 for CONFIG in "${CONFIGS[@]}"; do
                     time "${MAKE[@]}" \
                         ARCH=arm \
-                        CROSS_COMPILE="${TARGET}-" \
                         distclean "${CONFIG}" all || exit ${?}
                 done
                 ;;
             "aarch64-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=arm64 \
-                    CROSS_COMPILE="${TARGET}-" \
                     distclean "${CONFIG_TARGET}" all || exit ${?}
                 ;;
             "hexagon-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=hexagon \
-                    CROSS_COMPILE="${TARGET}-" \
-                    LLVM_IAS=1 \
                     distclean defconfig all || exit ${?}
                 ;;
             "mipsel-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=mips \
-                    CROSS_COMPILE="${TARGET}-" \
                     distclean malta_defconfig all || exit ${?}
                 ;;
             "powerpc-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
                     CROSS_COMPILE="${TARGET}-" \
+                    LLVM_IAS=0 \
                     distclean ppc44x_defconfig all || exit ${?}
                 ;;
             "powerpc64-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
-                    LD="${TARGET}-ld" \
                     CROSS_COMPILE="${TARGET}-" \
+                    LD="${TARGET}-ld" \
+                    LLVM_IAS=0 \
                     distclean pseries_defconfig disable-werror.config all || exit ${?}
                 ;;
             "powerpc64le-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
                     CROSS_COMPILE="${TARGET}-" \
+                    LLVM_IAS=0 \
                     distclean powernv_defconfig all || exit ${?}
                 ;;
             "riscv64-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=riscv \
-                    CROSS_COMPILE="${TARGET}-" \
-                    LLVM_IAS=1 \
                     distclean defconfig all || exit ${?}
                 ;;
             "s390x-linux-gnu")
@@ -253,6 +249,7 @@ function build_kernels() {
                     ARCH=s390 \
                     CROSS_COMPILE="${TARGET}-" \
                     LD="${TARGET}-ld" \
+                    LLVM_IAS=0 \
                     OBJCOPY="${TARGET}-objcopy" \
                     OBJDUMP="${TARGET}-objdump" \
                     distclean defconfig all || exit ${?}
