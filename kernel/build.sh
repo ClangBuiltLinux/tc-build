@@ -242,17 +242,11 @@ function build_kernels() {
                     distclean powernv_defconfig all || exit ${?}
                 ;;
             "riscv64-linux-gnu")
-                RISCV_MAKE=(
-                    "${MAKE[@]}"
-                    ARCH=riscv
-                    CROSS_COMPILE="${TARGET}-"
-                    LD="${TARGET}-ld"
-                    LLVM_IAS=1
-                )
-                time "${RISCV_MAKE[@]}" distclean defconfig || exit ${?}
-                # https://github.com/ClangBuiltLinux/linux/issues/1143
-                grep -q "config EFI" arch/riscv/Kconfig && scripts/config --file out/.config -d EFI
-                time "${RISCV_MAKE[@]}" all || exit ${?}
+                time "${MAKE[@]}" \
+                    ARCH=riscv \
+                    CROSS_COMPILE="${TARGET}-" \
+                    LLVM_IAS=1 \
+                    distclean defconfig all || exit ${?}
                 ;;
             "s390x-linux-gnu")
                 time "${MAKE[@]}" \
