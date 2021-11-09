@@ -100,7 +100,7 @@ function setup_krnl_src() {
     if [[ -n ${KERNEL_SRC} ]]; then
         cd "${KERNEL_SRC}" || exit 1
     else
-        LINUX=linux-5.14
+        LINUX=linux-5.15
         LINUX_TARBALL=${KRNL}/${LINUX}.tar.xz
 
         # If we don't have the source tarball, download and verify it
@@ -164,7 +164,7 @@ function print_tc_info() {
 function build_kernels() {
     # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
     # shellcheck disable=SC2191
-    MAKE=(make -skj"$(nproc)" LLVM=1 O=out)
+    MAKE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
     case "$(uname -m)" in
         arm*) [[ ${TARGETS[*]} =~ arm ]] || NEED_GCC=true ;;
         aarch64) [[ ${TARGETS[*]} =~ aarch64 ]] || NEED_GCC=true ;;
@@ -199,68 +199,57 @@ function build_kernels() {
                 for CONFIG in "${CONFIGS[@]}"; do
                     time "${MAKE[@]}" \
                         ARCH=arm \
-                        CROSS_COMPILE="${TARGET}-" \
-                        KCONFIG_ALLCONFIG=<(echo CONFIG_CPU_BIG_ENDIAN=n) \
                         distclean "${CONFIG}" all || exit ${?}
                 done
                 ;;
             "aarch64-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=arm64 \
-                    CROSS_COMPILE="${TARGET}-" \
-                    KCONFIG_ALLCONFIG=<(echo CONFIG_CPU_BIG_ENDIAN=n) \
                     distclean "${CONFIG_TARGET}" all || exit ${?}
                 ;;
             "hexagon-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=hexagon \
-                    CROSS_COMPILE="${TARGET}-" \
-                    LLVM_IAS=1 \
                     distclean defconfig all || exit ${?}
                 ;;
             "mipsel-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=mips \
-                    CROSS_COMPILE="${TARGET}-" \
                     distclean malta_defconfig all || exit ${?}
                 ;;
             "powerpc-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
                     CROSS_COMPILE="${TARGET}-" \
+                    LLVM_IAS=0 \
                     distclean ppc44x_defconfig all || exit ${?}
                 ;;
             "powerpc64-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
-                    LD="${TARGET}-ld" \
                     CROSS_COMPILE="${TARGET}-" \
+                    LD="${TARGET}-ld" \
+                    LLVM_IAS=0 \
                     distclean pseries_defconfig disable-werror.config all || exit ${?}
                 ;;
             "powerpc64le-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
                     CROSS_COMPILE="${TARGET}-" \
+                    LLVM_IAS=0 \
                     distclean powernv_defconfig all || exit ${?}
                 ;;
             "riscv64-linux-gnu")
-                RISCV_MAKE=(
-                    "${MAKE[@]}"
-                    ARCH=riscv
-                    CROSS_COMPILE="${TARGET}-"
-                    LD="${TARGET}-ld"
-                    LLVM_IAS=1
-                )
-                time "${RISCV_MAKE[@]}" distclean defconfig || exit ${?}
-                # https://github.com/ClangBuiltLinux/linux/issues/1143
-                grep -q "config EFI" arch/riscv/Kconfig && scripts/config --file out/.config -d EFI
-                time "${RISCV_MAKE[@]}" all || exit ${?}
+                time "${MAKE[@]}" \
+                    ARCH=riscv \
+                    distclean defconfig all || exit ${?}
                 ;;
             "s390x-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=s390 \
                     CROSS_COMPILE="${TARGET}-" \
                     LD="${TARGET}-ld" \
+                    LLVM_IAS=0 \
                     OBJCOPY="${TARGET}-objcopy" \
                     OBJDUMP="${TARGET}-objdump" \
                     distclean defconfig all || exit ${?}

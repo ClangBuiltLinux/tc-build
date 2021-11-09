@@ -1,0 +1,79 @@
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v2] power: reset: ltc2952: Fix use of floating point literals
+From: Nathan Chancellor <nathan@kernel.org>
+Date: Fri, 05 Nov 2021 08:20:50 -0700
+Message-Id: <20211105152049.2522250-1-nathan@kernel.org>
+To: Sebastian Reichel <sre@kernel.org>
+Cc: Nick Desaulniers <ndesaulniers@google.com>, linux-pm@vger.kernel.org, linux-kernel@vger.kernel.org, llvm@lists.linux.dev, Nathan Chancellor <nathan@kernel.org>
+List-Id: <linux-kernel.vger.kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+A new commit in LLVM causes an error on the use of 'long double' when
+'-mno-x87' is used, which the kernel does through an alias,
+'-mno-80387' (see the LLVM commit below for more details around why it
+does this).
+
+drivers/power/reset/ltc2952-poweroff.c:162:28: error: expression requires  'long double' type support, but target 'x86_64-unknown-linux-gnu' does not support it
+        data->wde_interval = 300L * 1E6L;
+                                  ^
+drivers/power/reset/ltc2952-poweroff.c:162:21: error: expression requires  'long double' type support, but target 'x86_64-unknown-linux-gnu' does not support it
+        data->wde_interval = 300L * 1E6L;
+                           ^
+drivers/power/reset/ltc2952-poweroff.c:163:41: error: expression requires  'long double' type support, but target 'x86_64-unknown-linux-gnu' does not support it
+        data->trigger_delay = ktime_set(2, 500L*1E6L);
+                                               ^
+3 errors generated.
+
+This happens due to the use of a 'long double' literal. The 'E6' part of
+'1E6L' causes the literal to be a 'double' then the 'L' suffix promotes
+it to 'long double'.
+
+There is no visible reason for floating point values in this driver, as
+the values are only assigned to integer types. Use NSEC_PER_MSEC, which
+is the same integer value as '1E6L', to avoid changing functionality but
+fix the error.
+
+Fixes: 6647156c00cc ("power: reset: add LTC2952 poweroff driver")
+Link: https://github.com/ClangBuiltLinux/linux/issues/1497
+Link: https://github.com/llvm/llvm-project/commit/a8083d42b1c346e21623a1d36d1f0cadd7801d83
+Signed-off-by: Nathan Chancellor <nathan@kernel.org>
+Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
+Link: https://lore.kernel.org/r/20211105152049.2522250-1-nathan@kernel.org
+---
+
+v1 -> v2: https://lore.kernel.org/r/20211104215047.663411-1-nathan@kernel.org/
+
+* A separate review pointed out that NSEC_PER_MSEC is a better choice
+  than USEC_PER_SEC because ktime_t is nanoseconds and the few functions
+  that take these values work in nanoseconds. The value is the same but
+  the documentation is better.
+
+* Pick up Nick's review tag.
+
+ drivers/power/reset/ltc2952-poweroff.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/power/reset/ltc2952-poweroff.c b/drivers/power/reset/ltc2952-poweroff.c
+index fbb344353fe4..65d9528cc989 100644
+--- a/drivers/power/reset/ltc2952-poweroff.c
++++ b/drivers/power/reset/ltc2952-poweroff.c
+@@ -159,8 +159,8 @@ static void ltc2952_poweroff_kill(void)
+ 
+ static void ltc2952_poweroff_default(struct ltc2952_poweroff *data)
+ {
+-	data->wde_interval = 300L * 1E6L;
+-	data->trigger_delay = ktime_set(2, 500L*1E6L);
++	data->wde_interval = 300L * NSEC_PER_MSEC;
++	data->trigger_delay = ktime_set(2, 500L * NSEC_PER_MSEC);
+ 
+ 	hrtimer_init(&data->timer_trigger, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+ 	data->timer_trigger.function = ltc2952_poweroff_timer_trigger;
+
+base-commit: d4439a1189f93d0ac1eaf0197db8e6b3e197d5c7
+
+-- 
+2.34.0.rc0
+
+
