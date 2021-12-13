@@ -130,20 +130,64 @@ function setup_krnl_src() {
     fi
 }
 
+# Can the requested architecture use LLVM_IAS=1? This assumes that if the user
+# is passing in their own kernel source via '-k', it is either the same or a
+# newer version as the one that the script downloads to avoid having a two
+# variable matrix.
+function can_use_llvm_ias() {
+    local llvm_version
+    llvm_version=$("$TC_BLD"/clang-version.sh clang)
+
+    case $1 in
+        # https://github.com/ClangBuiltLinux/linux/issues?q=is%3Aissue+label%3A%22%5BARCH%5D+arm32%22+label%3A%22%5BTOOL%5D+integrated-as%22+
+        arm*)
+            if [[ $llvm_version -ge 130000 ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+
+        # https://github.com/ClangBuiltLinux/linux/issues?q=is%3Aissue+label%3A%22%5BARCH%5D+arm64%22+label%3A%22%5BTOOL%5D+integrated-as%22+
+        # https://github.com/ClangBuiltLinux/linux/issues?q=is%3Aissue+label%3A%22%5BARCH%5D+x86_64%22+label%3A%22%5BTOOL%5D+integrated-as%22+
+        aarch64* | x86_64*)
+            if [[ $llvm_version -ge 110000 ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+
+        hexagon* | mips* | riscv*)
+            # All supported versions of LLVM for building the kernel
+            return 0
+            ;;
+
+        powerpc* | s390*)
+            # No supported versions of LLVM for building the kernel
+            return 1
+            ;;
+    esac
+}
+
 function check_binutils() {
     # Check for all binutils and build them if necessary
     BINUTILS_TARGETS=()
+
     for PREFIX in "${TARGETS[@]}"; do
-        # Hexagon does not build binutils
-        [[ ${PREFIX} = "hexagon-linux-gnu" ]] && continue
+        # We do not need to check for binutils if we can use the integrated assembler
+        can_use_llvm_ias "$PREFIX" && continue
+
         # We assume an x86_64 host, should probably make this more generic in the future
         if [[ ${PREFIX} = "x86_64-linux-gnu" ]]; then
             COMMAND=as
         else
             COMMAND="${PREFIX}"-as
         fi
+
         command -v "${COMMAND}" &>/dev/null || BINUTILS_TARGETS+=("${PREFIX}")
     done
+
     [[ -n "${BINUTILS_TARGETS[*]}" ]] && { "${TC_BLD}"/build-binutils.py -t "${BINUTILS_TARGETS[@]}" || exit ${?}; }
 }
 
