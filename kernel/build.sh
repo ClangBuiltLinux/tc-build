@@ -206,21 +206,20 @@ function print_tc_info() {
     done
 }
 
+# Checks if clang can be used as a host toolchain. This command will error with
+# "No available targets are compatible with triple ..." if clang has been built
+# without support for the host target. This is better than keeping a map of
+# 'uname -m' against the target's name.
+function clang_supports_host_target() {
+    echo | clang -x c -c -o /dev/null - &>/dev/null
+}
+
 function build_kernels() {
     # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
     # shellcheck disable=SC2191
     MAKE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
-    case "$(uname -m)" in
-        arm*) [[ ${TARGETS[*]} =~ arm ]] || NEED_GCC=true ;;
-        aarch64) [[ ${TARGETS[*]} =~ aarch64 ]] || NEED_GCC=true ;;
-        hexagon) [[ ${TARGETS[*]} =~ hexagon ]] || NEED_GCC=true ;;
-        mips*) [[ ${TARGETS[*]} =~ mips ]] || NEED_GCC=true ;;
-        ppc*) [[ ${TARGETS[*]} =~ powerpc ]] || NEED_GCC=true ;;
-        s390*) [[ ${TARGETS[*]} =~ s390 ]] || NEED_GCC=true ;;
-        riscv*) [[ ${TARGETS[*]} =~ riscv ]] || NEED_GCC=true ;;
-        i*86 | x86*) [[ ${TARGETS[*]} =~ x86_64 ]] || NEED_GCC=true ;;
-    esac
-    ${NEED_GCC:=false} && MAKE+=(HOSTCC=gcc HOSTCXX=g++)
+
+    clang_supports_host_target || MAKE+=(HOSTCC=gcc HOSTCXX=g++)
 
     header "Building kernels"
 
