@@ -170,6 +170,29 @@ function can_use_llvm_ias() {
     esac
 }
 
+# Get as command based on prefix and host architecture. See host_arch_target()
+# in build-binutils.py.
+function get_as() {
+    local host_target target_arch
+
+    case "$(uname -m)" in
+        armv7l) host_target=arm ;;
+        ppc64) host_target=powerpc64 ;;
+        ppc64le) host_target=powerpc64le ;;
+        ppc) host_target=powerpc ;;
+        *) host_target=$(uname -m) ;;
+    esac
+
+    # Turn triple (<arch>-<os>-<abi>) into <arch>
+    target_arch=${1%%-*}
+
+    if [[ "$target_arch" = "$host_target" ]]; then
+        echo "as"
+    else
+        echo "$1-as"
+    fi
+}
+
 function check_binutils() {
     # Check for all binutils and build them if necessary
     BINUTILS_TARGETS=()
@@ -178,14 +201,7 @@ function check_binutils() {
         # We do not need to check for binutils if we can use the integrated assembler
         can_use_llvm_ias "$PREFIX" && continue
 
-        # We assume an x86_64 host, should probably make this more generic in the future
-        if [[ ${PREFIX} = "x86_64-linux-gnu" ]]; then
-            COMMAND=as
-        else
-            COMMAND="${PREFIX}"-as
-        fi
-
-        command -v "${COMMAND}" &>/dev/null || BINUTILS_TARGETS+=("${PREFIX}")
+        command -v "$(get_as "$PREFIX")" &>/dev/null || BINUTILS_TARGETS+=("${PREFIX}")
     done
 
     [[ -n "${BINUTILS_TARGETS[*]}" ]] && { "${TC_BLD}"/build-binutils.py -t "${BINUTILS_TARGETS[@]}" || exit ${?}; }
@@ -199,10 +215,7 @@ function print_tc_info() {
         can_use_llvm_ias "$PREFIX" && continue
 
         echo
-        case ${PREFIX} in
-            x86_64-linux-gnu) as --version ;;
-            *) "${PREFIX}"-as --version ;;
-        esac
+        "$(get_as "$PREFIX")" --version
     done
 }
 
