@@ -215,9 +215,9 @@ function clang_supports_host_target() {
 }
 
 function build_kernels() {
-    MAKE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
+    MAKE_BASE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
 
-    clang_supports_host_target || MAKE+=(HOSTCC=gcc HOSTCXX=g++)
+    clang_supports_host_target || MAKE_BASE+=(HOSTCC=gcc HOSTCXX=g++)
 
     header "Building kernels"
 
@@ -228,6 +228,9 @@ function build_kernels() {
     set -x
 
     for TARGET in "${TARGETS[@]}"; do
+        MAKE=("${MAKE_BASE[@]}")
+        can_use_llvm_ias "$TARGET" || MAKE+=(CROSS_COMPILE="${TARGET}-" LLVM_IAS=0)
+
         case ${TARGET} in
             "arm-linux-gnueabi")
                 case ${CONFIG_TARGET} in
@@ -262,23 +265,17 @@ function build_kernels() {
             "powerpc-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
-                    CROSS_COMPILE="${TARGET}-" \
-                    LLVM_IAS=0 \
                     distclean ppc44x_defconfig all || exit ${?}
                 ;;
             "powerpc64-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
-                    CROSS_COMPILE="${TARGET}-" \
                     LD="${TARGET}-ld" \
-                    LLVM_IAS=0 \
                     distclean pseries_defconfig disable-werror.config all || exit ${?}
                 ;;
             "powerpc64le-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
-                    CROSS_COMPILE="${TARGET}-" \
-                    LLVM_IAS=0 \
                     distclean powernv_defconfig all || exit ${?}
                 ;;
             "riscv64-linux-gnu")
@@ -289,9 +286,7 @@ function build_kernels() {
             "s390x-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=s390 \
-                    CROSS_COMPILE="${TARGET}-" \
                     LD="${TARGET}-ld" \
-                    LLVM_IAS=0 \
                     OBJCOPY="${TARGET}-objcopy" \
                     OBJDUMP="${TARGET}-objdump" \
                     distclean defconfig all || exit ${?}
