@@ -215,8 +215,6 @@ function clang_supports_host_target() {
 }
 
 function build_kernels() {
-    # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
-    # shellcheck disable=SC2191
     MAKE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
 
     clang_supports_host_target || MAKE+=(HOSTCC=gcc HOSTCXX=g++)
