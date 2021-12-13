@@ -196,10 +196,11 @@ function print_tc_info() {
     header "Toolchain information"
     clang --version
     for PREFIX in "${TARGETS[@]}"; do
+        can_use_llvm_ias "$PREFIX" && continue
+
         echo
         case ${PREFIX} in
             x86_64-linux-gnu) as --version ;;
-            hexagon-linux-gnu) ;;
             *) "${PREFIX}"-as --version ;;
         esac
     done
