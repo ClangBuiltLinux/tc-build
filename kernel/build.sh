@@ -130,20 +130,80 @@ function setup_krnl_src() {
     fi
 }
 
+# Can the requested architecture use LLVM_IAS=1? This assumes that if the user
+# is passing in their own kernel source via '-k', it is either the same or a
+# newer version as the one that the script downloads to avoid having a two
+# variable matrix.
+function can_use_llvm_ias() {
+    local llvm_version
+    llvm_version=$("$TC_BLD"/clang-version.sh clang)
+
+    case $1 in
+        # https://github.com/ClangBuiltLinux/linux/issues?q=is%3Aissue+label%3A%22%5BARCH%5D+arm32%22+label%3A%22%5BTOOL%5D+integrated-as%22+
+        arm*)
+            if [[ $llvm_version -ge 130000 ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+
+        # https://github.com/ClangBuiltLinux/linux/issues?q=is%3Aissue+label%3A%22%5BARCH%5D+arm64%22+label%3A%22%5BTOOL%5D+integrated-as%22+
+        # https://github.com/ClangBuiltLinux/linux/issues?q=is%3Aissue+label%3A%22%5BARCH%5D+x86_64%22+label%3A%22%5BTOOL%5D+integrated-as%22+
+        aarch64* | x86_64*)
+            if [[ $llvm_version -ge 110000 ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+
+        hexagon* | mips* | riscv*)
+            # All supported versions of LLVM for building the kernel
+            return 0
+            ;;
+
+        powerpc* | s390*)
+            # No supported versions of LLVM for building the kernel
+            return 1
+            ;;
+    esac
+}
+
+# Get as command based on prefix and host architecture. See host_arch_target()
+# in build-binutils.py.
+function get_as() {
+    local host_target target_arch
+
+    case "$(uname -m)" in
+        armv7l) host_target=arm ;;
+        ppc64) host_target=powerpc64 ;;
+        ppc64le) host_target=powerpc64le ;;
+        ppc) host_target=powerpc ;;
+        *) host_target=$(uname -m) ;;
+    esac
+
+    # Turn triple (<arch>-<os>-<abi>) into <arch>
+    target_arch=${1%%-*}
+
+    if [[ "$target_arch" = "$host_target" ]]; then
+        echo "as"
+    else
+        echo "$1-as"
+    fi
+}
+
 function check_binutils() {
     # Check for all binutils and build them if necessary
     BINUTILS_TARGETS=()
+
     for PREFIX in "${TARGETS[@]}"; do
-        # Hexagon does not build binutils
-        [[ ${PREFIX} = "hexagon-linux-gnu" ]] && continue
-        # We assume an x86_64 host, should probably make this more generic in the future
-        if [[ ${PREFIX} = "x86_64-linux-gnu" ]]; then
-            COMMAND=as
-        else
-            COMMAND="${PREFIX}"-as
-        fi
-        command -v "${COMMAND}" &>/dev/null || BINUTILS_TARGETS+=("${PREFIX}")
+        # We do not need to check for binutils if we can use the integrated assembler
+        can_use_llvm_ias "$PREFIX" && continue
+
+        command -v "$(get_as "$PREFIX")" &>/dev/null || BINUTILS_TARGETS+=("${PREFIX}")
     done
+
     [[ -n "${BINUTILS_TARGETS[*]}" ]] && { "${TC_BLD}"/build-binutils.py -t "${BINUTILS_TARGETS[@]}" || exit ${?}; }
 }
 
@@ -152,30 +212,25 @@ function print_tc_info() {
     header "Toolchain information"
     clang --version
     for PREFIX in "${TARGETS[@]}"; do
+        can_use_llvm_ias "$PREFIX" && continue
+
         echo
-        case ${PREFIX} in
-            x86_64-linux-gnu) as --version ;;
-            hexagon-linux-gnu) ;;
-            *) "${PREFIX}"-as --version ;;
-        esac
+        "$(get_as "$PREFIX")" --version
     done
 }
 
+# Checks if clang can be used as a host toolchain. This command will error with
+# "No available targets are compatible with triple ..." if clang has been built
+# without support for the host target. This is better than keeping a map of
+# 'uname -m' against the target's name.
+function clang_supports_host_target() {
+    echo | clang -x c -c -o /dev/null - &>/dev/null
+}
+
 function build_kernels() {
-    # SC2191: The = here is literal. To assign by index, use ( [index]=value ) with no spaces. To keep as literal, quote it.
-    # shellcheck disable=SC2191
-    MAKE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
-    case "$(uname -m)" in
-        arm*) [[ ${TARGETS[*]} =~ arm ]] || NEED_GCC=true ;;
-        aarch64) [[ ${TARGETS[*]} =~ aarch64 ]] || NEED_GCC=true ;;
-        hexagon) [[ ${TARGETS[*]} =~ hexagon ]] || NEED_GCC=true ;;
-        mips*) [[ ${TARGETS[*]} =~ mips ]] || NEED_GCC=true ;;
-        ppc*) [[ ${TARGETS[*]} =~ powerpc ]] || NEED_GCC=true ;;
-        s390*) [[ ${TARGETS[*]} =~ s390 ]] || NEED_GCC=true ;;
-        riscv*) [[ ${TARGETS[*]} =~ riscv ]] || NEED_GCC=true ;;
-        i*86 | x86*) [[ ${TARGETS[*]} =~ x86_64 ]] || NEED_GCC=true ;;
-    esac
-    ${NEED_GCC:=false} && MAKE+=(HOSTCC=gcc HOSTCXX=g++)
+    MAKE_BASE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
+
+    clang_supports_host_target || MAKE_BASE+=(HOSTCC=gcc HOSTCXX=g++)
 
     header "Building kernels"
 
@@ -186,6 +241,9 @@ function build_kernels() {
     set -x
 
     for TARGET in "${TARGETS[@]}"; do
+        MAKE=("${MAKE_BASE[@]}")
+        can_use_llvm_ias "$TARGET" || MAKE+=(CROSS_COMPILE="${TARGET}-" LLVM_IAS=0)
+
         case ${TARGET} in
             "arm-linux-gnueabi")
                 case ${CONFIG_TARGET} in
@@ -220,23 +278,17 @@ function build_kernels() {
             "powerpc-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
-                    CROSS_COMPILE="${TARGET}-" \
-                    LLVM_IAS=0 \
                     distclean ppc44x_defconfig all || exit ${?}
                 ;;
             "powerpc64-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
-                    CROSS_COMPILE="${TARGET}-" \
                     LD="${TARGET}-ld" \
-                    LLVM_IAS=0 \
                     distclean pseries_defconfig disable-werror.config all || exit ${?}
                 ;;
             "powerpc64le-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=powerpc \
-                    CROSS_COMPILE="${TARGET}-" \
-                    LLVM_IAS=0 \
                     distclean powernv_defconfig all || exit ${?}
                 ;;
             "riscv64-linux-gnu")
@@ -247,15 +299,14 @@ function build_kernels() {
             "s390x-linux-gnu")
                 time "${MAKE[@]}" \
                     ARCH=s390 \
-                    CROSS_COMPILE="${TARGET}-" \
                     LD="${TARGET}-ld" \
-                    LLVM_IAS=0 \
                     OBJCOPY="${TARGET}-objcopy" \
                     OBJDUMP="${TARGET}-objdump" \
                     distclean defconfig all || exit ${?}
                 ;;
             "x86_64-linux-gnu")
                 time "${MAKE[@]}" \
+                    ARCH=x86_64 \
                     distclean "${CONFIG_TARGET}" all || exit ${?}
                 ;;
         esac
