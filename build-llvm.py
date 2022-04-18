@@ -958,6 +958,10 @@ def stage_specific_cmake_defines(args, dirs, stage):
         if instrumented_stage(args, stage):
             defines['LLVM_BUILD_INSTRUMENTED'] = 'IR'
             defines['LLVM_BUILD_RUNTIME'] = 'OFF'
+            # The next two defines is needed to avoid thousands of warnings
+            # along the lines of:
+            # "Unable to track new values: Running out of static counters."
+            defines['LLVM_LINK_LLVM_DYLIB'] = 'ON'
             defines['LLVM_VP_COUNTERS_PER_SITE'] = '6'
 
         # If we are at the final stage, use PGO/Thin LTO if requested
