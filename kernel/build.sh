@@ -23,6 +23,13 @@ function parse_parameters() {
                 shift
                 BUILD_FOLDER=${1}
                 ;;
+            "--bolt-"*)
+                BOLT=$(echo "${1}" | cut -d - -f 4)
+                ;;
+            "-i" | "--install-folder")
+                shift
+                INSTALL_FOLDER=${1}
+                ;;
             "-k" | "--kernel-src")
                 shift
                 KERNEL_SRC=${1}
@@ -77,6 +84,11 @@ function setup_up_path() {
     export PATH=${TC_BLD}/install/bin:${PATH}
     # Add the stage 2 bin folder to PATH for the instrumented clang if we are doing PGO
     ${PGO:=false} && export PATH=${BUILD_FOLDER:=${TC_BLD}/build/llvm}/stage2/bin:${PATH}
+    # Add the user's install folder if it is not in the PATH already if we are doing BOLT
+    if [[ -n ${BOLT} ]] && [[ -n ${INSTALL_FOLDER} ]]; then
+        INSTALL_BIN=${INSTALL_FOLDER}/bin
+        echo "${PATH}" | grep -q "${INSTALL_BIN}:" || export PATH=${INSTALL_BIN}:${PATH}
+    fi
     # If the user wants to add another folder to PATH, they can do it with the PATH_OVERRIDE variable
     [[ -n ${PATH_OVERRIDE} ]] && export PATH=${PATH_OVERRIDE}:${PATH}
 }
@@ -229,8 +241,13 @@ function clang_supports_host_target() {
 
 function build_kernels() {
     MAKE_BASE=(make -skj"$(nproc)" KCFLAGS=-Wno-error LLVM=1 O=out)
+    [[ ${BOLT} = "instrumentation" ]] && MAKE_BASE+=(CC=clang.inst)
 
-    clang_supports_host_target || MAKE_BASE+=(HOSTCC=gcc HOSTCXX=g++)
+    if clang_supports_host_target; then
+        [[ ${BOLT} = "instrumentation" ]] && MAKE_BASE+=(HOSTCC=clang.inst)
+    else
+        MAKE_BASE+=(HOSTCC=gcc HOSTCXX=g++)
+    fi
 
     header "Building kernels"
 

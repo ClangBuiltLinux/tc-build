@@ -98,3 +98,12 @@ def print_error(string):
     """
     # Use bold red for error
     print("\033[01;31m%s\n\033[0m" % string)
+
+
+def print_warning(string):
+    """
+    Prints a error in bold yellow
+    :param string: String to print
+    """
+    # Use bold yellow for error
+    print("\033[01;33m%s\n\033[0m" % string)
