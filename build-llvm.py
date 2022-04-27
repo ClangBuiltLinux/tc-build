@@ -5,6 +5,7 @@ import argparse
 import datetime
 import glob
 import pathlib
+import platform
 import os
 import subprocess
 import shutil
@@ -91,6 +92,52 @@ def parse_parameters(root_folder):
                         type=str,
                         default=os.path.join(root_folder.as_posix(), "build",
                                              "llvm"))
+    parser.add_argument("--bolt",
+                        help=textwrap.dedent("""\
+                        Optimize the final clang binary with BOLT (Binary Optimization and Layout Tool), which can
+                        often improve compile time performance by 5-7%% on average.
+
+                        This is similar to Profile Guided Optimization (PGO) but it happens against the final
+                        binary that is built. The script will:
+
+                        1. Figure out if perf can be used with branch sampling. You can test this ahead of time by
+                           running:
+
+                           $ perf record --branch-filter any,u --event cycles:u --output /dev/null -- sleep 1
+
+                        2. If perf cannot be used, the clang binary will be instrumented by llvm-bolt, which will
+                           result in a much slower clang binary.
+
+                           NOTE #1: When this instrumentation is combined with a build of LLVM that has already
+                                    been PGO'd (i.e., the '--pgo' flag) without LLVM's internal assertions (i.e.,
+                                    no '--assertions' flag), there might be a crash when attempting to run the
+                                    instrumented clang:
+
+                                    https://github.com/llvm/llvm-project/issues/55004
+
+                                    To avoid this, pass '--assertions' with '--bolt --pgo'.
+
+                           NOTE #2: BOLT's instrumentation might not be compatible with architectures other than
+                                    x86_64 and build-llvm.py's implementation has only been validated on x86_64
+                                    machines:
+
+                                    https://github.com/llvm/llvm-project/issues/55005
+
+                                    BOLT itself only appears to support AArch64 and x86_64 as of LLVM commit
+                                    a0b8ab1ba3165d468792cf0032fce274c7d624e1.
+
+                        3. A kernel will be built and profiled. This will either be the host architecture's
+                           defconfig or the first target's defconfig if '--targets' is specified without support
+                           for the host architecture. The profiling data will be quite large, so it is imperative
+                           that you have ample disk space and memory when attempting to do this. With instrumentation,
+                           a profile will be generated for each invocation (PID) of clang, so this data could easily
+                           be a couple hundred gigabytes large.
+
+                        4. The clang binary will be optimized with BOLT using the profile generated above. This can
+                           take some time.
+
+                        """),
+                        action="store_true")
     opt_options.add_argument("--build-stage1-only",
                              help=textwrap.dedent("""\
                         By default, the script does a multi-stage build: it builds a more lightweight version of
@@ -853,6 +900,8 @@ def project_cmake_defines(args, stage):
     else:
         if bootstrap_stage(args, stage):
             projects = "clang;lld"
+            if args.bolt:
+                projects += ';bolt'
             if args.pgo:
                 projects += ';compiler-rt'
         elif instrumented_stage(args, stage):
@@ -861,6 +910,11 @@ def project_cmake_defines(args, stage):
             projects = args.projects
         else:
             projects = "clang;compiler-rt;lld;polly"
+
+    # Add "bolt" in the list of projects if the user is doing a one stage build
+    # and it is not already in the list
+    if args.bolt and args.build_stage1_only and projects != "all" and "bolt" not in projects:
+        projects += ";bolt"
 
     defines['LLVM_ENABLE_PROJECTS'] = projects
 
@@ -971,6 +1025,9 @@ def stage_specific_cmake_defines(args, dirs, stage):
                     "profdata.prof").as_posix()
             if args.lto:
                 defines['LLVM_ENABLE_LTO'] = args.lto.capitalize()
+            # BOLT needs relocations for instrumentation
+            if args.bolt:
+                defines['CMAKE_EXE_LINKER_FLAGS'] = '-Wl,--emit-relocs'
 
         # If the user did not specify CMAKE_C_FLAGS or CMAKE_CXX_FLAGS, add them as empty
         # to paste stage 2 to ensure there are no environment issues (since CFLAGS and CXXFLAGS
@@ -1156,28 +1213,94 @@ def invoke_ninja(args, dirs, stage):
 
         utils.create_gitignore(install_folder)
 
+        if args.bolt:
+            do_bolt(args, dirs)
+
     if install_folder is not None:
         print_install_info(install_folder)
 
 
-def kernel_build_sh(args, config, dirs):
+def get_host_llvm_target():
     """
-    Run kernel/build.sh to generate PGO profiles
+    Get the host's LLVM target based on 'uname -m'
+    :return: Host's LLVM target
+    """
+    host_mapping = {
+        "aarch64": "AArch64",
+        "armv7l": "ARM",
+        "i386": "X86",
+        "mips": "Mips",
+        "mips64": "Mips",
+        "ppc": "PowerPC",
+        "ppc64": "PowerPC",
+        "ppc64le": "PowerPC",
+        "riscv32": "RISCV",
+        "riscv64": "RISCV",
+        "s390x": "SystemZ",
+        "x86_64": "X86"
+    }
+    return host_mapping.get(platform.machine())
+
+
+def kernel_build_sh(args, config, dirs, profile_type):
+    """
+    Run kernel/build.sh to generate PGO or BOLT profiles
     :param args: The args variable generated by parse_parameters
     :param config: The config to build (defconfig, allmodconfig, allyesconfig)
     :param dirs: An instance of the Directories class with the paths to use
+    :param profile_type: The type of profile we are building (bolt-instrumentation, bolt-sampling, or pgo)
     :return:
     """
+
     # Run kernel/build.sh
     build_sh = [
-        dirs.root_folder.joinpath("kernel", "build.sh"), '-b',
-        dirs.build_folder, '--pgo', '-t',
-        get_targets(args)
+        dirs.root_folder.joinpath("kernel", "build.sh"),
+        '--{}'.format(profile_type)
     ]
+
+    targets = get_targets(args)
+    if "bolt" in profile_type:
+        # For BOLT, we limit the number of kernels we build for each mode:
+        #
+        # When using perf, building too many kernels will generate a gigantic
+        # perf profile. perf2bolt calls 'perf script', which will load the
+        # entire profile into memory, which could cause OOM for most machines
+        # and long processing times for the ones that can handle it for little
+        # extra gain.
+        #
+        # With BOLT instrumentation, we generate one profile file for each
+        # invocation of clang (PID) to avoid profiling just the driver, so
+        # building multiple kernels will generate a few hundred gigabytes of
+        # fdata files.
+        #
+        # Just do a native build if the host target is in the list of targets
+        # or the first target if not.
+        host_target = get_host_llvm_target()
+        if targets == "all" or host_target in targets:
+            targets = host_target
+        else:
+            targets = targets.split(";")[0]
+
+        build_sh += ['-i', dirs.install_folder]
+
+    build_sh += ['-t', targets]
+
+    if profile_type == "bolt-sampling":
+        build_sh = [
+            "perf", "record", "--branch-filter", "any,u", "--event",
+            "cycles:u", "--output",
+            dirs.build_folder.joinpath("perf.data"), "--"
+        ] + build_sh
+
+    if profile_type == "pgo":
+        build_sh += ['-b', dirs.build_folder]
+
     if config != "defconfig":
         build_sh += ['--%s' % config]
+
     if dirs.linux_folder:
         build_sh += ['-k', dirs.linux_folder.as_posix()]
+
     show_command(args, build_sh)
     subprocess.run(build_sh, check=True, cwd=dirs.build_folder.as_posix())
 
@@ -1211,7 +1334,7 @@ def generate_pgo_profiles(args, dirs):
     # Run PGO benchmarks
     for pgo in args.pgo:
         if pgo.split("-")[0] == "kernel":
-            kernel_build_sh(args, pgo.split("-")[1], dirs)
+            kernel_build_sh(args, pgo.split("-")[1], dirs, "pgo")
         if pgo == "llvm":
             pgo_llvm_build(args, dirs)
 
@@ -1243,10 +1366,167 @@ def do_multistage_build(args, dirs, env_vars):
             generate_pgo_profiles(args, dirs)
 
 
+def can_use_perf():
+    """
+    Checks if perf can be used for branch sampling with BOLT
+    :return: True if perf can be used for branch sampling with BOLT, false if not
+    """
+    # Make sure perf is in the environment
+    if shutil.which("perf"):
+        try:
+            subprocess.run([
+                "perf", "record", "--branch-filter", "any,u", "--event",
+                "cycles:u", "--output", "/dev/null", "--", "sleep", "1"
+            ],
+                           stderr=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL,
+                           check=True)
+        except:
+            pass
+        else:
+            return True
+
+    return False
+
+
+def do_bolt(args, dirs):
+    # Default to instrumentation, as it should be universally available.
+    mode = "instrumentation"
+
+    # If we can use perf for branch sampling, we switch to that mode, as
+    # it is much quicker and it can result in more performance gains
+    if can_use_perf():
+        mode = "sampling"
+
+    utils.print_header("Performing BOLT with {}".format(mode))
+
+    # clang-#: original binary
+    # clang.bolt: BOLT optimized binary
+    # .bolt will become original binary after optimization
+    clang = dirs.install_folder.joinpath("bin", "clang").resolve()
+    clang_bolt = clang.with_name("clang.bolt")
+
+    llvm_bolt = dirs.build_folder.joinpath("stage1", "bin", "llvm-bolt")
+    bolt_profile = dirs.build_folder.joinpath("clang.fdata")
+
+    if mode == "instrumentation":
+        # clang.inst: instrumented binary, will be removed after generating profiles
+        clang_inst = clang.with_name("clang.inst")
+
+        # Remove profile if it exists (incremental builds). The missing_ok
+        # parameter to unlink() was only introduced in Python 3.8 but we try to
+        # support older versions when possible.
+        try:
+            bolt_profile.unlink()
+        except FileNotFoundError:
+            pass
+
+        # Instrument clang
+        clang_inst_cmd = [
+            llvm_bolt, "--instrument",
+            "--instrumentation-file={}".format(bolt_profile),
+            "--instrumentation-file-append-pid", "-o", clang_inst, clang
+        ]
+        show_command(args, clang_inst_cmd)
+        subprocess.run(clang_inst_cmd, check=True)
+
+    # Generate profile data by using clang to build kernels
+    kernel_build_sh(args, "defconfig", dirs, "bolt-{}".format(mode))
+
+    # With instrumentation, we need to combine the profiles we generated, as
+    # they are separated by PID
+    if mode == "instrumentation":
+        merge_fdata = dirs.build_folder.joinpath("stage1", "bin",
+                                                 "merge-fdata")
+        fdata_files = glob.glob("{}.*.fdata".format(bolt_profile.as_posix()))
+
+        # merge-fdata will print one line for each .fdata it merges. Redirect
+        # the output to a log file in case it ever needs to be inspected
+        merge_fdata_log = dirs.build_folder.joinpath("merge-fdata.log")
+
+        with open(bolt_profile, "w") as out_f, open(merge_fdata_log,
+                                                    "w") as err_f:
+            # We don't use show_command() here because of how long the command
+            # will be.
+            print("Merging .fdata files, this might take a while...")
+            subprocess.run([merge_fdata] + fdata_files,
+                           stdout=out_f,
+                           stderr=err_f,
+                           check=True)
+
+        for fdata_file in fdata_files:
+            os.remove(fdata_file)
+
+    # If we generated perf data, we need to convert it into something BOLT can
+    # understand. This is already done with instrumentation.
+    if mode == "sampling":
+        perf2bolt = dirs.build_folder.joinpath("stage1", "bin", "perf2bolt")
+        perf_data = dirs.build_folder.joinpath("perf.data")
+
+        perf2bolt_cmd = [perf2bolt, "-p", perf_data, "-o", bolt_profile, clang]
+        show_command(args, perf2bolt_cmd)
+        subprocess.run(perf2bolt_cmd, check=True)
+
+        try:
+            perf_data.unlink()
+        except FileNotFoundError:
+            pass
+
+    # Generate BOLT optimized clang
+    # Flags are from https://github.com/llvm/llvm-project/blob/2696d82fa0c323d92d8794f0a34ea9619888fae9/bolt/docs/OptimizingClang.md
+    clang_opt_cmd = [
+        llvm_bolt, "--data={}".format(bolt_profile), "--reorder-blocks=cache+",
+        "--reorder-functions=hfsort+", "--split-functions=3",
+        "--split-all-cold", "--dyno-stats", "--icf=1", "--use-gnu-stack", "-o",
+        clang_bolt, clang
+    ]
+    show_command(args, clang_opt_cmd)
+    subprocess.run(clang_opt_cmd, check=True)
+
+    # Move BOLT optimized clang into place and remove instrumented clang
+    shutil.move(clang_bolt, clang)
+    if mode == "instrumentation":
+        clang_inst.unlink()
+
+
 def main():
     root_folder = pathlib.Path(__file__).resolve().parent
 
     args = parse_parameters(root_folder)
+
+    # There are a couple of known issues with BOLT in instrumentation mode:
+    # https://github.com/llvm/llvm-project/issues/55004
+    # https://github.com/llvm/llvm-project/issues/55005
+    # Warn the user about them
+    if args.bolt and not can_use_perf():
+        warn = False
+
+        if args.pgo and not args.assertions:
+            utils.print_warning(
+                "\nUsing BOLT in instrumentation mode with PGO and no assertions might result in a binary that crashes:"
+            )
+            utils.print_warning(
+                "https://github.com/llvm/llvm-project/issues/55004")
+            utils.print_warning(
+                "Consider adding '--assertions' if there are any failures during the BOLT stage."
+            )
+            warn = True
+
+        if platform.machine() != "x86_64":
+            utils.print_warning(
+                "\nUsing BOLT in instrumentation mode may not work on non-x86_64 machines:"
+            )
+            utils.print_warning(
+                "https://github.com/llvm/llvm-project/issues/55005")
+            utils.print_warning(
+                "Consider dropping '--bolt' if there are any failures during the BOLT stage."
+            )
+            warn = True
+
+        if warn:
+            utils.print_warning(
+                "Continuing in 5 seconds, hit Ctrl-C to cancel...")
+            time.sleep(5)
 
     build_folder = pathlib.Path(args.build_folder)
     if not build_folder.is_absolute():
