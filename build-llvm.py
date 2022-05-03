@@ -136,6 +136,13 @@ def parse_parameters(root_folder):
                         4. The clang binary will be optimized with BOLT using the profile generated above. This can
                            take some time.
 
+                           NOTE #3: Versions of BOLT without commit 7d7771f34d14 ("[BOLT] Compact legacy profiles")
+                                    will use significantly more memory during this stage if instrumentation is used
+                                    because the merged profile is not as slim as it could be. Either upgrade to a
+                                    version of LLVM that contains that change or pick it yourself, switch to perf if
+                                    your machine supports it, upgrade the amount of memory you have (if possible),
+                                    or run build-llvm.py without '--bolt'.
+
                         """),
                         action="store_true")
     opt_options.add_argument("--build-stage1-only",
