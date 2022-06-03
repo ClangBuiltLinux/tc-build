@@ -898,6 +898,17 @@ def distro_cmake_defines():
     if glob.glob("/usr/include/c++/*/x86_64-generic-linux"):
         defines['LLVM_HOST_TRIPLE'] = "x86_64-generic-linux"
 
+    # By default, the Linux triples are for glibc, which might not work on
+    # musl-based systems. If clang is available, get the default target triple
+    # from it so that clang without a '--target' flag always works.
+    if shutil.which("clang"):
+        clang_cmd = ["clang", "-print-target-triple"]
+        clang_cmd_out = subprocess.run(clang_cmd,
+                                       capture_output=True,
+                                       check=True)
+        default_target_triple = clang_cmd_out.stdout.decode('UTF-8').strip()
+        defines['LLVM_DEFAULT_TARGET_TRIPLE'] = default_target_triple
+
     return defines
 
 
