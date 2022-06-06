@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-BASE=$(dirname "$(readlink -f "${0}")")
+base=$(dirname "$(readlink -f "$0")")
 
 set -eu
 
 function parse_parameters() {
-    while ((${#})); do
-        case ${1} in
-            all | binutils | deps | kernel | llvm) ACTION=${1} ;;
+    while (($#)); do
+        case $1 in
+            all | binutils | deps | kernel | llvm) action=$1 ;;
             *) exit 33 ;;
         esac
         shift
@@ -22,12 +22,13 @@ function do_all() {
 }
 
 function do_binutils() {
-    "${BASE}"/build-binutils.py -t x86_64
+    "$base"/build-binutils.py -t x86_64
 }
 
 function do_deps() {
     # We only run this when running on GitHub Actions
     [[ -z ${GITHUB_ACTIONS:-} ]] && return 0
+
     sudo apt-get install -y --no-install-recommends \
         bc \
         bison \
@@ -52,14 +53,15 @@ function do_deps() {
 }
 
 function do_kernel() {
-    cd "${BASE}"/kernel
+    cd "$base"/kernel
     ./build.sh -t X86
 }
 
 function do_llvm() {
-    EXTRA_ARGS=()
-    [[ -n ${GITHUB_ACTIONS:-} ]] && EXTRA_ARGS+=(--no-ccache)
-    "${BASE}"/build-llvm.py \
+    extra_args=()
+    [[ -n ${GITHUB_ACTIONS:-} ]] && extra_args+=(--no-ccache)
+
+    "$base"/build-llvm.py \
         --assertions \
         --branch "release/13.x" \
         --build-stage1-only \
@@ -68,8 +70,8 @@ function do_llvm() {
         --projects "clang;lld" \
         --shallow-clone \
         --targets X86 \
-        "${EXTRA_ARGS[@]}"
+        "${extra_args[@]}"
 }
 
-parse_parameters "${@}"
-do_"${ACTION:=all}"
+parse_parameters "$@"
+do_"${action:=all}"
