@@ -63,7 +63,7 @@ function do_llvm() {
 
     "$base"/build-llvm.py \
         --assertions \
-        --branch "release/13.x" \
+        --branch "release/14.x" \
         --build-stage1-only \
         --check-targets clang lld llvm \
         --install-stage1-only \
