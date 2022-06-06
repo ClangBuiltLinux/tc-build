@@ -298,7 +298,7 @@ function build_kernels() {
             hexagon-linux-gnu)
                 time "${make[@]}" \
                     ARCH=hexagon \
-                    distclean defconfig all || exit
+                    distclean "$config_target" all || exit
                 ;;
 
             mipsel-linux-gnu)
@@ -329,7 +329,7 @@ function build_kernels() {
             riscv64-linux-gnu)
                 time "${make[@]}" \
                     ARCH=riscv \
-                    distclean defconfig all || exit
+                    distclean "$config_target" all || exit
                 ;;
 
             s390x-linux-gnu)
@@ -338,7 +338,7 @@ function build_kernels() {
                     LD="$target-ld" \
                     OBJCOPY="$target-objcopy" \
                     OBJDUMP="$target-objdump" \
-                    distclean defconfig all || exit
+                    distclean "$config_target" all || exit
                 ;;
 
             x86_64-linux-gnu)
