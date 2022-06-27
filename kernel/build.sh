@@ -4,7 +4,7 @@ krnl=$(dirname "$(readlink -f "$0")")
 tc_bld=${krnl%/*}
 
 function header() {
-    border="====$(for _ in $(seq ${#1}); do printf '='; done)===="
+    border="===$(for _ in $(seq ${#1}); do printf '='; done)==="
     printf '\033[1m\n%s\n%s\n%s\n\n\033[0m' "$border" "== $1 ==" "$border"
 }
 
@@ -260,7 +260,7 @@ function build_kernels() {
         make_base+=(HOSTCC=gcc HOSTCXX=g++)
     fi
 
-    header "Building kernels"
+    header "Building kernels ($(make -s kernelversion))"
 
     # If the user has any CFLAGS in their environment, they can cause issues when building tools/
     # Ideally, the kernel would always clobber user flags via ':=' but that is not always the case
