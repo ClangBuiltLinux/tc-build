@@ -4,7 +4,7 @@ krnl=$(dirname "$(readlink -f "$0")")
 tc_bld=${krnl%/*}
 
 function header() {
-    border="====$(for _ in $(seq ${#1}); do printf '='; done)===="
+    border="===$(for _ in $(seq ${#1}); do printf '='; done)==="
     printf '\033[1m\n%s\n%s\n%s\n\n\033[0m' "$border" "== $1 ==" "$border"
 }
 
