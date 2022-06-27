@@ -260,7 +260,7 @@ function build_kernels() {
         make_base+=(HOSTCC=gcc HOSTCXX=g++)
     fi
 
-    header "Building kernels"
+    header "Building kernels ($(make -s kernelversion))"
 
     # If the user has any CFLAGS in their environment, they can cause issues when building tools/
     # Ideally, the kernel would always clobber user flags via ':=' but that is not always the case
