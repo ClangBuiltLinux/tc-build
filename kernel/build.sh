@@ -334,6 +334,9 @@ function build_kernels() {
                 ;;
 
             s390x-linux-gnu)
+                # https://git.kernel.org/linus/8218827b73c6e41029438a2d3cc573286beee914
+                [[ $llvm_version -lt 140000 ]] && continue
+
                 time "${make[@]}" \
                     ARCH=s390 \
                     LD="$target-ld" \
