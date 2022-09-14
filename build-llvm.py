@@ -534,7 +534,8 @@ def check_cc_ld_variables(root_folder):
             ld = shutil.which(ld)
         if linker_test(cc, ld):
             print("LD won't work with " + cc +
-                  ", saving you from yourself by ignoring LD value")
+                  ", saving you from yourself by ignoring LD value",
+                  flush=True)
             ld = None
     # If the user didn't specify a linker
     else:
@@ -569,6 +570,7 @@ def check_cc_ld_variables(root_folder):
         if ld_to_print is None:
             ld_to_print = shutil.which(ld)
         print("LD: " + ld_to_print)
+    utils.flush_std_err_out()
 
     return cc, cxx, ld
 
@@ -584,7 +586,7 @@ def check_dependencies():
         if output is None:
             raise RuntimeError(command +
                                " could not be found, please install it!")
-        print(output)
+        print(output, flush=True)
 
 
 def repo_is_shallow(repo):
@@ -1119,7 +1121,8 @@ def show_command(args, command):
     :param command: The command being run
     """
     if args.show_build_commands:
-        print("$ %s" % " ".join([str(element) for element in command]))
+        print("$ %s" % " ".join([str(element) for element in command]),
+              flush=True)
 
 
 def get_pgo_header_folder(stage):
@@ -1185,6 +1188,7 @@ def print_install_info(install_folder):
             if binary.exists():
                 subprocess.run([binary, "--version"], check=True)
                 print()
+    utils.flush_std_err_out()
 
 
 def ninja_check(args, build_folder):
@@ -1233,6 +1237,7 @@ def invoke_ninja(args, dirs, stage):
     print()
     print("LLVM build duration: " +
           str(datetime.timedelta(seconds=int(time.time() - time_started))))
+    utils.flush_std_err_out()
 
     if should_install_toolchain(args, stage):
         subprocess.run(['ninja', 'install'],
@@ -1487,7 +1492,8 @@ def do_bolt(args, dirs):
                                                     "w") as err_f:
             # We don't use show_command() here because of how long the command
             # will be.
-            print("Merging .fdata files, this might take a while...")
+            print("Merging .fdata files, this might take a while...",
+                  flush=True)
             subprocess.run([merge_fdata] + fdata_files,
                            stdout=out_f,
                            stderr=err_f,
