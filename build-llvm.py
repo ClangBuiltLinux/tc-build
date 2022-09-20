@@ -1604,7 +1604,7 @@ def main():
             llvm_folder = root_folder.joinpath(llvm_folder)
         if not llvm_folder.exists():
             utils.print_error("\nSupplied LLVM source (%s) does not exist!" %
-                              linux_folder.as_posix())
+                              llvm_folder.as_posix())
             exit(1)
     else:
         llvm_folder = root_folder.joinpath("llvm-project")
