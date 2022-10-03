@@ -123,12 +123,12 @@ function setup_krnl_src() {
     if [[ -n $kernel_src ]]; then
         cd "$kernel_src" || exit
     else
-        linux="linux-5.18"
+        linux="linux-6.0"
         linux_tarball=$krnl/$linux.tar.xz
 
         # If we don't have the source tarball, download and verify it
         if [[ ! -f $linux_tarball ]]; then
-            curl -LSso "$linux_tarball" https://cdn.kernel.org/pub/linux/kernel/v5.x/"${linux_tarball##*/}"
+            curl -LSso "$linux_tarball" https://cdn.kernel.org/pub/linux/kernel/v6.x/"${linux_tarball##*/}"
 
             (
                 cd "${linux_tarball%/*}" || exit
