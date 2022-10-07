@@ -828,7 +828,7 @@ def if_binary_exists(binary_name, cc):
     return binary
 
 
-def cc_ld_cmake_defines(dirs, env_vars, stage):
+def cc_ld_cmake_defines(args, dirs, env_vars, stage):
     """
     Generate compiler and linker cmake defines, which change depending on what
     stage we are at
@@ -880,6 +880,11 @@ def cc_ld_cmake_defines(dirs, env_vars, stage):
     # If we have a linker, use it
     if ld:
         defines['LLVM_USE_LINKER'] = ld
+        # For LLVMgold.so, which is used for LTO with ld.gold
+        if args.lto and 'ld.gold' in ld:
+            defines['LLVM_BINUTILS_INCDIR'] = dirs.root_folder.joinpath(
+                utils.current_binutils(), "include")
+            defines['LLVM_ENABLE_PLUGINS'] = 'ON'
 
     if llvm_tblgen:
         defines['LLVM_TABLEGEN'] = llvm_tblgen
@@ -1073,11 +1078,6 @@ def stage_specific_cmake_defines(args, dirs, stage):
             if key not in str(args.defines):
                 defines[key] = ''
 
-        # For LLVMgold.so, which is used for LTO with ld.gold
-        defines['LLVM_BINUTILS_INCDIR'] = dirs.root_folder.joinpath(
-            utils.current_binutils(), "include")
-        defines['LLVM_ENABLE_PLUGINS'] = 'ON'
-
     return defines
 
 
@@ -1097,7 +1097,7 @@ def build_cmake_defines(args, dirs, env_vars, stage):
         defines.update(slim_cmake_defines())
 
     # Add compiler/linker defines, which change based on stage
-    defines.update(cc_ld_cmake_defines(dirs, env_vars, stage))
+    defines.update(cc_ld_cmake_defines(args, dirs, env_vars, stage))
 
     # Add distribution specific defines
     defines.update(distro_cmake_defines())
