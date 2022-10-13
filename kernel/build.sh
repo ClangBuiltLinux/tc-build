@@ -310,7 +310,7 @@ function build_kernels() {
             powerpc-linux-gnu)
                 time "${make[@]}" \
                     ARCH=powerpc \
-                    distclean ppc44x_defconfig all || exit
+                    distclean pmac32_defconfig all || exit
                 ;;
 
             powerpc64-linux-gnu)
