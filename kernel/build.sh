@@ -153,14 +153,15 @@ function setup_krnl_src() {
     fi
 }
 
+function set_llvm_version() {
+    llvm_version=$("$tc_bld"/clang-version.sh clang)
+}
+
 # Can the requested architecture use LLVM_IAS=1? This assumes that if the user
 # is passing in their own kernel source via '-k', it is either the same or a
 # newer version as the one that the script downloads to avoid having a two
 # variable matrix.
 function can_use_llvm_ias() {
-    local llvm_version
-    llvm_version=$("$tc_bld"/clang-version.sh clang)
-
     case $1 in
         # https://github.com/ClangBuiltLinux/linux/issues?q=is%3Aissue+label%3A%22%5BARCH%5D+arm32%22+label%3A%22%5BTOOL%5D+integrated-as%22+
         arm*)
@@ -354,6 +355,7 @@ parse_parameters "$@"
 set_default_values
 setup_up_path
 setup_krnl_src
+set_llvm_version
 check_binutils
 print_tc_info
 build_kernels
