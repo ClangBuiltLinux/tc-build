@@ -1534,10 +1534,45 @@ def do_bolt(args, dirs):
         clang_inst.unlink()
 
 
+# https://github.com/llvm/llvm-project/commit/4f158995b9cddae392bfb5989af8c83101ae0789
+def has_4f158995b9cddae(llvm_folder):
+    return llvm_folder.joinpath("bolt", "lib", "Passes",
+                                "ValidateMemRefs.cpp").exists()
+
+
 def main():
     root_folder = pathlib.Path(__file__).resolve().parent
 
     args = parse_parameters(root_folder)
+
+    build_folder = pathlib.Path(args.build_folder)
+    if not build_folder.is_absolute():
+        build_folder = root_folder.joinpath(build_folder)
+
+    install_folder = pathlib.Path(args.install_folder)
+    if not install_folder.is_absolute():
+        install_folder = root_folder.joinpath(install_folder)
+
+    linux_folder = None
+    if args.linux_folder:
+        linux_folder = pathlib.Path(args.linux_folder)
+        if not linux_folder.is_absolute():
+            linux_folder = root_folder.joinpath(linux_folder)
+        if not linux_folder.exists():
+            utils.print_error("\nSupplied kernel source (%s) does not exist!" %
+                              linux_folder.as_posix())
+            exit(1)
+
+    if args.llvm_folder:
+        llvm_folder = pathlib.Path(args.llvm_folder)
+        if not llvm_folder.is_absolute():
+            llvm_folder = root_folder.joinpath(llvm_folder)
+        if not llvm_folder.exists():
+            utils.print_error("\nSupplied LLVM source (%s) does not exist!" %
+                              llvm_folder.as_posix())
+            exit(1)
+    else:
+        llvm_folder = root_folder.joinpath("llvm-project")
 
     # There are a couple of known issues with BOLT in instrumentation mode:
     # https://github.com/llvm/llvm-project/issues/55004
@@ -1546,7 +1581,8 @@ def main():
     if args.bolt and not can_use_perf():
         warn = False
 
-        if args.pgo and not args.assertions:
+        if args.pgo and not args.assertions and not has_4f158995b9cddae(
+                llvm_folder):
             utils.print_warning(
                 "\nUsing BOLT in instrumentation mode with PGO and no assertions might result in a binary that crashes:"
             )
@@ -1573,24 +1609,6 @@ def main():
                 "Continuing in 5 seconds, hit Ctrl-C to cancel...")
             time.sleep(5)
 
-    build_folder = pathlib.Path(args.build_folder)
-    if not build_folder.is_absolute():
-        build_folder = root_folder.joinpath(build_folder)
-
-    install_folder = pathlib.Path(args.install_folder)
-    if not install_folder.is_absolute():
-        install_folder = root_folder.joinpath(install_folder)
-
-    linux_folder = None
-    if args.linux_folder:
-        linux_folder = pathlib.Path(args.linux_folder)
-        if not linux_folder.is_absolute():
-            linux_folder = root_folder.joinpath(linux_folder)
-        if not linux_folder.exists():
-            utils.print_error("\nSupplied kernel source (%s) does not exist!" %
-                              linux_folder.as_posix())
-            exit(1)
-
     env_vars = EnvVars(*check_cc_ld_variables(root_folder))
     check_dependencies()
     if args.use_good_revision:
@@ -1598,16 +1616,7 @@ def main():
     else:
         ref = args.branch
 
-    if args.llvm_folder:
-        llvm_folder = pathlib.Path(args.llvm_folder)
-        if not llvm_folder.is_absolute():
-            llvm_folder = root_folder.joinpath(llvm_folder)
-        if not llvm_folder.exists():
-            utils.print_error("\nSupplied LLVM source (%s) does not exist!" %
-                              llvm_folder.as_posix())
-            exit(1)
-    else:
-        llvm_folder = root_folder.joinpath("llvm-project")
+    if not args.llvm_folder:
         fetch_llvm_binutils(root_folder, llvm_folder, not args.no_update,
                             args.shallow_clone, ref)
     cleanup(build_folder, args.incremental)
