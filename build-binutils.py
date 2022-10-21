@@ -3,7 +3,6 @@
 
 import argparse
 import multiprocessing
-import os
 import pathlib
 import platform
 import shutil
@@ -60,8 +59,8 @@ def parse_parameters(root_folder):
                         or relative path.
                         """,
                         type=str,
-                        default=os.path.join(root_folder.as_posix(), "build",
-                                             "binutils"))
+                        default=root_folder.joinpath("build",
+                                                     "binutils").as_posix())
     parser.add_argument("-I",
                         "--install-folder",
                         help="""
@@ -70,8 +69,7 @@ def parse_parameters(root_folder):
                         it to this parameter. This can either be an absolute or relative path.
                         """,
                         type=str,
-                        default=os.path.join(root_folder.as_posix(),
-                                             "install"))
+                        default=root_folder.joinpath("install").as_posix())
     parser.add_argument("-t",
                         "--targets",
                         help="""
