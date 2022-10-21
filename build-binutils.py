@@ -78,6 +78,12 @@ def parse_parameters(root_folder):
                         """,
                         type=str,
                         default=root_folder.joinpath("install").as_posix())
+    parser.add_argument("-s",
+                        "--skip-install",
+                        help="""
+                        Skip installing binutils into INSTALL_FOLDER
+                        """,
+                        action="store_true")
     parser.add_argument("-t",
                         "--targets",
                         help="""
@@ -158,9 +164,10 @@ def invoke_configure(binutils_folder, build_folder, install_folder, target,
         '--disable-compressed-debug-sections', '--disable-gdb',
         '--disable-werror', '--enable-deterministic-archives',
         '--enable-new-dtags', '--enable-plugins', '--enable-threads',
-        '--prefix=%s' % install_folder.as_posix(), '--quiet',
-        '--with-system-zlib'
+        '--quiet', '--with-system-zlib'
     ]
+    if install_folder:
+        configure += ['--prefix=%s' % install_folder.as_posix()]
     if host_arch:
         configure += [
             'CFLAGS=-O2 -march=%s -mtune=%s' % (host_arch, host_arch),
@@ -220,11 +227,13 @@ def invoke_make(build_folder, install_folder, target):
                        check=True,
                        cwd=build_folder.as_posix())
     subprocess.run(make, check=True, cwd=build_folder.as_posix())
-    subprocess.run(make + ['prefix=%s' % install_folder.as_posix(), 'install'],
-                   check=True,
-                   cwd=build_folder.as_posix())
-    with install_folder.joinpath(".gitignore").open("w") as gitignore:
-        gitignore.write("*")
+    if install_folder:
+        subprocess.run(make +
+                       ['prefix=%s' % install_folder.as_posix(), 'install'],
+                       check=True,
+                       cwd=build_folder.as_posix())
+        with install_folder.joinpath(".gitignore").open("w") as gitignore:
+            gitignore.write("*")
 
 
 def build_targets(binutils_folder, build, install_folder, targets, host_arch):
@@ -262,9 +271,12 @@ def main():
     if not build_folder.is_absolute():
         build_folder = root_folder.joinpath(build_folder)
 
-    install_folder = pathlib.Path(args.install_folder)
-    if not install_folder.is_absolute():
-        install_folder = root_folder.joinpath(install_folder)
+    if args.skip_install:
+        install_folder = None
+    else:
+        install_folder = pathlib.Path(args.install_folder)
+        if not install_folder.is_absolute():
+            install_folder = root_folder.joinpath(install_folder)
 
     targets = ["all"]
     if args.targets is not None:
