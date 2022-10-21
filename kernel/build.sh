@@ -123,12 +123,12 @@ function setup_krnl_src() {
     if [[ -n $kernel_src ]]; then
         cd "$kernel_src" || exit
     else
-        linux="linux-5.18"
+        linux="linux-6.0"
         linux_tarball=$krnl/$linux.tar.xz
 
         # If we don't have the source tarball, download and verify it
         if [[ ! -f $linux_tarball ]]; then
-            curl -LSso "$linux_tarball" https://cdn.kernel.org/pub/linux/kernel/v5.x/"${linux_tarball##*/}"
+            curl -LSso "$linux_tarball" https://cdn.kernel.org/pub/linux/kernel/v6.x/"${linux_tarball##*/}"
 
             (
                 cd "${linux_tarball%/*}" || exit
@@ -153,14 +153,15 @@ function setup_krnl_src() {
     fi
 }
 
+function set_llvm_version() {
+    llvm_version=$("$tc_bld"/clang-version.sh clang)
+}
+
 # Can the requested architecture use LLVM_IAS=1? This assumes that if the user
 # is passing in their own kernel source via '-k', it is either the same or a
 # newer version as the one that the script downloads to avoid having a two
 # variable matrix.
 function can_use_llvm_ias() {
-    local llvm_version
-    llvm_version=$("$tc_bld"/clang-version.sh clang)
-
     case $1 in
         # https://github.com/ClangBuiltLinux/linux/issues?q=is%3Aissue+label%3A%22%5BARCH%5D+arm32%22+label%3A%22%5BTOOL%5D+integrated-as%22+
         arm*)
@@ -181,14 +182,43 @@ function can_use_llvm_ias() {
             fi
             ;;
 
-        hexagon* | mips* | riscv*)
+        hexagon* | mips* | riscv* | s390*)
             # All supported versions of LLVM for building the kernel
             return 0
             ;;
 
-        powerpc* | s390*)
+        powerpc64le-linux-gnu)
+            if [[ $llvm_version -ge 140000 ]]; then
+                return 0
+            else
+                return 1
+            fi
+            ;;
+
+        powerpc*)
             # No supported versions of LLVM for building the kernel
             return 1
+            ;;
+    esac
+}
+
+# Does the requested architecture need binutils? Normally, this is answered by
+# can_use_llvm_ias() but powerpc64le stills needs binutils for now due to the
+# boot wrapper, despite being able to use the integrated assembler and LLVM
+# binutils for the rest of the kernel build.
+function needs_binutils() {
+    case $1 in
+        # powerpc64le needs binutils for the boot wrapper:
+        #   - https://github.com/ClangBuiltLinux/linux/issues/1601
+        # s390x needs binutils for ld, objcopy, and objdump:
+        #   - https://github.com/ClangBuiltLinux/linux/issues/1524
+        #   - https://github.com/ClangBuiltLinux/linux/issues/1530
+        #   - https://github.com/ClangBuiltLinux/linux/issues/859
+        powerpc64le-linux-gnu | s390x-linux-gnu)
+            return 0
+            ;;
+        *)
+            ! can_use_llvm_ias "$1"
             ;;
     esac
 }
@@ -221,8 +251,7 @@ function check_binutils() {
     binutils_targets=()
 
     for prefix in "${targets[@]}"; do
-        # We do not need to check for binutils if we can use the integrated assembler
-        can_use_llvm_ias "$prefix" && continue
+        needs_binutils "$prefix" || continue
 
         command -v "$(get_as "$prefix")" &>/dev/null || binutils_targets+=("$prefix")
     done
@@ -235,7 +264,7 @@ function print_tc_info() {
     header "Toolchain information"
     clang --version
     for prefix in "${targets[@]}"; do
-        can_use_llvm_ias "$prefix" && continue
+        needs_binutils "$prefix" || continue
 
         echo
         "$(get_as "$prefix")" --version
@@ -270,7 +299,8 @@ function build_kernels() {
 
     for target in "${targets[@]}"; do
         make=("${make_base[@]}")
-        can_use_llvm_ias "$target" || make+=(CROSS_COMPILE="$target-" LLVM_IAS=0)
+        needs_binutils "$target" && make+=(CROSS_COMPILE="$target-")
+        can_use_llvm_ias "$target" || make+=(LLVM_IAS=0)
 
         case $target in
             arm-linux-gnueabi)
@@ -310,7 +340,7 @@ function build_kernels() {
             powerpc-linux-gnu)
                 time "${make[@]}" \
                     ARCH=powerpc \
-                    distclean ppc44x_defconfig all || exit
+                    distclean pmac32_defconfig all || exit
                 ;;
 
             powerpc64-linux-gnu)
@@ -333,6 +363,9 @@ function build_kernels() {
                 ;;
 
             s390x-linux-gnu)
+                # https://git.kernel.org/linus/8218827b73c6e41029438a2d3cc573286beee914
+                [[ $llvm_version -lt 140000 ]] && continue
+
                 time "${make[@]}" \
                     ARCH=s390 \
                     LD="$target-ld" \
@@ -354,6 +387,7 @@ parse_parameters "$@"
 set_default_values
 setup_up_path
 setup_krnl_src
+set_llvm_version
 check_binutils
 print_tc_info
 build_kernels

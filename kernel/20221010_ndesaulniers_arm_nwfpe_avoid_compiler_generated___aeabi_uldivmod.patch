@@ -1,0 +1,67 @@
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH] ARM: NWFPE: avoid compiler-generated __aeabi_uldivmod
+From: Nick Desaulniers <ndesaulniers@google.com>
+Date: Mon, 10 Oct 2022 15:53:42 -0700
+Message-Id: <20221010225342.3903590-1-ndesaulniers@google.com>
+To: Arnd Bergmann <arnd@kernel.org>, Russell King <linux@armlinux.org.uk>
+Cc: Tom Rix <trix@redhat.com>, linux-arm-kernel@lists.infradead.org, linux-kernel@vger.kernel.org, llvm@lists.linux.dev, Miguel Ojeda <ojeda@kernel.org>, Ard Biesheuvel <ardb@kernel.org>, Gary Guo <gary@garyguo.net>, Craig Topper <craig.topper@sifive.com>, Philip Reames <listmail@philipreames.com>, jh@jhauser.us, Nick Desaulniers <ndesaulniers@google.com>, Nathan Chancellor <nathan@kernel.org>
+In-Reply-To: <CAKwvOdnQ-tWa0oY0CKAwJD5WQDgVBvxDtf6=E3hS8Ytz5J1OKg@mail.gmail.com>
+References: <CAKwvOdnQ-tWa0oY0CKAwJD5WQDgVBvxDtf6=E3hS8Ytz5J1OKg@mail.gmail.com>
+List-Id: <llvm.lists.linux.dev>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+clang-15's ability to elide loops completely became more aggressive when
+it can deduce how a variable is being updated in a loop. Counting down
+one variable by an increment of another can be replaced by a modulo
+operation.
+
+For 64b variables on 32b ARM EABI targets, this can result in the
+compiler generating calls to __aeabi_uldivmod, which it does for a do
+while loop in float64_rem().
+
+For the kernel, we'd generally prefer that developers not open code 64b
+division via binary / operators and instead use the more explicit
+helpers from div64.h. On arm-linux-gnuabi targets, failure to do so can
+result in linkage failures due to undefined references to
+__aeabi_uldivmod().
+
+While developers can avoid open coding divisions on 64b variables, the
+compiler doesn't know that the Linux kernel has a partial implementation
+of a compiler runtime (--rtlib) to enforce this convention.
+
+It's also undecidable for the compiler whether the code in question
+would be faster to execute the loop vs elide it and do the 64b division.
+
+While I actively avoid using the internal -mllvm command line flags, I
+think we get better code than using barrier() here, which will force
+reloads+spills in the loop for all toolchains.
+
+Link: https://github.com/ClangBuiltLinux/linux/issues/1666
+Reported-by: Nathan Chancellor <nathan@kernel.org>
+Signed-off-by: Nick Desaulniers <ndesaulniers@google.com>
+Tested-by: Nathan Chancellor <nathan@kernel.org>
+Reviewed-by: Arnd Bergmann <arnd@arndb.de>
+Link: https://lore.kernel.org/r/20221010225342.3903590-1-ndesaulniers@google.com
+---
+ arch/arm/nwfpe/Makefile | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/arch/arm/nwfpe/Makefile b/arch/arm/nwfpe/Makefile
+index 303400fa2cdf..2aec85ab1e8b 100644
+--- a/arch/arm/nwfpe/Makefile
++++ b/arch/arm/nwfpe/Makefile
+@@ -11,3 +11,9 @@ nwfpe-y				+= fpa11.o fpa11_cpdo.o fpa11_cpdt.o \
+ 				   entry.o
+ 
+ nwfpe-$(CONFIG_FPE_NWFPE_XP)	+= extended_cpdo.o
++
++# Try really hard to avoid generating calls to __aeabi_uldivmod() from
++# float64_rem() due to loop elision.
++ifdef CONFIG_CC_IS_CLANG
++CFLAGS_softfloat.o	+= -mllvm -replexitval=never
++endif
+-- 
+2.38.0.rc2.412.g84df46c1b4-goog
+
