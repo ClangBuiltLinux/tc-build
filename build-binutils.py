@@ -50,6 +50,14 @@ def parse_parameters(root_folder):
     :return: A 'Namespace' object with all the options parsed from supplied parameters
     """
     parser = argparse.ArgumentParser()
+    parser.add_argument("-b",
+                        "--binutils-folder",
+                        help="""
+                        By default, the script will download a copy of the binutils source in the same folder as
+                        this script. If you have your own copy of the binutils source that you would like to build
+                        from, pass it to this parameter. This can either be an absolute or relative path.
+                        """,
+                        type=str)
     parser.add_argument("-B",
                         "--build-folder",
                         help="""
@@ -135,20 +143,20 @@ def cleanup(build_folder):
     build_folder.mkdir(parents=True, exist_ok=True)
 
 
-def invoke_configure(build_folder, install_folder, root_folder, target,
+def invoke_configure(binutils_folder, build_folder, install_folder, target,
                      host_arch):
     """
     Invokes the configure script to generate a Makefile
+    :param binutils_folder: Binutils source folder
     :param build_folder: Build directory
     :param install_folder: Directory to install binutils to
-    :param root_folder: Working directory
     :param target: Target to compile for
     :param host_arch: Host architecture to optimize for
     """
     configure = [
-        root_folder.joinpath(utils.current_binutils(), "configure").as_posix(),
-        'CC=gcc', 'CXX=g++', '--disable-compressed-debug-sections',
-        '--disable-gdb', '--disable-werror', '--enable-deterministic-archives',
+        binutils_folder.joinpath("configure").as_posix(), 'CC=gcc', 'CXX=g++',
+        '--disable-compressed-debug-sections', '--disable-gdb',
+        '--disable-werror', '--enable-deterministic-archives',
         '--enable-new-dtags', '--enable-plugins', '--enable-threads',
         '--prefix=%s' % install_folder.as_posix(), '--quiet',
         '--with-system-zlib'
@@ -219,12 +227,12 @@ def invoke_make(build_folder, install_folder, target):
         gitignore.write("*")
 
 
-def build_targets(build, install_folder, root_folder, targets, host_arch):
+def build_targets(binutils_folder, build, install_folder, targets, host_arch):
     """
     Builds binutils for all specified targets
+    :param binutils_folder: Binutils source folder
     :param build: Build directory
     :param install_folder: Directory to install binutils to
-    :param root_folder: Working directory
     :param targets: Targets to compile binutils for
     :param host_arch: Host architecture to optimize for
     :return:
@@ -232,7 +240,7 @@ def build_targets(build, install_folder, root_folder, targets, host_arch):
     for target in targets:
         build_folder = build.joinpath(target)
         cleanup(build_folder)
-        invoke_configure(build_folder, install_folder, root_folder, target,
+        invoke_configure(binutils_folder, build_folder, install_folder, target,
                          host_arch)
         invoke_make(build_folder, install_folder, target)
 
@@ -241,6 +249,14 @@ def main():
     root_folder = pathlib.Path(__file__).resolve().parent
 
     args = parse_parameters(root_folder)
+
+    if args.binutils_folder:
+        binutils_folder = pathlib.Path(args.binutils_folder)
+        if not binutils_folder.is_absolute():
+            binutils_folder = root_folder.joinpath(binutils_folder)
+    else:
+        binutils_folder = root_folder.joinpath(utils.current_binutils())
+        utils.download_binutils(root_folder)
 
     build_folder = pathlib.Path(args.build_folder)
     if not build_folder.is_absolute():
@@ -254,9 +270,7 @@ def main():
     if args.targets is not None:
         targets = args.targets
 
-    utils.download_binutils(root_folder)
-
-    build_targets(build_folder, install_folder, root_folder,
+    build_targets(binutils_folder, build_folder, install_folder,
                   create_targets(targets), args.march)
 
 
