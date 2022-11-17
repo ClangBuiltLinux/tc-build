@@ -67,8 +67,7 @@ def parse_parameters(root_folder):
                         or relative path.
                         """,
                         type=str,
-                        default=root_folder.joinpath("build",
-                                                     "binutils").as_posix())
+                        default=root_folder.joinpath("build", "binutils"))
     parser.add_argument("-I",
                         "--install-folder",
                         help="""
@@ -77,7 +76,7 @@ def parse_parameters(root_folder):
                         it to this parameter. This can either be an absolute or relative path.
                         """,
                         type=str,
-                        default=root_folder.joinpath("install").as_posix())
+                        default=root_folder.joinpath("install"))
     parser.add_argument("-s",
                         "--skip-install",
                         help="""
@@ -145,7 +144,7 @@ def cleanup(build_folder):
     :param build_folder: Build directory
     """
     if build_folder.is_dir():
-        shutil.rmtree(build_folder.as_posix())
+        shutil.rmtree(build_folder)
     build_folder.mkdir(parents=True, exist_ok=True)
 
 
@@ -160,14 +159,14 @@ def invoke_configure(binutils_folder, build_folder, install_folder, target,
     :param host_arch: Host architecture to optimize for
     """
     configure = [
-        binutils_folder.joinpath("configure").as_posix(), 'CC=gcc', 'CXX=g++',
+        binutils_folder.joinpath("configure"), 'CC=gcc', 'CXX=g++',
         '--disable-compressed-debug-sections', '--disable-gdb',
         '--disable-werror', '--enable-deterministic-archives',
         '--enable-new-dtags', '--enable-plugins', '--enable-threads',
         '--quiet', '--with-system-zlib'
     ]
     if install_folder:
-        configure += [f'--prefix={install_folder.as_posix()}']
+        configure += [f'--prefix={install_folder}']
     if host_arch:
         configure += [
             f'CFLAGS=-O2 -march={host_arch} -mtune={host_arch}',
@@ -210,7 +209,7 @@ def invoke_configure(binutils_folder, build_folder, install_folder, target,
         configure += [f'--program-prefix={target}-', f'--target={target}']
 
     utils.print_header(f"Building {target} binutils")
-    subprocess.run(configure, check=True, cwd=build_folder.as_posix())
+    subprocess.run(configure, check=True, cwd=build_folder)
 
 
 def invoke_make(build_folder, install_folder, target):
@@ -222,15 +221,12 @@ def invoke_make(build_folder, install_folder, target):
     """
     make = ['make', '-s', '-j' + str(multiprocessing.cpu_count()), 'V=0']
     if host_is_target(target):
-        subprocess.run(make + ['configure-host'],
-                       check=True,
-                       cwd=build_folder.as_posix())
-    subprocess.run(make, check=True, cwd=build_folder.as_posix())
+        subprocess.run(make + ['configure-host'], check=True, cwd=build_folder)
+    subprocess.run(make, check=True, cwd=build_folder)
     if install_folder:
-        subprocess.run(make +
-                       [f'prefix={install_folder.as_posix()}', 'install'],
+        subprocess.run(make + [f'prefix={install_folder}', 'install'],
                        check=True,
-                       cwd=build_folder.as_posix())
+                       cwd=build_folder)
         with install_folder.joinpath(".gitignore").open("w") as gitignore:
             gitignore.write("*")
 

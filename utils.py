@@ -37,15 +37,14 @@ def download_binutils(folder):
         # Remove any previous copies of binutils
         for entity in folder.glob('binutils-*'):
             if entity.is_dir():
-                shutil.rmtree(entity.as_posix())
+                shutil.rmtree(entity)
             else:
                 entity.unlink()
 
         # Download the tarball
         binutils_tarball = folder.joinpath(binutils + ".tar.xz")
         subprocess.run([
-            "curl", "-LSs", "-o",
-            binutils_tarball.as_posix(),
+            "curl", "-LSs", "-o", binutils_tarball,
             "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name
         ],
                        check=True)
@@ -53,7 +52,7 @@ def download_binutils(folder):
         # Extract the tarball then remove it
         subprocess.run(["tar", "-xJf", binutils_tarball.name],
                        check=True,
-                       cwd=folder.as_posix())
+                       cwd=folder)
         create_gitignore(binutils_folder)
         binutils_tarball.unlink()
 
