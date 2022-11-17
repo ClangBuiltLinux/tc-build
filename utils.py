@@ -90,7 +90,7 @@ def print_header(string):
     print("\033[01;36m")
     for x in range(0, len(string) + 6):
         print("=", end="")
-    print("\n== %s ==" % string)
+    print(f"\n== {string} ==")
     for x in range(0, len(string) + 6):
         print("=", end="")
     # \033[0m resets the color back to the user's default
@@ -104,7 +104,7 @@ def print_error(string):
     :param string: String to print
     """
     # Use bold red for error
-    print("\033[01;31m%s\n\033[0m" % string, flush=True)
+    print(f"\033[01;31m{string}\n\033[0m", flush=True)
 
 
 def print_warning(string):
@@ -113,4 +113,4 @@ def print_warning(string):
     :param string: String to print
     """
     # Use bold yellow for error
-    print("\033[01;33m%s\n\033[0m" % string, flush=True)
+    print(f"\033[01;33m{string}\n\033[0m", flush=True)

@@ -477,9 +477,7 @@ def versioned_binaries(binary_name):
         tot_llvm_ver = re.search('\d+', to_parse).group(0)
     except URLError:
         pass
-    return [
-        '%s-%s' % (binary_name, i) for i in range(int(tot_llvm_ver), 6, -1)
-    ]
+    return [f'{binary_name}-{i}' for i in range(int(tot_llvm_ver), 6, -1)]
 
 
 def check_cc_ld_variables(root_folder):
@@ -634,18 +632,17 @@ def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
             if repo_is_shallow(llvm_folder) and not ref_exists(
                     llvm_folder, ref):
                 utils.print_error(
-                    "\nSupplied ref (%s) does not exist, cannot checkout." %
-                    ref)
+                    f"\nSupplied ref ({ref}) does not exist, cannot checkout.")
                 utils.print_error("To proceed, either:")
                 utils.print_error(
                     "\t1. Manage the repo yourself and pass '--no-update' to the script."
                 )
                 utils.print_error(
-                    "\t2. Run 'git -C %s fetch --unshallow origin' to get a complete repository."
-                    % cwd)
+                    f"\t2. Run 'git -C {cwd} fetch --unshallow origin' to get a complete repository."
+                )
                 utils.print_error(
-                    "\t3. Delete '%s' and re-run the script with '-s' + '-b <ref>' to get a full set of refs."
-                    % cwd)
+                    f"\t3. Delete '{cwd}' and re-run the script with '-s' + '-b <ref>' to get a full set of refs."
+                )
                 exit(1)
 
             # Do the update
@@ -805,7 +802,7 @@ def get_stage_binary(binary, dirs, stage):
     :param stage: The staged binary to use
     :return: A path suitable for a cmake define
     """
-    return dirs.build_folder.joinpath("stage%d" % stage, "bin",
+    return dirs.build_folder.joinpath(f"stage{stage}", "bin",
                                       binary).as_posix()
 
 
@@ -1121,7 +1118,7 @@ def show_command(args, command):
     :param command: The command being run
     """
     if args.show_build_commands:
-        print("$ %s" % " ".join([str(element) for element in command]),
+        print(f"$ {' '.join([str(element) for element in command])}",
               flush=True)
 
 
@@ -1130,8 +1127,8 @@ def get_pgo_header_folder(stage):
         header_string = "for PGO"
         sub_folder = "pgo"
     else:
-        header_string = "stage %d" % stage
-        sub_folder = "stage%d" % stage
+        header_string = f"stage {stage}"
+        sub_folder = f"stage{stage}"
 
     return (header_string, sub_folder)
 
@@ -1160,7 +1157,7 @@ def invoke_cmake(args, dirs, env_vars, stage):
 
     cwd = dirs.build_folder.joinpath(sub_folder).as_posix()
 
-    utils.print_header("Configuring LLVM %s" % header_string)
+    utils.print_header(f"Configuring LLVM {header_string}")
 
     show_command(args, cmake)
     subprocess.run(cmake, check=True, cwd=cwd)
@@ -1173,11 +1170,11 @@ def print_install_info(install_folder):
     :return:
     """
     bin_folder = install_folder.joinpath("bin")
-    print("\nLLVM toolchain installed to: %s" % install_folder.as_posix())
+    print(f"\nLLVM toolchain installed to: {install_folder.as_posix()}")
     print("\nTo use, either run:\n")
-    print("    $ export PATH=%s:${PATH}\n" % bin_folder.as_posix())
+    print(f"    $ export PATH={bin_folder.as_posix()}:$PATH\n")
     print("or add:\n")
-    print("    PATH=%s:${PATH}\n" % bin_folder.as_posix())
+    print(f"    PATH={bin_folder.as_posix()}:$PATH\n")
     print("to the command you want to use this toolchain.\n")
 
     clang = bin_folder.joinpath("clang")
@@ -1199,7 +1196,7 @@ def ninja_check(args, build_folder):
     :return:
     """
     if args.check_targets:
-        ninja_check = ['ninja'] + ['check-%s' % s for s in args.check_targets]
+        ninja_check = ['ninja'] + [f'check-{s}' for s in args.check_targets]
         show_command(args, ninja_check)
         subprocess.run(ninja_check, check=True, cwd=build_folder)
 
@@ -1214,7 +1211,7 @@ def invoke_ninja(args, dirs, stage):
     """
     header_string, sub_folder = get_pgo_header_folder(stage)
 
-    utils.print_header("Building LLVM %s" % header_string)
+    utils.print_header(f"Building LLVM {header_string}")
 
     build_folder = dirs.build_folder.joinpath(sub_folder)
 
@@ -1332,7 +1329,7 @@ def kernel_build_sh(args, config, dirs, profile_type):
         build_sh += ['-b', dirs.build_folder]
 
     if config != "defconfig":
-        build_sh += ['--%s' % config]
+        build_sh += [f'--{config}']
 
     if dirs.linux_folder:
         build_sh += ['-k', dirs.linux_folder.as_posix()]
@@ -1385,7 +1382,7 @@ def generate_pgo_profiles(args, dirs):
     # Combine profiles
     subprocess.run([
         dirs.build_folder.joinpath("stage1", "bin", "llvm-profdata"), "merge",
-        "-output=%s" % dirs.build_folder.joinpath("profdata.prof").as_posix()
+        f'-output={dirs.build_folder.joinpath("profdata.prof").as_posix()}'
     ] + glob.glob(
         dirs.build_folder.joinpath("stage2", "profiles",
                                    "*.profraw").as_posix()),
@@ -1401,8 +1398,8 @@ def do_multistage_build(args, dirs, env_vars):
             stages += [3]
 
     for stage in stages:
-        dirs.build_folder.joinpath("stage%d" % stage).mkdir(parents=True,
-                                                            exist_ok=True)
+        dirs.build_folder.joinpath(f"stage{stage}").mkdir(parents=True,
+                                                          exist_ok=True)
         invoke_cmake(args, dirs, env_vars, stage)
         invoke_ninja(args, dirs, stage)
         # Build profiles after stage 2 when using PGO
@@ -1559,8 +1556,9 @@ def main():
         if not linux_folder.is_absolute():
             linux_folder = root_folder.joinpath(linux_folder)
         if not linux_folder.exists():
-            utils.print_error("\nSupplied kernel source (%s) does not exist!" %
-                              linux_folder.as_posix())
+            utils.print_error(
+                f"\nSupplied kernel source ({linux_folder.as_posix()}) does not exist!"
+            )
             exit(1)
 
     if args.llvm_folder:
@@ -1568,8 +1566,9 @@ def main():
         if not llvm_folder.is_absolute():
             llvm_folder = root_folder.joinpath(llvm_folder)
         if not llvm_folder.exists():
-            utils.print_error("\nSupplied LLVM source (%s) does not exist!" %
-                              llvm_folder.as_posix())
+            utils.print_error(
+                f"\nSupplied LLVM source ({llvm_folder.as_posix()}) does not exist!"
+            )
             exit(1)
     else:
         llvm_folder = root_folder.joinpath("llvm-project")
