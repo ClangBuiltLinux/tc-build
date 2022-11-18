@@ -90,7 +90,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default=os.path.join(root_folder, "build", "llvm"))
+                        default=root_folder.joinpath("build", "llvm"))
     parser.add_argument("--bolt",
                         help=textwrap.dedent("""\
                         Optimize the final clang binary with BOLT (Binary Optimization and Layout Tool), which can
@@ -242,7 +242,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default=os.path.join(root_folder, "install"))
+                        default=root_folder.joinpath("install"))
     parser.add_argument("--install-stage1-only",
                         help=textwrap.dedent("""\
                         When doing a stage 1 only build with '--build-stage1-only', install the toolchain to
@@ -447,7 +447,7 @@ def linker_test(cc, ld):
     echo = subprocess.Popen(['echo', 'int main() { return 0; }'],
                             stdout=subprocess.PIPE)
     return subprocess.run(
-        [cc, '-fuse-ld=' + ld, '-o', '/dev/null', '-x', 'c', '-'],
+        [cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-'],
         stdin=echo.stdout,
         stderr=subprocess.DEVNULL).returncode
 
@@ -505,20 +505,20 @@ def check_cc_ld_variables(root_folder):
     # This won't be found by the dumb logic below and trying to parse and figure
     # out a heuristic for that is a lot more effort than just going into the
     # folder that clang is actually installed in and getting clang++ from there.
-    cc = os.path.realpath(cc)
-    cc_folder = os.path.dirname(cc)
+    cc = pathlib.Path(cc).resolve()
+    cc_folder = cc.parent
 
     # If the user specified a C++ compiler, get its full path
     if 'CXX' in os.environ:
         cxx = shutil.which(os.environ['CXX'])
     # Otherwise, use the one where CC is
     else:
-        if "clang" in cc:
+        if "clang" in cc.stem:
             cxx = "clang++"
         else:
             cxx = "g++"
-        cxx = shutil.which(cxx, path=cc_folder + ":" + os.environ['PATH'])
-    cxx = cxx.strip()
+        cxx = shutil.which(cxx, path=f"{cc_folder}:{os.environ['PATH']}")
+    cxx = pathlib.Path(cxx.strip())
 
     # If the user specified a linker
     if 'LD' in os.environ:
@@ -526,29 +526,29 @@ def check_cc_ld_variables(root_folder):
         # see if it will work with '-fuse-ld', which is what cmake will do. Doing
         # it now prevents a hard error later.
         ld = os.environ['LD']
-        if "clang" in cc and clang_version(cc, root_folder) >= 30900:
+        if "clang" in cc.stem and clang_version(cc, root_folder) >= 30900:
             ld = shutil.which(ld)
         if linker_test(cc, ld):
-            print("LD won't work with " + cc +
-                  ", saving you from yourself by ignoring LD value",
-                  flush=True)
+            print(
+                f"LD won't work with {cc}, saving you from yourself by ignoring LD value",
+                flush=True)
             ld = None
     # If the user didn't specify a linker
     else:
         # and we're using clang, try to find the fastest one
-        if "clang" in cc:
+        if "clang" in cc.stem:
             possible_linkers = ['lld', 'gold', 'bfd']
             for linker in possible_linkers:
                 # We want to find lld wherever the clang we are using is located
-                ld = shutil.which("ld." + linker,
-                                  path=cc_folder + ":" + os.environ['PATH'])
+                ld = shutil.which(f"ld.{linker}",
+                                  path=f"{cc_folder}:{os.environ['PATH']}")
                 if ld is not None:
                     break
             # If clang is older than 3.9, it won't accept absolute paths so we
             # need to just pass it the name (and modify PATH so that it is found properly)
             # https://github.com/llvm/llvm-project/commit/e43b7413597d8102a4412f9de41102e55f4f2ec9
             if clang_version(cc, root_folder) < 30900:
-                os.environ['PATH'] = cc_folder + ":" + os.environ['PATH']
+                os.environ['PATH'] = f"{cc_folder}:{os.environ['PATH']}"
                 ld = linker
         # and we're using gcc, try to use gold
         else:
@@ -558,14 +558,14 @@ def check_cc_ld_variables(root_folder):
 
     # Print what binaries we are using to compile/link with so the user can
     # decide if that is proper or not
-    print("CC: " + cc)
-    print("CXX: " + cxx)
+    print(f"CC: {cc}")
+    print(f"CXX: {cxx}")
     if ld is not None:
         ld = ld.strip()
-        ld_to_print = shutil.which("ld." + ld)
+        ld_to_print = shutil.which("ld.{ld}")
         if ld_to_print is None:
             ld_to_print = shutil.which(ld)
-        print("LD: " + ld_to_print)
+        print(f"LD: {ld_to_print}")
     utils.flush_std_err_out()
 
     return cc, cxx, ld
@@ -580,8 +580,8 @@ def check_dependencies():
     for command in required_commands:
         output = shutil.which(command)
         if output is None:
-            raise RuntimeError(command +
-                               " could not be found, please install it!")
+            raise RuntimeError(
+                f"{command} could not be found, please install it!")
         print(output, flush=True)
 
 
@@ -813,10 +813,9 @@ def if_binary_exists(binary_name, cc):
     :return: A path to binary if it exists and clang is being used, None if either condition is false
     """
     binary = None
-    if "clang" in cc:
+    if "clang" in cc.stem:
         binary = shutil.which(binary_name,
-                              path=os.path.dirname(cc) + ":" +
-                              os.environ['PATH'])
+                              path=f"{cc.parent}:{os.environ['PATH']}")
     return binary
 
 
@@ -1145,11 +1144,11 @@ def invoke_cmake(args, dirs, env_vars, stage):
     cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
     defines = build_cmake_defines(args, dirs, env_vars, stage)
     for key in defines:
-        newdef = '-D' + key + '=' + str(defines[key])
+        newdef = f'-D{key}={defines[key]}'
         cmake += [newdef]
     if args.defines:
         for d in args.defines:
-            cmake += ['-D' + d]
+            cmake += [f'-D{d}']
     cmake += [dirs.llvm_folder.joinpath("llvm")]
 
     header_string, sub_folder = get_pgo_header_folder(stage)
@@ -1231,8 +1230,9 @@ def invoke_ninja(args, dirs, stage):
         ninja_check(args, build_folder)
 
     print()
-    print("LLVM build duration: " +
-          str(datetime.timedelta(seconds=int(time.time() - time_started))))
+    time_string = str(
+        datetime.timedelta(seconds=int(time.time() - time_started)))
+    print(f"LLVM build duration: {time_string}")
     utils.flush_std_err_out()
 
     if should_install_toolchain(args, stage):
@@ -1285,8 +1285,7 @@ def kernel_build_sh(args, config, dirs, profile_type):
 
     # Run kernel/build.sh
     build_sh = [
-        dirs.root_folder.joinpath("kernel", "build.sh"),
-        '--{}'.format(profile_type)
+        dirs.root_folder.joinpath("kernel", "build.sh"), f'--{profile_type}'
     ]
 
     targets = get_targets(args)
@@ -1382,8 +1381,8 @@ def generate_pgo_profiles(args, dirs):
     subprocess.run([
         dirs.build_folder.joinpath("stage1", "bin", "llvm-profdata"), "merge",
         f'-output={dirs.build_folder.joinpath("profdata.prof")}'
-    ] + glob.glob(dirs.build_folder.joinpath("stage2", "profiles",
-                                             "*.profraw")),
+    ] + list(
+        dirs.build_folder.joinpath("stage2", "profiles").glob("*.profraw")),
                    check=True)
 
 
@@ -1437,7 +1436,7 @@ def do_bolt(args, dirs):
     if can_use_perf():
         mode = "sampling"
 
-    utils.print_header("Performing BOLT with {}".format(mode))
+    utils.print_header(f"Performing BOLT with {mode}")
 
     # clang-#: original binary
     # clang.bolt: BOLT optimized binary
@@ -1463,21 +1462,21 @@ def do_bolt(args, dirs):
         # Instrument clang
         clang_inst_cmd = [
             llvm_bolt, "--instrument",
-            "--instrumentation-file={}".format(bolt_profile),
+            f"--instrumentation-file={bolt_profile}",
             "--instrumentation-file-append-pid", "-o", clang_inst, clang
         ]
         show_command(args, clang_inst_cmd)
         subprocess.run(clang_inst_cmd, check=True)
 
     # Generate profile data by using clang to build kernels
-    kernel_build_sh(args, "defconfig", dirs, "bolt-{}".format(mode))
+    kernel_build_sh(args, "defconfig", dirs, f"bolt-{mode}")
 
     # With instrumentation, we need to combine the profiles we generated, as
     # they are separated by PID
     if mode == "instrumentation":
         merge_fdata = dirs.build_folder.joinpath("stage1", "bin",
                                                  "merge-fdata")
-        fdata_files = glob.glob("{}.*.fdata".format(bolt_profile))
+        fdata_files = glob.glob(f"{bolt_profile}.*.fdata")
 
         # merge-fdata will print one line for each .fdata it merges. Redirect
         # the output to a log file in case it ever needs to be inspected
@@ -1515,7 +1514,7 @@ def do_bolt(args, dirs):
     # Generate BOLT optimized clang
     # Flags are from https://github.com/llvm/llvm-project/blob/2696d82fa0c323d92d8794f0a34ea9619888fae9/bolt/docs/OptimizingClang.md
     clang_opt_cmd = [
-        llvm_bolt, "--data={}".format(bolt_profile), "--reorder-blocks=cache+",
+        llvm_bolt, f"--data={bolt_profile}", "--reorder-blocks=cache+",
         "--reorder-functions=hfsort+", "--split-functions=3",
         "--split-all-cold", "--dyno-stats", "--icf=1", "--use-gnu-stack", "-o",
         clang_bolt, clang
