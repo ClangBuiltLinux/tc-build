@@ -447,7 +447,7 @@ def linker_test(cc, ld):
     echo = subprocess.Popen(['echo', 'int main() { return 0; }'],
                             stdout=subprocess.PIPE)
     return subprocess.run(
-        [cc, '-fuse-ld=' + ld, '-o', '/dev/null', '-x', 'c', '-'],
+        [cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-'],
         stdin=echo.stdout,
         stderr=subprocess.DEVNULL).returncode
 
@@ -529,9 +529,9 @@ def check_cc_ld_variables(root_folder):
         if "clang" in cc.stem and clang_version(cc, root_folder) >= 30900:
             ld = shutil.which(ld)
         if linker_test(cc, ld):
-            print("LD won't work with " + cc +
-                  ", saving you from yourself by ignoring LD value",
-                  flush=True)
+            print(
+                f"LD won't work with {cc}, saving you from yourself by ignoring LD value",
+                flush=True)
             ld = None
     # If the user didn't specify a linker
     else:
@@ -540,7 +540,7 @@ def check_cc_ld_variables(root_folder):
             possible_linkers = ['lld', 'gold', 'bfd']
             for linker in possible_linkers:
                 # We want to find lld wherever the clang we are using is located
-                ld = shutil.which(f"ld." + linker,
+                ld = shutil.which(f"ld.{linker}",
                                   path=f"{cc_folder}:{os.environ['PATH']}")
                 if ld is not None:
                     break
@@ -562,10 +562,10 @@ def check_cc_ld_variables(root_folder):
     print(f"CXX: {cxx}")
     if ld is not None:
         ld = ld.strip()
-        ld_to_print = shutil.which("ld." + ld)
+        ld_to_print = shutil.which("ld.{ld}")
         if ld_to_print is None:
             ld_to_print = shutil.which(ld)
-        print("LD: " + ld_to_print)
+        print(f"LD: {ld_to_print}")
     utils.flush_std_err_out()
 
     return cc, cxx, ld
@@ -580,8 +580,8 @@ def check_dependencies():
     for command in required_commands:
         output = shutil.which(command)
         if output is None:
-            raise RuntimeError(command +
-                               " could not be found, please install it!")
+            raise RuntimeError(
+                f"{command} could not be found, please install it!")
         print(output, flush=True)
 
 
@@ -1144,11 +1144,11 @@ def invoke_cmake(args, dirs, env_vars, stage):
     cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
     defines = build_cmake_defines(args, dirs, env_vars, stage)
     for key in defines:
-        newdef = '-D' + key + '=' + str(defines[key])
+        newdef = f'-D{key}={defines[key]}'
         cmake += [newdef]
     if args.defines:
         for d in args.defines:
-            cmake += ['-D' + d]
+            cmake += [f'-D{d}']
     cmake += [dirs.llvm_folder.joinpath("llvm")]
 
     header_string, sub_folder = get_pgo_header_folder(stage)
@@ -1230,8 +1230,9 @@ def invoke_ninja(args, dirs, stage):
         ninja_check(args, build_folder)
 
     print()
-    print("LLVM build duration: " +
-          str(datetime.timedelta(seconds=int(time.time() - time_started))))
+    time_string = str(
+        datetime.timedelta(seconds=int(time.time() - time_started)))
+    print(f"LLVM build duration: {time_string}")
     utils.flush_std_err_out()
 
     if should_install_toolchain(args, stage):
@@ -1284,8 +1285,7 @@ def kernel_build_sh(args, config, dirs, profile_type):
 
     # Run kernel/build.sh
     build_sh = [
-        dirs.root_folder.joinpath("kernel", "build.sh"),
-        '--{}'.format(profile_type)
+        dirs.root_folder.joinpath("kernel", "build.sh"), f'--{profile_type}'
     ]
 
     targets = get_targets(args)
@@ -1436,7 +1436,7 @@ def do_bolt(args, dirs):
     if can_use_perf():
         mode = "sampling"
 
-    utils.print_header("Performing BOLT with {}".format(mode))
+    utils.print_header(f"Performing BOLT with {mode}")
 
     # clang-#: original binary
     # clang.bolt: BOLT optimized binary
@@ -1462,21 +1462,21 @@ def do_bolt(args, dirs):
         # Instrument clang
         clang_inst_cmd = [
             llvm_bolt, "--instrument",
-            "--instrumentation-file={}".format(bolt_profile),
+            f"--instrumentation-file={bolt_profile}",
             "--instrumentation-file-append-pid", "-o", clang_inst, clang
         ]
         show_command(args, clang_inst_cmd)
         subprocess.run(clang_inst_cmd, check=True)
 
     # Generate profile data by using clang to build kernels
-    kernel_build_sh(args, "defconfig", dirs, "bolt-{}".format(mode))
+    kernel_build_sh(args, "defconfig", dirs, f"bolt-{mode}")
 
     # With instrumentation, we need to combine the profiles we generated, as
     # they are separated by PID
     if mode == "instrumentation":
         merge_fdata = dirs.build_folder.joinpath("stage1", "bin",
                                                  "merge-fdata")
-        fdata_files = glob.glob("{}.*.fdata".format(bolt_profile))
+        fdata_files = glob.glob(f"{bolt_profile}.*.fdata")
 
         # merge-fdata will print one line for each .fdata it merges. Redirect
         # the output to a log file in case it ever needs to be inspected
@@ -1514,7 +1514,7 @@ def do_bolt(args, dirs):
     # Generate BOLT optimized clang
     # Flags are from https://github.com/llvm/llvm-project/blob/2696d82fa0c323d92d8794f0a34ea9619888fae9/bolt/docs/OptimizingClang.md
     clang_opt_cmd = [
-        llvm_bolt, "--data={}".format(bolt_profile), "--reorder-blocks=cache+",
+        llvm_bolt, f"--data={bolt_profile}", "--reorder-blocks=cache+",
         "--reorder-functions=hfsort+", "--split-functions=3",
         "--split-all-cold", "--dyno-stats", "--icf=1", "--use-gnu-stack", "-o",
         clang_bolt, clang
