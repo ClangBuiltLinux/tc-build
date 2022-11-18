@@ -46,7 +46,7 @@ def clang_version(cc, root_folder):
     :param root_folder: Top of the script folder
     :return: an int denoting the version of the given compiler
     """
-    command = [root_folder.joinpath("clang-version.sh").as_posix(), cc]
+    command = [root_folder.joinpath("clang-version.sh"), cc]
     return int(subprocess.check_output(command).decode())
 
 
@@ -90,8 +90,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default=os.path.join(root_folder.as_posix(), "build",
-                                             "llvm"))
+                        default=os.path.join(root_folder, "build", "llvm"))
     parser.add_argument("--bolt",
                         help=textwrap.dedent("""\
                         Optimize the final clang binary with BOLT (Binary Optimization and Layout Tool), which can
@@ -243,8 +242,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default=os.path.join(root_folder.as_posix(),
-                                             "install"))
+                        default=os.path.join(root_folder, "install"))
     parser.add_argument("--install-stage1-only",
                         help=textwrap.dedent("""\
                         When doing a stage 1 only build with '--build-stage1-only', install the toolchain to
@@ -477,9 +475,7 @@ def versioned_binaries(binary_name):
         tot_llvm_ver = re.search('\d+', to_parse).group(0)
     except URLError:
         pass
-    return [
-        '%s-%s' % (binary_name, i) for i in range(int(tot_llvm_ver), 6, -1)
-    ]
+    return [f'{binary_name}-{i}' for i in range(int(tot_llvm_ver), 6, -1)]
 
 
 def check_cc_ld_variables(root_folder):
@@ -596,7 +592,7 @@ def repo_is_shallow(repo):
     :return: True if the repo is shallow, False if not
     """
     git_dir = subprocess.check_output(["git", "rev-parse", "--git-dir"],
-                                      cwd=repo.as_posix()).decode().strip()
+                                      cwd=repo).decode().strip()
     return pathlib.Path(repo).resolve().joinpath(git_dir, "shallow").exists()
 
 
@@ -610,7 +606,7 @@ def ref_exists(repo, ref):
     return subprocess.run(["git", "show-branch", ref],
                           stderr=subprocess.STDOUT,
                           stdout=subprocess.DEVNULL,
-                          cwd=repo.as_posix()).returncode == 0
+                          cwd=repo).returncode == 0
 
 
 def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
@@ -621,40 +617,42 @@ def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
     :param update: Boolean indicating whether sources need to be updated or not
     :param ref: The ref to checkout the monorepo to
     """
-    cwd = llvm_folder.as_posix()
     if llvm_folder.is_dir():
         if update:
             utils.print_header("Updating LLVM")
 
             # Make sure repo is up to date before trying to see if checkout is possible
-            subprocess.run(["git", "fetch", "origin"], check=True, cwd=cwd)
+            subprocess.run(["git", "fetch", "origin"],
+                           check=True,
+                           cwd=llvm_folder)
 
             # Explain to the user how to avoid issues if their ref does not exist with
             # a shallow clone.
             if repo_is_shallow(llvm_folder) and not ref_exists(
                     llvm_folder, ref):
                 utils.print_error(
-                    "\nSupplied ref (%s) does not exist, cannot checkout." %
-                    ref)
+                    f"\nSupplied ref ({ref}) does not exist, cannot checkout.")
                 utils.print_error("To proceed, either:")
                 utils.print_error(
                     "\t1. Manage the repo yourself and pass '--no-update' to the script."
                 )
                 utils.print_error(
-                    "\t2. Run 'git -C %s fetch --unshallow origin' to get a complete repository."
-                    % cwd)
+                    f"\t2. Run 'git -C {llvm_folder} fetch --unshallow origin' to get a complete repository."
+                )
                 utils.print_error(
-                    "\t3. Delete '%s' and re-run the script with '-s' + '-b <ref>' to get a full set of refs."
-                    % cwd)
+                    f"\t3. Delete '{llvm_folder}' and re-run the script with '-s' + '-b <ref>' to get a full set of refs."
+                )
                 exit(1)
 
             # Do the update
-            subprocess.run(["git", "checkout", ref], check=True, cwd=cwd)
+            subprocess.run(["git", "checkout", ref],
+                           check=True,
+                           cwd=llvm_folder)
             local_ref = None
             try:
                 local_ref = subprocess.check_output(
                     ["git", "symbolic-ref", "-q", "HEAD"],
-                    cwd=cwd).decode("utf-8")
+                    cwd=llvm_folder).decode("utf-8")
             except subprocess.CalledProcessError:
                 # This is thrown when we're on a revision that cannot be mapped to a symbolic reference, like a tag
                 # or a git hash. Swallow and move on with the rest of our business.
@@ -666,7 +664,7 @@ def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
                     local_ref.strip().replace("refs/heads/", "")
                 ],
                                check=True,
-                               cwd=cwd)
+                               cwd=llvm_folder)
     else:
         utils.print_header("Downloading LLVM")
 
@@ -677,11 +675,10 @@ def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
                 extra_args += ("--no-single-branch", )
         subprocess.run([
             "git", "clone", *extra_args,
-            "https://github.com/llvm/llvm-project",
-            llvm_folder.as_posix()
+            "https://github.com/llvm/llvm-project", llvm_folder
         ],
                        check=True)
-        subprocess.run(["git", "checkout", ref], check=True, cwd=cwd)
+        subprocess.run(["git", "checkout", ref], check=True, cwd=llvm_folder)
 
     # One might wonder why we are downloading binutils in an LLVM build script :)
     # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
@@ -698,7 +695,7 @@ def cleanup(build_folder, incremental):
     :return:
     """
     if not incremental and build_folder.is_dir():
-        shutil.rmtree(build_folder.as_posix())
+        shutil.rmtree(build_folder)
     build_folder.mkdir(parents=True, exist_ok=True)
 
 
@@ -805,8 +802,7 @@ def get_stage_binary(binary, dirs, stage):
     :param stage: The staged binary to use
     :return: A path suitable for a cmake define
     """
-    return dirs.build_folder.joinpath("stage%d" % stage, "bin",
-                                      binary).as_posix()
+    return dirs.build_folder.joinpath(f"stage{stage}", "bin", binary)
 
 
 def if_binary_exists(binary_name, cc):
@@ -1038,7 +1034,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
             defines['LLVM_ENABLE_ASSERTIONS'] = 'ON'
 
         # Where the toolchain should be installed
-        defines['CMAKE_INSTALL_PREFIX'] = dirs.install_folder.as_posix()
+        defines['CMAKE_INSTALL_PREFIX'] = dirs.install_folder
 
         # Build with instrumentation if we are using PGO and on stage 2
         if instrumented_stage(args, stage):
@@ -1054,7 +1050,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
         if stage == get_final_stage(args):
             if args.pgo:
                 defines['LLVM_PROFDATA_FILE'] = dirs.build_folder.joinpath(
-                    "profdata.prof").as_posix()
+                    "profdata.prof")
             if args.lto:
                 defines['LLVM_ENABLE_LTO'] = args.lto.capitalize()
             # BOLT needs relocations for instrumentation
@@ -1071,7 +1067,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
 
         # For LLVMgold.so, which is used for LTO with ld.gold
         defines['LLVM_BINUTILS_INCDIR'] = dirs.root_folder.joinpath(
-            utils.current_binutils(), "include").as_posix()
+            utils.current_binutils(), "include")
         defines['LLVM_ENABLE_PLUGINS'] = 'ON'
 
     return defines
@@ -1121,7 +1117,7 @@ def show_command(args, command):
     :param command: The command being run
     """
     if args.show_build_commands:
-        print("$ %s" % " ".join([str(element) for element in command]),
+        print(f"$ {' '.join([str(element) for element in command])}",
               flush=True)
 
 
@@ -1130,8 +1126,8 @@ def get_pgo_header_folder(stage):
         header_string = "for PGO"
         sub_folder = "pgo"
     else:
-        header_string = "stage %d" % stage
-        sub_folder = "stage%d" % stage
+        header_string = f"stage {stage}"
+        sub_folder = f"stage{stage}"
 
     return (header_string, sub_folder)
 
@@ -1149,21 +1145,21 @@ def invoke_cmake(args, dirs, env_vars, stage):
     cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
     defines = build_cmake_defines(args, dirs, env_vars, stage)
     for key in defines:
-        newdef = '-D' + key + '=' + defines[key]
+        newdef = '-D' + key + '=' + str(defines[key])
         cmake += [newdef]
     if args.defines:
         for d in args.defines:
             cmake += ['-D' + d]
-    cmake += [dirs.llvm_folder.joinpath("llvm").as_posix()]
+    cmake += [dirs.llvm_folder.joinpath("llvm")]
 
     header_string, sub_folder = get_pgo_header_folder(stage)
 
-    cwd = dirs.build_folder.joinpath(sub_folder).as_posix()
-
-    utils.print_header("Configuring LLVM %s" % header_string)
+    utils.print_header(f"Configuring LLVM {header_string}")
 
     show_command(args, cmake)
-    subprocess.run(cmake, check=True, cwd=cwd)
+    subprocess.run(cmake,
+                   check=True,
+                   cwd=dirs.build_folder.joinpath(sub_folder))
 
 
 def print_install_info(install_folder):
@@ -1173,11 +1169,11 @@ def print_install_info(install_folder):
     :return:
     """
     bin_folder = install_folder.joinpath("bin")
-    print("\nLLVM toolchain installed to: %s" % install_folder.as_posix())
+    print(f"\nLLVM toolchain installed to: {install_folder}")
     print("\nTo use, either run:\n")
-    print("    $ export PATH=%s:${PATH}\n" % bin_folder.as_posix())
+    print(f"    $ export PATH={bin_folder}:$PATH\n")
     print("or add:\n")
-    print("    PATH=%s:${PATH}\n" % bin_folder.as_posix())
+    print(f"    PATH={bin_folder}:$PATH\n")
     print("to the command you want to use this toolchain.\n")
 
     clang = bin_folder.joinpath("clang")
@@ -1199,7 +1195,7 @@ def ninja_check(args, build_folder):
     :return:
     """
     if args.check_targets:
-        ninja_check = ['ninja'] + ['check-%s' % s for s in args.check_targets]
+        ninja_check = ['ninja'] + [f'check-{s}' for s in args.check_targets]
         show_command(args, ninja_check)
         subprocess.run(ninja_check, check=True, cwd=build_folder)
 
@@ -1214,7 +1210,7 @@ def invoke_ninja(args, dirs, stage):
     """
     header_string, sub_folder = get_pgo_header_folder(stage)
 
-    utils.print_header("Building LLVM %s" % header_string)
+    utils.print_header(f"Building LLVM {header_string}")
 
     build_folder = dirs.build_folder.joinpath(sub_folder)
 
@@ -1224,7 +1220,7 @@ def invoke_ninja(args, dirs, stage):
     elif stage == 1 and args.build_stage1_only and not args.install_stage1_only:
         install_folder = build_folder
 
-    build_folder = build_folder.as_posix()
+    build_folder = build_folder
 
     time_started = time.time()
 
@@ -1332,13 +1328,13 @@ def kernel_build_sh(args, config, dirs, profile_type):
         build_sh += ['-b', dirs.build_folder]
 
     if config != "defconfig":
-        build_sh += ['--%s' % config]
+        build_sh += [f'--{config}']
 
     if dirs.linux_folder:
-        build_sh += ['-k', dirs.linux_folder.as_posix()]
+        build_sh += ['-k', dirs.linux_folder]
 
     show_command(args, build_sh)
-    subprocess.run(build_sh, check=True, cwd=dirs.build_folder.as_posix())
+    subprocess.run(build_sh, check=True, cwd=dirs.build_folder)
 
 
 def pgo_llvm_build(args, dirs):
@@ -1349,7 +1345,7 @@ def pgo_llvm_build(args, dirs):
     :return:
     """
     # Run check targets if the user requested them for PGO coverage
-    ninja_check(args, dirs.build_folder.joinpath("stage2").as_posix())
+    ninja_check(args, dirs.build_folder.joinpath("stage2"))
     # Then, build LLVM as if it were the full final toolchain
     stage = "pgo"
     dirs.build_folder.joinpath(stage).mkdir(parents=True, exist_ok=True)
@@ -1385,10 +1381,9 @@ def generate_pgo_profiles(args, dirs):
     # Combine profiles
     subprocess.run([
         dirs.build_folder.joinpath("stage1", "bin", "llvm-profdata"), "merge",
-        "-output=%s" % dirs.build_folder.joinpath("profdata.prof").as_posix()
-    ] + glob.glob(
-        dirs.build_folder.joinpath("stage2", "profiles",
-                                   "*.profraw").as_posix()),
+        f'-output={dirs.build_folder.joinpath("profdata.prof")}'
+    ] + glob.glob(dirs.build_folder.joinpath("stage2", "profiles",
+                                             "*.profraw")),
                    check=True)
 
 
@@ -1401,8 +1396,8 @@ def do_multistage_build(args, dirs, env_vars):
             stages += [3]
 
     for stage in stages:
-        dirs.build_folder.joinpath("stage%d" % stage).mkdir(parents=True,
-                                                            exist_ok=True)
+        dirs.build_folder.joinpath(f"stage{stage}").mkdir(parents=True,
+                                                          exist_ok=True)
         invoke_cmake(args, dirs, env_vars, stage)
         invoke_ninja(args, dirs, stage)
         # Build profiles after stage 2 when using PGO
@@ -1482,7 +1477,7 @@ def do_bolt(args, dirs):
     if mode == "instrumentation":
         merge_fdata = dirs.build_folder.joinpath("stage1", "bin",
                                                  "merge-fdata")
-        fdata_files = glob.glob("{}.*.fdata".format(bolt_profile.as_posix()))
+        fdata_files = glob.glob("{}.*.fdata".format(bolt_profile))
 
         # merge-fdata will print one line for each .fdata it merges. Redirect
         # the output to a log file in case it ever needs to be inspected
@@ -1559,8 +1554,8 @@ def main():
         if not linux_folder.is_absolute():
             linux_folder = root_folder.joinpath(linux_folder)
         if not linux_folder.exists():
-            utils.print_error("\nSupplied kernel source (%s) does not exist!" %
-                              linux_folder.as_posix())
+            utils.print_error(
+                f"\nSupplied kernel source ({linux_folder}) does not exist!")
             exit(1)
 
     if args.llvm_folder:
@@ -1568,8 +1563,8 @@ def main():
         if not llvm_folder.is_absolute():
             llvm_folder = root_folder.joinpath(llvm_folder)
         if not llvm_folder.exists():
-            utils.print_error("\nSupplied LLVM source (%s) does not exist!" %
-                              llvm_folder.as_posix())
+            utils.print_error(
+                f"\nSupplied LLVM source ({llvm_folder}) does not exist!")
             exit(1)
     else:
         llvm_folder = root_folder.joinpath("llvm-project")
