@@ -90,7 +90,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default=os.path.join(root_folder, "build", "llvm"))
+                        default=root_folder.joinpath("build", "llvm"))
     parser.add_argument("--bolt",
                         help=textwrap.dedent("""\
                         Optimize the final clang binary with BOLT (Binary Optimization and Layout Tool), which can
@@ -242,7 +242,7 @@ def parse_parameters(root_folder):
 
                         """),
                         type=str,
-                        default=os.path.join(root_folder, "install"))
+                        default=root_folder.joinpath("install"))
     parser.add_argument("--install-stage1-only",
                         help=textwrap.dedent("""\
                         When doing a stage 1 only build with '--build-stage1-only', install the toolchain to
@@ -505,20 +505,20 @@ def check_cc_ld_variables(root_folder):
     # This won't be found by the dumb logic below and trying to parse and figure
     # out a heuristic for that is a lot more effort than just going into the
     # folder that clang is actually installed in and getting clang++ from there.
-    cc = os.path.realpath(cc)
-    cc_folder = os.path.dirname(cc)
+    cc = pathlib.Path(cc).resolve()
+    cc_folder = cc.parent
 
     # If the user specified a C++ compiler, get its full path
     if 'CXX' in os.environ:
         cxx = shutil.which(os.environ['CXX'])
     # Otherwise, use the one where CC is
     else:
-        if "clang" in cc:
+        if "clang" in cc.stem:
             cxx = "clang++"
         else:
             cxx = "g++"
-        cxx = shutil.which(cxx, path=cc_folder + ":" + os.environ['PATH'])
-    cxx = cxx.strip()
+        cxx = shutil.which(cxx, path=f"{cc_folder}:{os.environ['PATH']}")
+    cxx = pathlib.Path(cxx.strip())
 
     # If the user specified a linker
     if 'LD' in os.environ:
@@ -526,7 +526,7 @@ def check_cc_ld_variables(root_folder):
         # see if it will work with '-fuse-ld', which is what cmake will do. Doing
         # it now prevents a hard error later.
         ld = os.environ['LD']
-        if "clang" in cc and clang_version(cc, root_folder) >= 30900:
+        if "clang" in cc.stem and clang_version(cc, root_folder) >= 30900:
             ld = shutil.which(ld)
         if linker_test(cc, ld):
             print("LD won't work with " + cc +
@@ -536,19 +536,19 @@ def check_cc_ld_variables(root_folder):
     # If the user didn't specify a linker
     else:
         # and we're using clang, try to find the fastest one
-        if "clang" in cc:
+        if "clang" in cc.stem:
             possible_linkers = ['lld', 'gold', 'bfd']
             for linker in possible_linkers:
                 # We want to find lld wherever the clang we are using is located
-                ld = shutil.which("ld." + linker,
-                                  path=cc_folder + ":" + os.environ['PATH'])
+                ld = shutil.which(f"ld." + linker,
+                                  path=f"{cc_folder}:{os.environ['PATH']}")
                 if ld is not None:
                     break
             # If clang is older than 3.9, it won't accept absolute paths so we
             # need to just pass it the name (and modify PATH so that it is found properly)
             # https://github.com/llvm/llvm-project/commit/e43b7413597d8102a4412f9de41102e55f4f2ec9
             if clang_version(cc, root_folder) < 30900:
-                os.environ['PATH'] = cc_folder + ":" + os.environ['PATH']
+                os.environ['PATH'] = f"{cc_folder}:{os.environ['PATH']}"
                 ld = linker
         # and we're using gcc, try to use gold
         else:
@@ -558,8 +558,8 @@ def check_cc_ld_variables(root_folder):
 
     # Print what binaries we are using to compile/link with so the user can
     # decide if that is proper or not
-    print("CC: " + cc)
-    print("CXX: " + cxx)
+    print(f"CC: {cc}")
+    print(f"CXX: {cxx}")
     if ld is not None:
         ld = ld.strip()
         ld_to_print = shutil.which("ld." + ld)
@@ -813,10 +813,9 @@ def if_binary_exists(binary_name, cc):
     :return: A path to binary if it exists and clang is being used, None if either condition is false
     """
     binary = None
-    if "clang" in cc:
+    if "clang" in cc.stem:
         binary = shutil.which(binary_name,
-                              path=os.path.dirname(cc) + ":" +
-                              os.environ['PATH'])
+                              path=f"{cc.parent}:{os.environ['PATH']}")
     return binary
 
 
@@ -1382,8 +1381,8 @@ def generate_pgo_profiles(args, dirs):
     subprocess.run([
         dirs.build_folder.joinpath("stage1", "bin", "llvm-profdata"), "merge",
         f'-output={dirs.build_folder.joinpath("profdata.prof")}'
-    ] + glob.glob(dirs.build_folder.joinpath("stage2", "profiles",
-                                             "*.profraw")),
+    ] + list(
+        dirs.build_folder.joinpath("stage2", "profiles").glob("*.profraw")),
                    check=True)
 
 
