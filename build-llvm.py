@@ -718,10 +718,9 @@ def get_final_stage(args):
     """
     if args.build_stage1_only:
         return 1
-    elif args.pgo:
+    if args.pgo:
         return 3
-    else:
-        return 2
+    return 2
 
 
 def should_install_toolchain(args, stage):
