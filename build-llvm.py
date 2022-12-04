@@ -10,6 +10,7 @@ import platform
 import os
 import subprocess
 import shutil
+import sys
 import textwrap
 import time
 import re
@@ -650,7 +651,7 @@ def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
                 utils.print_error(
                     f"\t3. Delete '{llvm_folder}' and re-run the script with '-s' + '-b <ref>' to get a full set of refs."
                 )
-                exit(1)
+                sys.exit(1)
 
             # Do the update
             subprocess.run(["git", "checkout", ref],
@@ -1563,7 +1564,7 @@ def main():
         if not linux_folder.exists():
             utils.print_error(
                 f"\nSupplied kernel source ({linux_folder}) does not exist!")
-            exit(1)
+            sys.exit(1)
 
     if args.llvm_folder:
         llvm_folder = pathlib.Path(args.llvm_folder)
@@ -1572,7 +1573,7 @@ def main():
         if not llvm_folder.exists():
             utils.print_error(
                 f"\nSupplied LLVM source ({llvm_folder}) does not exist!")
-            exit(1)
+            sys.exit(1)
     else:
         llvm_folder = root_folder.joinpath("llvm-project")
 
