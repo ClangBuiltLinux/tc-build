@@ -472,7 +472,7 @@ def versioned_binaries(binary_name):
             if "set(LLVM_VERSION_MAJOR" in line:
                 to_parse = line
                 break
-        tot_llvm_ver = re.search('\d+', to_parse).group(0)
+        tot_llvm_ver = re.search(r'\d+', to_parse).group(0)
     except URLError:
         pass
     return [f'{binary_name}-{i}' for i in range(int(tot_llvm_ver), 6, -1)]
