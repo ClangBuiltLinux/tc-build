@@ -1419,7 +1419,7 @@ def can_use_perf():
                            stderr=subprocess.DEVNULL,
                            stdout=subprocess.DEVNULL,
                            check=True)
-        except:
+        except subprocess.CalledProcessError:
             pass
         else:
             return True
