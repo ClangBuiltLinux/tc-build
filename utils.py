@@ -56,14 +56,14 @@ def download_binutils(folder):
         binutils_tarball.unlink()
 
 
-def verify_binutils_checksum(file):
+def verify_binutils_checksum(file_to_check):
     # Check the SHA512 checksum of the downloaded file with a known good one
     # The sha512.sum file from <sourceware.org> ships the SHA512 checksums
     # Link: https://sourceware.org/pub/binutils/releases/sha512.sum
     file_hash = hashlib.sha512()
-    with file.open("rb") as f:
+    with file_to_check.open("rb") as file:
         while True:
-            data = f.read(131072)
+            data = file.read(131072)
             if not data:
                 break
             file_hash.update(data)
@@ -86,10 +86,10 @@ def print_header(string):
     # Use bold cyan for the header so that the headers
     # are not intepreted as success (green) or failed (red)
     print("\033[01;36m")
-    for x in range(0, len(string) + 6):
+    for _ in range(0, len(string) + 6):
         print("=", end="")
     print(f"\n== {string} ==")
-    for x in range(0, len(string) + 6):
+    for _ in range(0, len(string) + 6):
         print("=", end="")
     # \033[0m resets the color back to the user's default
     print("\n\033[0m")
