@@ -12,10 +12,11 @@ import subprocess
 import shutil
 import textwrap
 import time
-import utils
 import re
-import urllib.request as request
+from urllib import request
 from urllib.error import URLError
+
+import utils
 
 # This is a known good revision of LLVM for building the kernel
 GOOD_REVISION = '5351878ba1963a84600df3a9e907b458b0529851'
