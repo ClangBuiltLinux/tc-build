@@ -610,10 +610,14 @@ def ref_exists(repo, ref):
     :param ref: The ref to check
     :return: True if ref exits, False if not
     """
-    return subprocess.run(["git", "show-branch", ref],
-                          stderr=subprocess.STDOUT,
-                          stdout=subprocess.DEVNULL,
-                          cwd=repo).returncode == 0
+    try:
+        subprocess.run(["git", "show-branch", ref],
+                       capture_output=True,
+                       check=True,
+                       cwd=repo)
+    except subprocess.CalledProcessError:
+        return False
+    return True
 
 
 def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
