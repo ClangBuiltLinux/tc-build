@@ -1491,8 +1491,8 @@ def do_bolt(args, dirs):
         # the output to a log file in case it ever needs to be inspected
         merge_fdata_log = dirs.build_folder.joinpath("merge-fdata.log")
 
-        with open(bolt_profile, "w") as out_f, open(merge_fdata_log,
-                                                    "w") as err_f:
+        with open(bolt_profile, "w", encoding='utf-8') as out_f, \
+             open(merge_fdata_log, "w", encoding='utf-8') as err_f:
             # We don't use show_command() here because of how long the command
             # will be.
             print("Merging .fdata files, this might take a while...",
