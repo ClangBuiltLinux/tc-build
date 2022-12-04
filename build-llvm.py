@@ -446,12 +446,18 @@ def linker_test(cc, ld):
     :param ld: A linker to test -fuse=ld against
     :return: 0 if the linker supports -fuse=ld, 1 otherwise
     """
-    echo = subprocess.Popen(['echo', 'int main() { return 0; }'],
-                            stdout=subprocess.PIPE)
-    return subprocess.run(
-        [cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-'],
-        stdin=echo.stdout,
-        stderr=subprocess.DEVNULL).returncode
+    cc_cmd = [cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-']
+
+    try:
+        subprocess.run(cc_cmd,
+                       capture_output=True,
+                       check=True,
+                       input='int main() { return 0; }',
+                       text=True)
+    except subprocess.CalledProcessError:
+        return False
+
+    return True
 
 
 def versioned_binaries(binary_name):
