@@ -1203,9 +1203,11 @@ def ninja_check(args, build_folder):
     :return:
     """
     if args.check_targets:
-        ninja_check = ['ninja'] + [f'check-{s}' for s in args.check_targets]
-        show_command(args, ninja_check)
-        subprocess.run(ninja_check, check=True, cwd=build_folder)
+        # yapf really messes the look of this up so split it into two assignments.
+        ninja_check_cmd = ['ninja']
+        ninja_check_cmd += [f'check-{s}' for s in args.check_targets]
+        show_command(args, ninja_check_cmd)
+        subprocess.run(ninja_check_cmd, check=True, cwd=build_folder)
 
 
 def invoke_ninja(args, dirs, stage):
