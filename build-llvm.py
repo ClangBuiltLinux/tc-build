@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=invalid-name
 # Description: Builds an LLVM toolchain suitable for kernel development
 
 import argparse

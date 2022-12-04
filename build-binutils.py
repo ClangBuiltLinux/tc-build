@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=invalid-name
 # Description: Builds a standalone copy of binutils
 
 import argparse
