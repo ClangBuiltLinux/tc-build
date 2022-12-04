@@ -2,7 +2,6 @@
 # Description: Common helper functions
 
 import hashlib
-import pathlib
 import shutil
 import sys
 import subprocess
