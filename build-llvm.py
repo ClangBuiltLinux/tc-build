@@ -1061,7 +1061,7 @@ def stage_specific_cmake_defines(args, dirs, stage):
         # are taken into account by cmake)
         keys = ['CMAKE_C_FLAGS', 'CMAKE_CXX_FLAGS']
         for key in keys:
-            if not key in str(args.defines):
+            if key not in str(args.defines):
                 defines[key] = ''
 
         # For LLVMgold.so, which is used for LTO with ld.gold
