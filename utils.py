@@ -42,11 +42,11 @@ def download_binutils(folder):
 
         # Download the tarball
         binutils_tarball = folder.joinpath(binutils + ".tar.xz")
-        subprocess.run([
+        curl_cmd = [
             "curl", "-LSs", "-o", binutils_tarball,
             "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name
-        ],
-                       check=True)
+        ]
+        subprocess.run(curl_cmd, check=True)
         verify_binutils_checksum(binutils_tarball)
         # Extract the tarball then remove it
         subprocess.run(["tar", "-xJf", binutils_tarball.name],

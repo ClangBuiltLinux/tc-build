@@ -670,12 +670,11 @@ def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
                 pass
             if local_ref and local_ref.startswith("refs/heads/"):
                 # This is a branch, pull from remote
-                subprocess.run([
+                git_pull_cmd = [
                     "git", "pull", "--rebase", "origin",
                     local_ref.strip().replace("refs/heads/", "")
-                ],
-                               check=True,
-                               cwd=llvm_folder)
+                ]
+                subprocess.run(git_pull_cmd, check=True, cwd=llvm_folder)
     else:
         utils.print_header("Downloading LLVM")
 
@@ -684,11 +683,11 @@ def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
             extra_args = ("--depth", "1")
             if ref != "main":
                 extra_args += ("--no-single-branch", )
-        subprocess.run([
+        git_clone_cmd = [
             "git", "clone", *extra_args,
             "https://github.com/llvm/llvm-project", llvm_folder
-        ],
-                       check=True)
+        ]
+        subprocess.run(git_clone_cmd, check=True)
         subprocess.run(["git", "checkout", ref], check=True, cwd=llvm_folder)
 
     # One might wonder why we are downloading binutils in an LLVM build script :)
@@ -1387,12 +1386,12 @@ def generate_pgo_profiles(args, dirs):
             pgo_llvm_build(args, dirs)
 
     # Combine profiles
-    subprocess.run([
+    llvm_prof_data_cmd = [
         dirs.build_folder.joinpath("stage1", "bin", "llvm-profdata"), "merge",
         f'-output={dirs.build_folder.joinpath("profdata.prof")}'
     ] + list(
-        dirs.build_folder.joinpath("stage2", "profiles").glob("*.profraw")),
-                   check=True)
+        dirs.build_folder.joinpath("stage2", "profiles").glob("*.profraw"))
+    subprocess.run(llvm_prof_data_cmd, check=True)
 
 
 def do_multistage_build(args, dirs, env_vars):
@@ -1421,10 +1420,11 @@ def can_use_perf():
     # Make sure perf is in the environment
     if shutil.which("perf"):
         try:
-            subprocess.run([
+            perf_cmd = [
                 "perf", "record", "--branch-filter", "any,u", "--event",
                 "cycles:u", "--output", "/dev/null", "--", "sleep", "1"
-            ],
+            ]
+            subprocess.run(perf_cmd,
                            stderr=subprocess.DEVNULL,
                            stdout=subprocess.DEVNULL,
                            check=True)
