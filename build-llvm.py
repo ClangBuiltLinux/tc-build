@@ -1230,8 +1230,6 @@ def invoke_ninja(args, dirs, stage):
     elif stage == 1 and args.build_stage1_only and not args.install_stage1_only:
         install_folder = build_folder
 
-    build_folder = build_folder
-
     time_started = time.time()
 
     show_command(args, ["ninja"])
