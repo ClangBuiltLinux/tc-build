@@ -1152,13 +1152,12 @@ def invoke_cmake(args, dirs, env_vars, stage):
     """
     # Add the defines, point them to our build folder, and invoke cmake
     cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
+
     defines = build_cmake_defines(args, dirs, env_vars, stage)
-    for key in defines:
-        newdef = f'-D{key}={defines[key]}'
-        cmake += [newdef]
+    cmake += [f'-D{key}={val}' for key, val in defines.items()]
     if args.defines:
-        for d in args.defines:
-            cmake += [f'-D{d}']
+        cmake += [f'-D{d}' for d in args.defines]
+
     cmake += [dirs.llvm_folder.joinpath("llvm")]
 
     header_string, sub_folder = get_pgo_header_folder(stage)
