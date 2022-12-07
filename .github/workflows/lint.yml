@@ -1,12 +1,18 @@
-# Run a couple of linters on code in repo
+# Run linters on code in repo
 # * shellcheck and shfmt for shell scripts
-# * YAPF for Python scripts
+# * various tools for Python scripts
 name: Lint checks
 on: [push, pull_request]
 jobs:
+  python:
+      strategy:
+        fail-fast: false
+        matrix:
+          version: ['3.11', '3.10', '3.9', '3.8']
+      uses: ClangBuiltLinux/actions-workflows/.github/workflows/python_lint.yml@main
+      with:
+        python_version: ${{ matrix.version }}
   shellcheck:
     uses: ClangBuiltLinux/actions-workflows/.github/workflows/shellcheck.yml@main
   shfmt:
     uses: ClangBuiltLinux/actions-workflows/.github/workflows/shfmt.yml@main
-  yapf:
-    uses: ClangBuiltLinux/actions-workflows/.github/workflows/yapf.yml@main

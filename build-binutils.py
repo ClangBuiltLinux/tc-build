@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=invalid-name
 # Description: Builds a standalone copy of binutils
 
 import argparse
@@ -129,7 +130,7 @@ def create_targets(targets):
     for target in targets:
         if target == "all":
             return list(targets_dict.values())
-        elif target == "host":
+        if target == "host":
             key = host_arch_target()
         else:
             key = target_arch(target)
