@@ -217,12 +217,19 @@ def invoke_configure(binutils_folder, build_folder, install_folder, target,
     :param host_arch: Host architecture to optimize for
     """
     configure = [
-        binutils_folder.joinpath("configure"), 'CC=gcc', 'CXX=g++',
-        '--disable-compressed-debug-sections', '--disable-gdb',
-        '--disable-werror', '--enable-deterministic-archives',
-        '--enable-new-dtags', '--enable-plugins', '--enable-threads',
-        '--quiet', '--with-system-zlib'
-    ]
+        binutils_folder.joinpath("configure"),
+        'CC=gcc',
+        'CXX=g++',
+        '--disable-compressed-debug-sections',
+        '--disable-gdb',
+        '--disable-werror',
+        '--enable-deterministic-archives',
+        '--enable-new-dtags',
+        '--enable-plugins',
+        '--enable-threads',
+        '--quiet',
+        '--with-system-zlib',
+    ]  # yapf: disable
     if install_folder:
         configure += [f'--prefix={install_folder}']
     if host_arch:
@@ -235,24 +242,37 @@ def invoke_configure(binutils_folder, build_folder, install_folder, target,
 
     configure_arch_flags = {
         "arm-linux-gnueabi": [
-            '--disable-multilib', '--disable-nls', '--with-gnu-as',
-            '--with-gnu-ld'
+            '--disable-multilib',
+            '--disable-nls',
+            '--with-gnu-as',
+            '--with-gnu-ld',
         ],
-        "powerpc-linux-gnu":
-        ['--disable-sim', '--enable-lto', '--enable-relro', '--with-pic'],
-    }
-    configure_arch_flags['aarch64-linux-gnu'] = configure_arch_flags[
-        'arm-linux-gnueabi'] + ['--enable-gold', '--enable-ld=default']
+        "powerpc-linux-gnu": [
+            '--disable-sim',
+            '--enable-lto',
+            '--enable-relro',
+            '--with-pic',
+        ],
+    }  # yapf: disable
+    configure_arch_flags['aarch64-linux-gnu'] = [
+        *configure_arch_flags['arm-linux-gnueabi'],
+        '--enable-gold',
+        '--enable-ld=default',
+    ]
     configure_arch_flags['powerpc64-linux-gnu'] = configure_arch_flags[
         'powerpc-linux-gnu']
     configure_arch_flags['powerpc64le-linux-gnu'] = configure_arch_flags[
         'powerpc-linux-gnu']
     configure_arch_flags['riscv64-linux-gnu'] = configure_arch_flags[
         'powerpc-linux-gnu']
-    configure_arch_flags['s390x-linux-gnu'] = configure_arch_flags[
-        'powerpc-linux-gnu'] + ['--enable-targets=s390-linux-gnu']
-    configure_arch_flags['x86_64-linux-gnu'] = configure_arch_flags[
-        'powerpc-linux-gnu'] + ['--enable-targets=x86_64-pep']
+    configure_arch_flags['s390x-linux-gnu'] = [
+        *configure_arch_flags['powerpc-linux-gnu'],
+        '--enable-targets=s390-linux-gnu',
+    ]
+    configure_arch_flags['x86_64-linux-gnu'] = [
+        *configure_arch_flags['powerpc-linux-gnu'],
+        '--enable-targets=x86_64-pep',
+    ]
 
     for endian in ["", "el"]:
         configure_arch_flags[f'mips{endian}-linux-gnu'] = [
