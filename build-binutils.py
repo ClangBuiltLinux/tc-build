@@ -239,6 +239,9 @@ def invoke_configure(binutils_folder, build_folder, install_folder, target,
         ]
     else:
         configure += ['CFLAGS=-O2', 'CXXFLAGS=-O2']
+    # gprofng uses glibc APIs that might not be available on musl
+    if utils.libc_is_musl():
+        configure += ['--disable-gprofng']
 
     configure_arch_flags = {
         "arm-linux-gnueabi": [
