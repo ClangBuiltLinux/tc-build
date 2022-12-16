@@ -7,6 +7,7 @@ import hashlib
 import multiprocessing
 import pathlib
 import platform
+import re
 import shutil
 import subprocess
 import utils
@@ -53,8 +54,6 @@ def download_binutils(folder):
 
 def verify_binutils_checksum(file_to_check):
     # Check the SHA512 checksum of the downloaded file with a known good one
-    # The sha512.sum file from <sourceware.org> ships the SHA512 checksums
-    # Link: https://sourceware.org/pub/binutils/releases/sha512.sum
     file_hash = hashlib.sha512()
     with file_to_check.open("rb") as file:
         while True:
@@ -62,8 +61,20 @@ def verify_binutils_checksum(file_to_check):
             if not data:
                 break
             file_hash.update(data)
-    good_hash = "68e038f339a8c21faa19a57bbc447a51c817f47c2e06d740847c6e9cc3396c025d35d5369fa8c3f8b70414757c89f0e577939ddc0d70f283182504920f53b0a3"
-    if file_hash.hexdigest() != good_hash:
+    # Get good hash from file
+    curl_cmd = [
+        'curl', '-fLSs',
+        'https://sourceware.org/pub/binutils/releases/sha512.sum'
+    ]
+    sha512_sums = subprocess.run(curl_cmd,
+                                 capture_output=True,
+                                 check=True,
+                                 text=True).stdout
+    line_match = fr"([0-9a-f]+)\s+{file_to_check.name}$"
+    if not (match := re.search(line_match, sha512_sums, flags=re.M)):
+        raise RuntimeError(
+            "Could not find binutils hash in sha512.sum output?")
+    if file_hash.hexdigest() != match.groups()[0]:
         raise RuntimeError(
             "binutils: SHA512 checksum does not match known good one!")
 
