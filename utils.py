@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
 # Description: Common helper functions
 
-import hashlib
-import shutil
 import sys
-import subprocess
 
 
 def create_gitignore(folder):
@@ -15,62 +12,6 @@ def create_gitignore(folder):
     """
     with folder.joinpath(".gitignore").open("w") as gitignore:
         gitignore.write("*")
-
-
-def current_binutils():
-    """
-    Simple getter for current stable binutils release
-    :return: The current stable release of binutils
-    """
-    return "binutils-2.39"
-
-
-def download_binutils(folder):
-    """
-    Downloads the latest stable version of binutils
-    :param folder: Directory to download binutils to
-    """
-    binutils = current_binutils()
-    binutils_folder = folder.joinpath(binutils)
-    if not binutils_folder.is_dir():
-        # Remove any previous copies of binutils
-        for entity in folder.glob('binutils-*'):
-            if entity.is_dir():
-                shutil.rmtree(entity)
-            else:
-                entity.unlink()
-
-        # Download the tarball
-        binutils_tarball = folder.joinpath(binutils + ".tar.xz")
-        curl_cmd = [
-            "curl", "-LSs", "-o", binutils_tarball,
-            "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name
-        ]
-        subprocess.run(curl_cmd, check=True)
-        verify_binutils_checksum(binutils_tarball)
-        # Extract the tarball then remove it
-        subprocess.run(["tar", "-xJf", binutils_tarball.name],
-                       check=True,
-                       cwd=folder)
-        create_gitignore(binutils_folder)
-        binutils_tarball.unlink()
-
-
-def verify_binutils_checksum(file_to_check):
-    # Check the SHA512 checksum of the downloaded file with a known good one
-    # The sha512.sum file from <sourceware.org> ships the SHA512 checksums
-    # Link: https://sourceware.org/pub/binutils/releases/sha512.sum
-    file_hash = hashlib.sha512()
-    with file_to_check.open("rb") as file:
-        while True:
-            data = file.read(131072)
-            if not data:
-                break
-            file_hash.update(data)
-    good_hash = "68e038f339a8c21faa19a57bbc447a51c817f47c2e06d740847c6e9cc3396c025d35d5369fa8c3f8b70414757c89f0e577939ddc0d70f283182504920f53b0a3"
-    if file_hash.hexdigest() != good_hash:
-        raise RuntimeError(
-            "binutils: SHA512 checksum does not match known good one!")
 
 
 def flush_std_err_out():

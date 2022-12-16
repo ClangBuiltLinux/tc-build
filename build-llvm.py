@@ -620,10 +620,9 @@ def ref_exists(repo, ref):
     return True
 
 
-def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
+def fetch_llvm(llvm_folder, update, shallow, ref):
     """
-    Download llvm and binutils or update them if they exist
-    :param root_folder: Working directory
+    Download llvm if it does not exist, update it if it does
     :param llvm_folder: llvm-project repo directory
     :param update: Boolean indicating whether sources need to be updated or not
     :param ref: The ref to checkout the monorepo to
@@ -689,12 +688,6 @@ def fetch_llvm_binutils(root_folder, llvm_folder, update, shallow, ref):
         ]
         subprocess.run(git_clone_cmd, check=True)
         subprocess.run(["git", "checkout", ref], check=True, cwd=llvm_folder)
-
-    # One might wonder why we are downloading binutils in an LLVM build script :)
-    # We need it for the LLVMgold plugin, which can be used for LTO with ld.gold,
-    # which at the time of writing this, is how the Google Pixel 3 kernel is built
-    # and linked.
-    utils.download_binutils(root_folder)
 
 
 def cleanup(build_folder, incremental):
@@ -1072,11 +1065,6 @@ def stage_specific_cmake_defines(args, dirs, stage):
         for key in keys:
             if key not in str(args.defines):
                 defines[key] = ''
-
-        # For LLVMgold.so, which is used for LTO with ld.gold
-        defines['LLVM_BINUTILS_INCDIR'] = dirs.root_folder.joinpath(
-            utils.current_binutils(), "include")
-        defines['LLVM_ENABLE_PLUGINS'] = 'ON'
 
     return defines
 
@@ -1611,8 +1599,7 @@ def main():
         ref = args.branch
 
     if not args.llvm_folder:
-        fetch_llvm_binutils(root_folder, llvm_folder, not args.no_update,
-                            args.shallow_clone, ref)
+        fetch_llvm(llvm_folder, not args.no_update, args.shallow_clone, ref)
     cleanup(build_folder, args.incremental)
     dirs = Directories(build_folder, install_folder, linux_folder, llvm_folder,
                        root_folder)
