@@ -1548,28 +1548,19 @@ def main():
 
     args = parse_parameters(root_folder)
 
-    build_folder = pathlib.Path(args.build_folder)
-    if not build_folder.is_absolute():
-        build_folder = root_folder.joinpath(build_folder)
-
-    install_folder = pathlib.Path(args.install_folder)
-    if not install_folder.is_absolute():
-        install_folder = root_folder.joinpath(install_folder)
+    build_folder = pathlib.Path(args.build_folder).resolve()
+    install_folder = pathlib.Path(args.install_folder).resolve()
 
     linux_folder = None
     if args.linux_folder:
-        linux_folder = pathlib.Path(args.linux_folder)
-        if not linux_folder.is_absolute():
-            linux_folder = root_folder.joinpath(linux_folder)
+        linux_folder = pathlib.Path(args.linux_folder).resolve()
         if not linux_folder.exists():
             utils.print_error(
                 f"\nSupplied kernel source ({linux_folder}) does not exist!")
             sys.exit(1)
 
     if args.llvm_folder:
-        llvm_folder = pathlib.Path(args.llvm_folder)
-        if not llvm_folder.is_absolute():
-            llvm_folder = root_folder.joinpath(llvm_folder)
+        llvm_folder = pathlib.Path(args.llvm_folder).resolve()
         if not llvm_folder.exists():
             utils.print_error(
                 f"\nSupplied LLVM source ({llvm_folder}) does not exist!")
