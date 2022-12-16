@@ -382,6 +382,13 @@ def parse_parameters(root_folder):
                                  'kernel-allmodconfig-slim',
                                  'kernel-allyesconfig-slim', 'llvm'
                              ])
+    parser.add_argument("--quiet-cmake",
+                        help=textwrap.dedent("""\
+                        By default, the script shows all output from cmake. When this option is enabled, the
+                        invocations of cmake will only show warnings and errors.
+
+                        """),
+                        action="store_true")
     clone_options.add_argument("-s",
                                "--shallow-clone",
                                help=textwrap.dedent("""\
@@ -1139,6 +1146,10 @@ def invoke_cmake(args, dirs, env_vars, stage):
     """
     # Add the defines, point them to our build folder, and invoke cmake
     cmake = ['cmake', '-G', 'Ninja', '-Wno-dev']
+
+    # Report only warnings and errors if running quietly.
+    if args.quiet_cmake:
+        cmake += ['--log-level=NOTICE']
 
     defines = build_cmake_defines(args, dirs, env_vars, stage)
     cmake += [f'-D{key}={val}' for key, val in defines.items()]
