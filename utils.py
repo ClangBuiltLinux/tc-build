@@ -10,8 +10,7 @@ def create_gitignore(folder):
     known until the script is run so they can't be added to the root .gitignore
     :param folder: Folder to create the gitignore in
     """
-    with folder.joinpath(".gitignore").open("w") as gitignore:
-        gitignore.write("*")
+    folder.joinpath('gitignore').write_text('*\n', encoding='utf-8')
 
 
 def flush_std_err_out():
