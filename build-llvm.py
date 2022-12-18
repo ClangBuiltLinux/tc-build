@@ -965,6 +965,11 @@ def project_cmake_defines(args, stage):
         # We don't need the sanitizers for the stage 1 bootstrap
         if bootstrap_stage(args, stage):
             defines['COMPILER_RT_BUILD_SANITIZERS'] = 'OFF'
+        # execinfo.h might not exist (Alpine Linux) but the GWP ASAN library
+        # depends on it. Disable the option to avoid breaking the build, the
+        # kernel does not depend on it.
+        if not pathlib.Path('/usr/include/execinfo.h').exists():
+            defines['COMPILER_RT_BUILD_GWP_ASAN'] = 'OFF'
 
     return defines
 
