@@ -347,23 +347,17 @@ def main():
     args = parse_parameters(root_folder)
 
     if args.binutils_folder:
-        binutils_folder = pathlib.Path(args.binutils_folder)
-        if not binutils_folder.is_absolute():
-            binutils_folder = root_folder.joinpath(binutils_folder)
+        binutils_folder = pathlib.Path(args.binutils_folder).resolve()
     else:
         binutils_folder = root_folder.joinpath(current_binutils())
         download_binutils(root_folder)
 
-    build_folder = pathlib.Path(args.build_folder)
-    if not build_folder.is_absolute():
-        build_folder = root_folder.joinpath(build_folder)
+    build_folder = pathlib.Path(args.build_folder).resolve()
 
     if args.skip_install:
         install_folder = None
     else:
-        install_folder = pathlib.Path(args.install_folder)
-        if not install_folder.is_absolute():
-            install_folder = root_folder.joinpath(install_folder)
+        install_folder = pathlib.Path(args.install_folder).resolve()
 
     targets = ["all"]
     if args.targets is not None:
