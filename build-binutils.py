@@ -18,7 +18,7 @@ def current_binutils():
     Simple getter for current stable binutils release
     :return: The current stable release of binutils
     """
-    return "binutils-2.39"
+    return "binutils-2.40"
 
 
 def download_binutils(folder):
@@ -40,7 +40,7 @@ def download_binutils(folder):
         binutils_tarball = folder.joinpath(binutils + ".tar.xz")
         curl_cmd = [
             "curl", "-LSs", "-o", binutils_tarball,
-            "https://ftp.gnu.org/gnu/binutils/" + binutils_tarball.name
+            f"https://sourceware.org/pub/binutils/releases/{binutils_tarball.name}"
         ]
         subprocess.run(curl_cmd, check=True)
         verify_binutils_checksum(binutils_tarball)
