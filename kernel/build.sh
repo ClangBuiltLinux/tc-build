@@ -123,7 +123,7 @@ function setup_krnl_src() {
     if [[ -n $kernel_src ]]; then
         cd "$kernel_src" || exit
     else
-        linux="linux-6.0"
+        linux="linux-6.1.7"
         linux_tarball=$krnl/$linux.tar.xz
 
         # If we don't have the source tarball, download and verify it
