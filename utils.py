@@ -4,6 +4,7 @@
 import re
 import subprocess
 import sys
+import time
 
 
 def create_gitignore(folder):
@@ -35,6 +36,32 @@ def libc_is_musl():
     if re.search('musl', ldd_out.stderr if ldd_out.stderr else ldd_out.stdout):
         return True
     return False
+
+
+def get_duration(start_seconds, end_seconds=None):
+    """
+    Formats a duration in days, hours, minutes, and seconds.
+    :param start_seconds: The start of the duration
+    :param end_seconds: The end of the duration; can be omitted for current time
+    :return: A string with the non-zero parts of the duration.
+    """
+    if not end_seconds:
+        end_seconds = time.time()
+    seconds = int(end_seconds - start_seconds)
+    days, seconds = divmod(seconds, 60 * 60 * 24)
+    hours, seconds = divmod(seconds, 60 * 60)
+    minutes, seconds = divmod(seconds, 60)
+
+    parts = []
+    if days:
+        parts.append(f"{days}d")
+    if hours:
+        parts.append(f"{hours}h")
+    if minutes:
+        parts.append(f"{minutes}m")
+    parts.append(f"{seconds}s")
+
+    return ' '.join(parts)
 
 
 def print_header(string):

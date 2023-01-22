@@ -3,7 +3,6 @@
 # Description: Builds an LLVM toolchain suitable for kernel development
 
 import argparse
-import datetime
 import glob
 import pathlib
 import platform
@@ -1242,9 +1241,7 @@ def invoke_ninja(args, dirs, stage):
         ninja_check(args, build_folder)
 
     print()
-    time_string = str(
-        datetime.timedelta(seconds=int(time.time() - time_started)))
-    print(f"LLVM build duration: {time_string}")
+    print(f"LLVM build duration: {utils.get_duration(time_started)}")
     utils.flush_std_err_out()
 
     if should_install_toolchain(args, stage):
