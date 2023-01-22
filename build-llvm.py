@@ -1545,6 +1545,8 @@ def has_4f158995b9cddae(llvm_folder):
 
 
 def main():
+    script_start = time.time()
+
     root_folder = pathlib.Path(__file__).resolve().parent
 
     args = parse_parameters(root_folder)
@@ -1617,6 +1619,8 @@ def main():
     dirs = Directories(build_folder, install_folder, linux_folder, llvm_folder,
                        root_folder)
     do_multistage_build(args, dirs, env_vars)
+
+    print(f"Total script duration: {utils.get_duration(script_start)}")
 
 
 if __name__ == '__main__':
