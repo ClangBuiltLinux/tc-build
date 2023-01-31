@@ -1,0 +1,15 @@
+diff --git a/drivers/infiniband/core/cma.c b/drivers/infiniband/core/cma.c
+index cc2222b85c88..d7b3044af812 100644
+--- a/drivers/infiniband/core/cma.c
++++ b/drivers/infiniband/core/cma.c
+@@ -5150,8 +5150,10 @@ static int cma_netevent_callback(struct notifier_block *self,
+ 
+ 		neigh_sock_4.sin_family = AF_INET;
+ 		neigh_sock_4.sin_addr.s_addr = *(__be32 *)(neigh->primary_key);
++#if 0
+ 		ips_node = node_from_ndev_ip(&id_table, neigh->dev->ifindex,
+ 					     (struct sockaddr *)&neigh_sock_4);
++#endif
+ 	} else
+ 		goto out;
+ 
