@@ -1,0 +1,489 @@
+#!/usr/bin/env python3
+
+import glob
+from pathlib import Path
+import platform
+import re
+import shutil
+import subprocess
+import time
+
+# Allows being imported via tc_build package or directly in REPL
+try:
+    from builder import Builder
+    import utils
+except ModuleNotFoundError:
+    from .builder import Builder
+    from . import utils
+
+
+class LLVMBuilder(Builder):
+
+    def __init__(self):
+        super().__init__()
+
+        self.bolt = False
+        self.bolt_builder = None
+        self.ccache = False
+        self.check_targets = []
+        # Removes system dependency on terminfo to keep the dynamic library
+        # dependencies slim.  This can be unconditionally done as it does not
+        # impact clang's ability to show colors for certain output like
+        # warnings.
+        self.cmake_defines = {'LLVM_ENABLE_TERMINFO': 'OFF'}
+        self.tools = None
+        self.projects = []
+        self.quiet_cmake = False
+        self.targets = []
+
+    def bolt_clang(self):
+        # Default to instrumentation, as it should be universally available.
+        mode = 'instrumentation'
+        # If we can use perf for branch sampling, we switch to that mode, as
+        # it is much quicker and it can result in more performance gains
+        if self.can_use_perf():
+            mode = 'sampling'
+
+        utils.print_header(f"Performing BOLT with {mode}")
+
+        # clang-#: original binary
+        # clang.bolt: BOLT optimized binary
+        # .bolt will become original binary after optimization
+        clang = Path(self.folders.build, 'bin/clang').resolve()
+        clang_bolt = clang.with_name('clang.bolt')
+
+        bolt_profile = Path(self.folders.build, 'clang.fdata')
+
+        if mode == 'instrumentation':
+            # clang.inst: instrumented binary, will be removed after generating profiles
+            clang_inst = clang.with_name('clang.inst')
+
+            clang_inst_cmd = [
+                self.tools.llvm_bolt,
+                '--instrument',
+                f"--instrumentation-file={bolt_profile}",
+                '--instrumentation-file-append-pid',
+                '-o',
+                clang_inst,
+                clang,
+            ]
+            self.run_cmd(clang_inst_cmd)
+
+            self.bolt_builder.bolt_instrumentation = True
+
+        if mode == 'sampling':
+            self.bolt_builder.bolt_sampling_output = Path(self.folders.build, 'perf.data')
+
+        self.bolt_builder.toolchain_prefix = self.folders.build
+        self.bolt_builder.build()
+
+        # With instrumentation, we need to combine the profiles we generated,
+        # as they are separated by PID
+        if mode == 'instrumentation':
+            fdata_files = bolt_profile.parent.glob(f"{bolt_profile.name}.*.fdata")
+
+            # merge-fdata will print one line for each .fdata it merges.
+            # Redirect the output to a log file in case it ever needs to be
+            # inspected.
+            merge_fdata_log = Path(self.folders.build, 'merge-fdata.log')
+
+            with bolt_profile.open('w', encoding='utf-8') as out_file, \
+                 merge_fdata_log.open('w', encoding='utf-8') as err_file:
+                utils.print_info('Merging .fdata files, this might take a while...')
+                subprocess.run([self.tools.merge_fdata] + list(fdata_files),
+                               check=True,
+                               stderr=err_file,
+                               stdout=out_file)
+            for fdata_file in fdata_files:
+                fdata_file.unlink()
+
+        if mode == 'sampling':
+            perf2bolt_cmd = [
+                self.tools.perf2bolt, '-p', self.bolt_builder.bolt_sampling_output, '-o',
+                bolt_profile, clang
+            ]
+            self.run_cmd(perf2bolt_cmd)
+            self.bolt_builder.bolt_sampling_output.unlink()
+
+        # Now actually optimize clang
+        clang_opt_cmd = [
+            self.tools.llvm_bolt, f"--data={bolt_profile}", '--dyno-stats', '--icf=1', '-o',
+            clang_bolt, '--reorder-blocks=cache+', '--reorder-functions=hfsort+',
+            '--split-all-cold', '--split-functions=3', '--use-gnu-stack', clang
+        ]
+        self.run_cmd(clang_opt_cmd)
+        clang_bolt.replace(clang)
+        if mode == 'instrumentation':
+            clang_inst.unlink()
+
+    def build(self):
+        if not self.folders.build:
+            raise RuntimeError('No build folder set for build()?')
+        if not Path(self.folders.build, 'build.ninja').exists():
+            raise RuntimeError('No build.ninja in build folder, run configure()?')
+        if self.bolt and not self.bolt_builder:
+            raise RuntimeError('BOLT requested without a builder?')
+
+        build_start = time.time()
+        ninja_cmd = ['ninja', '-C', self.folders.build]
+        self.run_cmd(ninja_cmd)
+
+        if self.check_targets:
+            check_targets = [f"check-{target}" for target in self.check_targets]
+            self.run_cmd([*ninja_cmd, *check_targets])
+
+        utils.print_info(f"Build duration: {utils.get_duration(build_start)}")
+
+        if self.bolt:
+            self.bolt_clang()
+
+        if self.folders.install:
+            self.run_cmd([*ninja_cmd, 'install'], capture_output=True)
+            utils.create_gitignore(self.folders.install)
+
+    def can_use_perf(self):
+        # Make sure perf is in the environment
+        if shutil.which('perf'):
+            try:
+                perf_cmd = [
+                    'perf', 'record', '--branch-filter', 'any,u', '--event', 'cycles:u', '--output',
+                    '/dev/null', '--', 'sleep', '1'
+                ]
+                subprocess.run(perf_cmd, capture_output=True, check=True)
+            except subprocess.CalledProcessError:
+                pass  # Fallthrough to False below
+            else:
+                return True
+
+        return False
+
+    def check_dependencies(self):
+        deps = ['cmake', 'curl', 'git', 'ninja']
+        for dep in deps:
+            if not shutil.which(dep):
+                raise RuntimeError(f"Dependency ('{dep}') could not be found!")
+
+    def configure(self):
+        if not self.folders.build:
+            raise RuntimeError('No build folder set?')
+        if not self.folders.source:
+            raise RuntimeError('No source folder set?')
+        if not self.tools:
+            raise RuntimeError('No build tools set?')
+        if not self.projects:
+            raise RuntimeError('No projects set?')
+        if not self.targets:
+            raise RuntimeError('No targets set?')
+
+        self.validate_targets()
+
+        # yapf: disable
+        cmake_cmd = [
+            'cmake',
+            '-B', self.folders.build,
+            '-G', 'Ninja',
+            '-S', Path(self.folders.source, 'llvm'),
+            '-Wno-dev',
+        ]
+        # yapf: enable
+        if self.quiet_cmake:
+            cmake_cmd.append('--log-level=NOTICE')
+
+        if self.ccache:
+            if shutil.which('ccache'):
+                self.cmake_defines['LLVM_CCACHE_BUILD'] = 'ON'
+            else:
+                utils.print_warning(
+                    'ccache requested but could not be found on your system, ignoring...')
+
+        if self.tools.clang_tblgen:
+            self.cmake_defines['CLANG_TABLEGEN'] = self.tools.clang_tblgen
+
+        if self.tools.ar:
+            self.cmake_defines['CMAKE_AR'] = self.tools.ar
+        if 'CMAKE_BUILD_TYPE' not in self.cmake_defines:
+            self.cmake_defines['CMAKE_BUILD_TYPE'] = 'Release'
+        self.cmake_defines['CMAKE_C_COMPILER'] = self.tools.cc
+        self.cmake_defines['CMAKE_CXX_COMPILER'] = self.tools.cxx
+        if self.bolt:
+            self.cmake_defines['CMAKE_EXE_LINKER_FLAGS'] = '-Wl,--emit-relocs'
+        if self.folders.install:
+            self.cmake_defines['CMAKE_INSTALL_PREFIX'] = self.folders.install
+
+        self.cmake_defines['LLVM_ENABLE_PROJECTS'] = ';'.join(self.projects)
+        if self.project_is_enabled('compiler-rt'):
+            # execinfo.h might not exist (Alpine Linux) but the GWP ASAN library
+            # depends on it. Disable the option to avoid breaking the build, the
+            # kernel does not depend on it.
+            if not Path('/usr/include/execinfo.h').exists():
+                self.cmake_defines['COMPILER_RT_BUILD_GWP_ASAN'] = 'OFF'
+        if self.cmake_defines['CMAKE_BUILD_TYPE'] == 'Release':
+            self.cmake_defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
+        if self.tools.llvm_tblgen:
+            self.cmake_defines['LLVM_TABLEGEN'] = self.tools.llvm_tblgen
+        self.cmake_defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(self.targets)
+        if self.tools.ld:
+            self.cmake_defines['LLVM_USE_LINKER'] = self.tools.ld
+
+        # Clear Linux needs a different target to find all of the C++ header files, otherwise
+        # stage 2+ compiles will fail without this
+        # We figure this out based on the existence of x86_64-generic-linux in the C++ headers path
+        if glob.glob('/usr/include/c++/*/x86_64-generic-linux'):
+            self.cmake_defines['LLVM_HOST_TRIPLE'] = 'x86_64-generic-linux'
+
+        # By default, the Linux triples are for glibc, which might not work on
+        # musl-based systems. If clang is available, get the default target triple
+        # from it so that clang without a '--target' flag always works.
+        if shutil.which('clang'):
+            default_target_triple = subprocess.run(['clang', '-print-target-triple'],
+                                                   capture_output=True,
+                                                   check=True,
+                                                   text=True).stdout.strip()
+            self.cmake_defines['LLVM_DEFAULT_TARGET_TRIPLE'] = default_target_triple
+
+        cmake_cmd += [f'-D{key}={self.cmake_defines[key]}' for key in sorted(self.cmake_defines)]
+
+        self.clean_build_folder()
+        self.run_cmd(cmake_cmd)
+
+    def host_target(self):
+        uname_to_llvm = {
+            'aarch64': 'AArch64',
+            'armv7l': 'ARM',
+            'i386': 'X86',
+            'mips': 'Mips',
+            'mips64': 'Mips',
+            'ppc': 'PowerPC',
+            'ppc64': 'PowerPC',
+            'ppc64le': 'PowerPC',
+            'riscv32': 'RISCV',
+            'riscv64': 'RISCV',
+            's390x': 'SystemZ',
+            'x86_64': 'X86',
+        }
+        return uname_to_llvm.get(platform.machine())
+
+    def host_target_is_enabled(self):
+        if 'all' in self.targets:
+            return True
+
+        return self.host_target() in self.targets
+
+    def project_is_enabled(self, project):
+        return 'all' in self.projects or project in self.projects
+
+    def show_install_info(self):
+        # Installation folder is optional, show build folder as the
+        # installation location in that case.
+        install_folder = self.folders.install if self.folders.install else self.folders.build
+        if not install_folder:
+            raise RuntimeError('Installation folder not set?')
+        if not install_folder.exists():
+            raise RuntimeError('Installation folder does not exist, run build()?')
+        if not (bin_folder := Path(install_folder, 'bin')).exists():
+            raise RuntimeError('bin folder does not exist in installation folder, run build()?')
+
+        utils.print_header('LLVM installation information')
+        install_info = (f"Toolchain is available at: {install_folder}\n\n"
+                        'To use, either run:\n\n'
+                        f"\t$ export PATH={bin_folder}:$PATH\n\n"
+                        'or add:\n\n'
+                        f"\tPATH={bin_folder}:$PATH\n\n"
+                        'before the command you want to use this toolchain.\n')
+        print(install_info)
+
+        for tool in ['clang', 'ld.lld']:
+            if (binary := Path(bin_folder, tool)).exists():
+                subprocess.run([binary, '--version'], check=True)
+                print()
+        utils.flush_std_err_out()
+
+    def validate_targets(self):
+        if not self.folders.source:
+            raise RuntimeError('No source folder set?')
+        if not self.targets:
+            raise RuntimeError('No targets set?')
+
+        contents = Path(self.folders.source, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
+        if not (match := re.search(r'set\(LLVM_ALL_TARGETS([\w|\s]+)\)', contents)):
+            raise RuntimeError('Could not find LLVM_ALL_TARGETS?')
+        all_targets = [val for target in match.group(1).splitlines() if (val := target.strip())]
+
+        for target in self.targets:
+            if target in ('all', 'host'):
+                continue
+
+            if target not in all_targets:
+                # tuple() for shorter pretty printing versus instead of
+                # ('{"', '".join(all_targets)}')
+                raise RuntimeError(
+                    f"Requested target ('{target}') was not found in LLVM_ALL_TARGETS {tuple(all_targets)}, check spelling?"
+                )
+
+
+class LLVMSlimBuilder(LLVMBuilder):
+
+    def configure(self):
+        # yapf: disable
+        slim_clang_defines = {
+            # Objective-C Automatic Reference Counting (we don't use Objective-C)
+            # https://clang.llvm.org/docs/AutomaticReferenceCounting.html
+            'CLANG_ENABLE_ARCMT': 'OFF',
+            # We don't (currently) use the static analyzer and it saves cycles
+            # according to Chromium OS:
+            # https://crrev.com/44702077cc9b5185fc21e99485ee4f0507722f82
+            'CLANG_ENABLE_STATIC_ANALYZER': 'OFF',
+            # We don't use the plugin system and it will remove unused symbols:
+            # https://crbug.com/917404
+            'CLANG_PLUGIN_SUPPORT': 'OFF',
+        }
+
+        slim_llvm_defines = {
+            # Don't build bindings; they are for other languages that the kernel does not use
+            'LLVM_ENABLE_BINDINGS': 'OFF',
+            # Don't build Ocaml documentation
+            'LLVM_ENABLE_OCAMLDOC': 'OFF',
+            # Don't build clang-tools-extras to cut down on build targets (about 400 files or so)
+            'LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR': '',
+            # Don't include documentation build targets because it is available on the web
+            'LLVM_INCLUDE_DOCS': 'OFF',
+            # Don't include example build targets to save on cmake cycles
+            'LLVM_INCLUDE_EXAMPLES': 'OFF',
+        }
+
+        slim_compiler_rt_defines = {
+            # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
+            'COMPILER_RT_BUILD_LIBFUZZER': 'OFF',
+            # We only use compiler-rt for the sanitizers, disable some extra stuff we don't need
+            # Chromium OS also does this: https://crrev.com/c/1629950
+            'COMPILER_RT_BUILD_CRT': 'OFF',
+            'COMPILER_RT_BUILD_XRAY': 'OFF',
+        }
+        # yapf: enable
+
+        self.cmake_defines.update(slim_llvm_defines)
+        if self.project_is_enabled('clang'):
+            self.cmake_defines.update(slim_clang_defines)
+        if self.project_is_enabled('compiler-rt') and self.cmake_defines.get(
+                'LLVM_BUILD_RUNTIME', 'ON') == 'ON':
+            self.cmake_defines.update(slim_compiler_rt_defines)
+
+        super().configure()
+
+
+class LLVMBootstrapBuilder(LLVMSlimBuilder):
+
+    def __init__(self):
+        super().__init__()
+
+        self.projects = ['clang', 'lld']
+        self.targets = ['host']
+
+    def configure(self):
+        if self.project_is_enabled('compiler-rt'):
+            self.cmake_defines['COMPILER_RT_BUILD_SANITIZERS'] = 'OFF'
+
+        self.cmake_defines['CMAKE_BUILD_TYPE'] = 'Release'
+        self.cmake_defines['LLVM_BUILD_UTILS'] = 'OFF'
+        self.cmake_defines['LLVM_ENABLE_ASSERTIONS'] = 'OFF'
+        self.cmake_defines['LLVM_ENABLE_BACKTRACES'] = 'OFF'
+        self.cmake_defines['LLVM_INCLUDE_TESTS'] = 'OFF'
+
+        super().configure()
+
+
+class LLVMInstrumentedBuilder(LLVMBuilder):
+
+    def __init__(self):
+        super().__init__()
+
+        self.cmake_defines['LLVM_BUILD_INSTRUMENTED'] = 'IR'
+        self.cmake_defines['LLVM_BUILD_RUNTIME'] = 'OFF'
+        # The next two defines is needed to avoid thousands of warnings
+        # along the lines of:
+        # "Unable to track new values: Running out of static counters."
+        self.cmake_defines['LLVM_LINK_LLVM_DYLIB'] = 'ON'
+        self.cmake_defines['LLVM_VP_COUNTERS_PER_SITE'] = '6'
+
+    def generate_profdata(self):
+        if not (profiles := list(self.folders.build.joinpath('profiles').glob('*.profraw'))):
+            raise RuntimeError('No profiles generated?')
+
+        llvm_prof_data_cmd = [
+            self.tools.llvm_profdata, 'merge',
+            f"-output={Path(self.folders.build, 'profdata.prof')}", *profiles
+        ]
+        subprocess.run(llvm_prof_data_cmd, check=True)
+
+
+class LLVMSlimInstrumentedBuilder(LLVMInstrumentedBuilder, LLVMSlimBuilder):
+    # No methods to override, this class inherits everyting from these super classes
+    pass
+
+
+class LLVMSourceManager:
+
+    def __init__(self, repo):
+        self.repo = repo
+
+    def default_projects(self):
+        return ['clang', 'compiler-rt', 'lld', 'polly']
+
+    def default_targets(self):
+        return ['AArch64', 'ARM', 'BPF', 'Hexagon', 'Mips', 'PowerPC', 'RISCV', 'SystemZ', 'X86']
+
+    def download(self, ref, shallow=False):
+        if self.repo.exists():
+            return
+
+        utils.print_header('Downloading LLVM')
+
+        git_clone = ['git', 'clone']
+        if shallow:
+            git_clone.append('--depth=1')
+            if ref != 'main':
+                git_clone.append('--no-single-branch')
+        git_clone += ['https://github.com/llvm/llvm-project', self.repo]
+
+        subprocess.run(git_clone, check=True)
+
+        self.git(['checkout', ref])
+
+    def git(self, cmd, capture_output=False):
+        return subprocess.run(['git', *cmd],
+                              capture_output=capture_output,
+                              check=True,
+                              cwd=self.repo,
+                              text=True)
+
+    def git_capture(self, cmd):
+        return self.git(cmd, capture_output=True).stdout.strip()
+
+    def is_shallow(self):
+        git_dir = self.git_capture(['rev-parse', '--git-dir'])
+        return Path(git_dir, 'shallow').exists()
+
+    def ref_exists(self, ref):
+        try:
+            self.git(['show-branch', ref])
+        except subprocess.CalledProcessError:
+            return False
+        return True
+
+    def update(self, ref):
+        utils.print_header('Updating LLVM')
+
+        self.git(['fetch', 'origin'])
+
+        if self.is_shallow() and not self.ref_exists(ref):
+            raise RuntimeError(f"Repo is shallow and supplied ref ('{ref}') does not exist!")
+
+        self.git(['checkout', ref])
+
+        local_ref = None
+        try:
+            local_ref = self.git_capture(['symbolic-ref', '-q', 'HEAD'])
+        except subprocess.CalledProcessError:
+            pass
+        if local_ref and local_ref.startswith('refs/heads/'):
+            self.git(['pull', '--rebase', 'origin', local_ref.replace('refs/heads/', '')])

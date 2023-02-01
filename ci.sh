@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 base=$(dirname "$(readlink -f "$0")")
+install=$base/install
+src=$base/src
 
 set -eu
 
@@ -22,7 +24,10 @@ function do_all() {
 }
 
 function do_binutils() {
-    "$base"/build-binutils.py -t x86_64
+    "$base"/build-binutils.py \
+        --install-folder "$install" \
+        --show-build-commands \
+        --targets x86_64
 }
 
 function do_deps() {
@@ -53,8 +58,34 @@ function do_deps() {
 }
 
 function do_kernel() {
-    cd "$base"/kernel
-    ./build.sh -t X86
+    local branch=linux-rolling-stable
+    local linux=$src/$branch
+
+    if [[ -d $linux ]]; then
+        git -C "$linux" fetch --depth=1 origin $branch
+        git -C "$linux" reset --hard FETCH_HEAD
+    else
+        git clone \
+            --branch "$branch" \
+            --depth=1 \
+            --single-branch \
+            https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git \
+            "$linux"
+    fi
+
+    cat <<EOF | env PYTHONPATH="$base"/tc_build python3 -
+from pathlib import Path
+
+from kernel import LLVMKernelBuilder
+
+builder = LLVMKernelBuilder()
+builder.folders.build = Path('$base/build/linux')
+builder.folders.source = Path('$linux')
+builder.matrix = {'defconfig': ['X86']}
+builder.toolchain_prefix = Path('$install')
+
+builder.build()
+EOF
 }
 
 function do_llvm() {
@@ -63,12 +94,14 @@ function do_llvm() {
 
     "$base"/build-llvm.py \
         --assertions \
-        --branch "release/14.x" \
         --build-stage1-only \
         --check-targets clang lld llvm \
-        --install-stage1-only \
-        --projects "clang;lld" \
+        --install-folder "$install" \
+        --projects clang lld \
+        --quiet-cmake \
+        --ref release/16.x \
         --shallow-clone \
+        --show-build-commands \
         --targets X86 \
         "${extra_args[@]}"
 }
