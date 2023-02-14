@@ -191,7 +191,8 @@ class LLVMBuilder(Builder):
 
         if self.ccache:
             if shutil.which('ccache'):
-                self.cmake_defines['LLVM_CCACHE_BUILD'] = 'ON'
+                self.cmake_defines['CMAKE_C_COMPILER_LAUNCHER'] = 'ccache'
+                self.cmake_defines['CMAKE_CXX_COMPILER_LAUNCHER'] = 'ccache'
             else:
                 utils.print_warning(
                     'ccache requested but could not be found on your system, ignoring...')
