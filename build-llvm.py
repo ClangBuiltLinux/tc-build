@@ -401,7 +401,7 @@ else:
 # Validate and prepare Linux source if doing BOLT or PGO with kernel benchmarks
 # Check for issues early, as these technologies are time consuming, so a user
 # might step away from the build once it looks like it has started
-if args.bolt or (args.pgo and list(x for x in args.pgo if 'kernel' in x)):
+if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
     lsm = LinuxSourceManager()
     if args.linux_folder:
         if not (linux_folder := Path(args.linux_folder).resolve()).exists():
