@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextlib
 import glob
 from pathlib import Path
 import platform
@@ -499,10 +500,7 @@ class LLVMSourceManager:
 
         self.git(['checkout', ref])
 
-        local_ref = None
-        try:
+        with contextlib.suppress(subprocess.CalledProcessError):
             local_ref = self.git_capture(['symbolic-ref', '-q', 'HEAD'])
-        except subprocess.CalledProcessError:
-            pass
         if local_ref and local_ref.startswith('refs/heads/'):
             self.git(['pull', '--rebase', 'origin', local_ref.replace('refs/heads/', '')])
