@@ -92,10 +92,7 @@ else:
     build_folder = Path(tc_build_folder, 'build/binutils')
 
 if args.targets:
-    if 'all' in args.targets:
-        targets = bsm.default_targets()
-    else:
-        targets = set(args.targets)
+    targets = bsm.default_targets() if 'all' in args.targets else set(args.targets)
 else:
     targets = bsm.default_targets()
 
