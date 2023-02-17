@@ -229,12 +229,11 @@ class LLVMBuilder(Builder):
             self.cmake_defines['CMAKE_INSTALL_PREFIX'] = self.folders.install
 
         self.cmake_defines['LLVM_ENABLE_PROJECTS'] = ';'.join(self.projects)
-        if self.project_is_enabled('compiler-rt'):
-            # execinfo.h might not exist (Alpine Linux) but the GWP ASAN library
-            # depends on it. Disable the option to avoid breaking the build, the
-            # kernel does not depend on it.
-            if not Path('/usr/include/execinfo.h').exists():
-                self.cmake_defines['COMPILER_RT_BUILD_GWP_ASAN'] = 'OFF'
+        # execinfo.h might not exist (Alpine Linux) but the GWP ASAN library
+        # depends on it. Disable the option to avoid breaking the build, the
+        # kernel does not depend on it.
+        if self.project_is_enabled('compiler-rt') and not Path('/usr/include/execinfo.h').exists():
+            self.cmake_defines['COMPILER_RT_BUILD_GWP_ASAN'] = 'OFF'
         if self.cmake_defines['CMAKE_BUILD_TYPE'] == 'Release':
             self.cmake_defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
         if self.tools.llvm_tblgen:
