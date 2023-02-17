@@ -90,7 +90,7 @@ class LLVMBuilder(Builder):
             with bolt_profile.open('w', encoding='utf-8') as out_file, \
                  merge_fdata_log.open('w', encoding='utf-8') as err_file:
                 utils.print_info('Merging .fdata files, this might take a while...')
-                subprocess.run([self.tools.merge_fdata] + list(fdata_files),
+                subprocess.run([self.tools.merge_fdata, *list(fdata_files)],
                                check=True,
                                stderr=err_file,
                                stdout=out_file)
