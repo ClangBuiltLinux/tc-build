@@ -451,7 +451,7 @@ def linker_test(cc, ld):
     Test to see if the supplied ld value will work with cc -fuse=ld
     :param cc: A working C compiler to compile the test program
     :param ld: A linker to test -fuse=ld against
-    :return: False if the linker supports -fuse=ld, True otherwise
+    :return: 0 if the linker supports -fuse=ld, 1 otherwise
     """
     cc_cmd = [cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-']
 
