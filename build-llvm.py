@@ -566,7 +566,7 @@ def check_cc_ld_variables(root_folder):
         # and we're using gcc, try to use gold
         else:
             ld = "gold"
-            if linker_test(cc, ld):
+            if not linker_test(cc, ld):
                 ld = None
 
     # Print what binaries we are using to compile/link with so the user can
