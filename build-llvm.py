@@ -541,7 +541,7 @@ def check_cc_ld_variables(root_folder):
         ld = os.environ['LD']
         if "clang" in cc.stem and clang_version(cc, root_folder) >= 30900:
             ld = shutil.which(ld)
-        if linker_test(cc, ld):
+        if not linker_test(cc, ld):
             print(
                 f"LD won't work with {cc}, saving you from yourself by ignoring LD value",
                 flush=True)
