@@ -462,9 +462,9 @@ def linker_test(cc, ld):
                        input='int main() { return 0; }',
                        text=True)
     except subprocess.CalledProcessError:
-        return False
+        return True
 
-    return True
+    return False
 
 
 def versioned_binaries(binary_name):
