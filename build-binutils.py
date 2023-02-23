@@ -11,7 +11,7 @@ import tc_build.utils
 LATEST_BINUTILS_RELEASE = (2, 40, 0)
 
 parser = ArgumentParser()
-parser.add_argument('-b',
+parser.add_argument('-B',
                     '--binutils-folder',
                     help='''
                     By default, the script will download a copy of the binutils source in the src folder within
@@ -20,7 +20,7 @@ parser.add_argument('-b',
                     relative path.
                     ''',
                     type=str)
-parser.add_argument('-B',
+parser.add_argument('-b',
                     '--build-folder',
                     help='''
                     By default, the script will create a "build/binutils" folder in the same folder as this
