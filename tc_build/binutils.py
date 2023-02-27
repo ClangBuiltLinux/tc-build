@@ -198,8 +198,16 @@ class BinutilsSourceManager(SourceManager):
 
     def default_targets(self):
         return [
-            'aarch64', 'arm', 'mips', 'mipsel', 'powerpc', 'powerpc64', 'powerpc64le', 'riscv64',
-            's390x', 'x86_64'
+            'aarch64',
+            'arm',
+            'mips',
+            'mipsel',
+            'powerpc',
+            'powerpc64',
+            'powerpc64le',
+            'riscv64',
+            's390x',
+            'x86_64',
         ]
 
     def prepare(self):

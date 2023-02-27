@@ -99,17 +99,30 @@ class LLVMBuilder(Builder):
 
         if mode == 'sampling':
             perf2bolt_cmd = [
-                self.tools.perf2bolt, '-p', self.bolt_builder.bolt_sampling_output, '-o',
-                bolt_profile, clang
+                self.tools.perf2bolt,
+                '-p',
+                self.bolt_builder.bolt_sampling_output,
+                '-o',
+                bolt_profile,
+                clang,
             ]
             self.run_cmd(perf2bolt_cmd)
             self.bolt_builder.bolt_sampling_output.unlink()
 
         # Now actually optimize clang
         clang_opt_cmd = [
-            self.tools.llvm_bolt, f"--data={bolt_profile}", '--dyno-stats', '--icf=1', '-o',
-            clang_bolt, '--reorder-blocks=cache+', '--reorder-functions=hfsort+',
-            '--split-all-cold', '--split-functions=3', '--use-gnu-stack', clang
+            self.tools.llvm_bolt,
+            f"--data={bolt_profile}",
+            '--dyno-stats',
+            '--icf=1',
+            '-o',
+            clang_bolt,
+            '--reorder-blocks=cache+',
+            '--reorder-functions=hfsort+',
+            '--split-all-cold',
+            '--split-functions=3',
+            '--use-gnu-stack',
+            clang,
         ]
         self.run_cmd(clang_opt_cmd)
         clang_bolt.replace(clang)
@@ -146,9 +159,12 @@ class LLVMBuilder(Builder):
         if shutil.which('perf'):
             try:
                 perf_cmd = [
-                    'perf', 'record', '--branch-filter', 'any,u', '--event', 'cycles:u', '--output',
-                    '/dev/null', '--', 'sleep', '1'
-                ]
+                    'perf', 'record',
+                    '--branch-filter', 'any,u',
+                    '--event', 'cycles:u',
+                    '--output', '/dev/null',
+                    '--', 'sleep', '1',
+                ]  # yapf: disable
                 subprocess.run(perf_cmd, capture_output=True, check=True)
             except subprocess.CalledProcessError:
                 pass  # Fallthrough to False below
@@ -411,8 +427,10 @@ class LLVMInstrumentedBuilder(LLVMBuilder):
             raise RuntimeError('No profiles generated?')
 
         llvm_prof_data_cmd = [
-            self.tools.llvm_profdata, 'merge',
-            f"-output={Path(self.folders.build, 'profdata.prof')}", *profiles
+            self.tools.llvm_profdata,
+            'merge',
+            f"-output={Path(self.folders.build, 'profdata.prof')}",
+            *profiles,
         ]
         subprocess.run(llvm_prof_data_cmd, check=True)
 

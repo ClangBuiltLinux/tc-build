@@ -287,9 +287,13 @@ opt_options.add_argument('--pgo',
                          '''),
                          nargs='+',
                          choices=[
-                             'kernel-defconfig', 'kernel-allmodconfig', 'kernel-allyesconfig',
-                             'kernel-defconfig-slim', 'kernel-allmodconfig-slim',
-                             'kernel-allyesconfig-slim', 'llvm'
+                             'kernel-defconfig',
+                             'kernel-allmodconfig',
+                             'kernel-allyesconfig',
+                             'kernel-defconfig-slim',
+                             'kernel-allmodconfig-slim',
+                             'kernel-allyesconfig-slim',
+                             'llvm',
                          ])
 parser.add_argument('--quiet-cmake',
                     help=textwrap.dedent('''\
