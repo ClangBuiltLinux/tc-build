@@ -616,11 +616,11 @@ if args.pgo:
                     llvm_targets = [instrumented.host_target()]
                 else:
                     llvm_targets = final.targets[0:1]
-            else:  # full
-                if 'all' in final.targets:
-                    llvm_targets = llvm_source.default_targets()
-                else:
-                    llvm_targets = final.targets
+            # full
+            elif 'all' in final.targets:
+                llvm_targets = llvm_source.default_targets()
+            else:
+                llvm_targets = final.targets
 
             kernel_builder.matrix[config_target] = llvm_targets
 
