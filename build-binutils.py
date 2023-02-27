@@ -108,8 +108,8 @@ targets_to_builder = {
     's390x': tc_build.binutils.S390XBinutilsBuilder,
     'x86_64': tc_build.binutils.X8664BinutilsBuilder,
 }
-for target in targets:
-    target = target.split('-', maxsplit=1)[0]
+for item in targets:
+    target = item.split('-', maxsplit=1)[0]
     if target in targets_to_builder:
         builder = targets_to_builder[target]()
         builder.folders.build = Path(build_folder, target)

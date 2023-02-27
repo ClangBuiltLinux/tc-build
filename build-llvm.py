@@ -591,8 +591,8 @@ if args.pgo:
         kernel_builder.folders.build = Path(build_folder, 'linux')
         kernel_builder.folders.source = lsm.location
         kernel_builder.toolchain_prefix = instrumented.folders.build
-        for pgo_target in pgo_targets:
-            pgo_target = pgo_target.split('-')
+        for item in pgo_targets:
+            pgo_target = item.split('-')
 
             config_target = pgo_target[0]
             # For BOLT or "slim" PGO, we limit the number of kernels we build for
