@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextlib
 import glob
 from pathlib import Path
 import platform
@@ -90,7 +91,7 @@ class LLVMBuilder(Builder):
             with bolt_profile.open('w', encoding='utf-8') as out_file, \
                  merge_fdata_log.open('w', encoding='utf-8') as err_file:
                 utils.print_info('Merging .fdata files, this might take a while...')
-                subprocess.run([self.tools.merge_fdata] + list(fdata_files),
+                subprocess.run([self.tools.merge_fdata, *list(fdata_files)],
                                check=True,
                                stderr=err_file,
                                stdout=out_file)
@@ -99,17 +100,30 @@ class LLVMBuilder(Builder):
 
         if mode == 'sampling':
             perf2bolt_cmd = [
-                self.tools.perf2bolt, '-p', self.bolt_builder.bolt_sampling_output, '-o',
-                bolt_profile, clang
+                self.tools.perf2bolt,
+                '-p',
+                self.bolt_builder.bolt_sampling_output,
+                '-o',
+                bolt_profile,
+                clang,
             ]
             self.run_cmd(perf2bolt_cmd)
             self.bolt_builder.bolt_sampling_output.unlink()
 
         # Now actually optimize clang
         clang_opt_cmd = [
-            self.tools.llvm_bolt, f"--data={bolt_profile}", '--dyno-stats', '--icf=1', '-o',
-            clang_bolt, '--reorder-blocks=cache+', '--reorder-functions=hfsort+',
-            '--split-all-cold', '--split-functions=3', '--use-gnu-stack', clang
+            self.tools.llvm_bolt,
+            f"--data={bolt_profile}",
+            '--dyno-stats',
+            '--icf=1',
+            '-o',
+            clang_bolt,
+            '--reorder-blocks=cache+',
+            '--reorder-functions=hfsort+',
+            '--split-all-cold',
+            '--split-functions=3',
+            '--use-gnu-stack',
+            clang,
         ]
         self.run_cmd(clang_opt_cmd)
         clang_bolt.replace(clang)
@@ -146,9 +160,12 @@ class LLVMBuilder(Builder):
         if shutil.which('perf'):
             try:
                 perf_cmd = [
-                    'perf', 'record', '--branch-filter', 'any,u', '--event', 'cycles:u', '--output',
-                    '/dev/null', '--', 'sleep', '1'
-                ]
+                    'perf', 'record',
+                    '--branch-filter', 'any,u',
+                    '--event', 'cycles:u',
+                    '--output', '/dev/null',
+                    '--', 'sleep', '1',
+                ]  # yapf: disable
                 subprocess.run(perf_cmd, capture_output=True, check=True)
             except subprocess.CalledProcessError:
                 pass  # Fallthrough to False below
@@ -212,12 +229,11 @@ class LLVMBuilder(Builder):
             self.cmake_defines['CMAKE_INSTALL_PREFIX'] = self.folders.install
 
         self.cmake_defines['LLVM_ENABLE_PROJECTS'] = ';'.join(self.projects)
-        if self.project_is_enabled('compiler-rt'):
-            # execinfo.h might not exist (Alpine Linux) but the GWP ASAN library
-            # depends on it. Disable the option to avoid breaking the build, the
-            # kernel does not depend on it.
-            if not Path('/usr/include/execinfo.h').exists():
-                self.cmake_defines['COMPILER_RT_BUILD_GWP_ASAN'] = 'OFF'
+        # execinfo.h might not exist (Alpine Linux) but the GWP ASAN library
+        # depends on it. Disable the option to avoid breaking the build, the
+        # kernel does not depend on it.
+        if self.project_is_enabled('compiler-rt') and not Path('/usr/include/execinfo.h').exists():
+            self.cmake_defines['COMPILER_RT_BUILD_GWP_ASAN'] = 'OFF'
         if self.cmake_defines['CMAKE_BUILD_TYPE'] == 'Release':
             self.cmake_defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
         if self.tools.llvm_tblgen:
@@ -411,8 +427,10 @@ class LLVMInstrumentedBuilder(LLVMBuilder):
             raise RuntimeError('No profiles generated?')
 
         llvm_prof_data_cmd = [
-            self.tools.llvm_profdata, 'merge',
-            f"-output={Path(self.folders.build, 'profdata.prof')}", *profiles
+            self.tools.llvm_profdata,
+            'merge',
+            f"-output={Path(self.folders.build, 'profdata.prof')}",
+            *profiles,
         ]
         subprocess.run(llvm_prof_data_cmd, check=True)
 
@@ -481,10 +499,7 @@ class LLVMSourceManager:
 
         self.git(['checkout', ref])
 
-        local_ref = None
-        try:
+        with contextlib.suppress(subprocess.CalledProcessError):
             local_ref = self.git_capture(['symbolic-ref', '-q', 'HEAD'])
-        except subprocess.CalledProcessError:
-            pass
         if local_ref and local_ref.startswith('refs/heads/'):
             self.git(['pull', '--rebase', 'origin', local_ref.replace('refs/heads/', '')])

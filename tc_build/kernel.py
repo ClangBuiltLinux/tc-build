@@ -69,9 +69,12 @@ class KernelBuilder(Builder):
         make_cmd = []
         if self.bolt_sampling_output:
             make_cmd += [
-                'perf', 'record', '--branch-filter', 'any,u', '--event', 'cycles:u', '--output',
-                self.bolt_sampling_output, '--'
-            ]
+                'perf', 'record',
+                '--branch-filter', 'any,u',
+                '--event', 'cycles:u',
+                '--output', self.bolt_sampling_output,
+                '--',
+            ]  # yapf: disable
         make_cmd += ['make', '-C', self.folders.source, f"-skj{os.cpu_count()}"]
         make_cmd += [f"{key}={self.make_variables[key]}" for key in sorted(self.make_variables)]
         make_cmd += [self.config_target, 'all']
@@ -298,7 +301,7 @@ class LLVMKernelBuilder(Builder):
                         builders += [
                             ArmV5KernelBuilder(),
                             ArmV6KernelBuilder(),
-                            ArmV7KernelBuilder()
+                            ArmV7KernelBuilder(),
                         ]
                     elif llvm_target == 'Mips':
                         builders.append(MIPSKernelBuilder())
@@ -364,8 +367,11 @@ class LinuxSourceManager(SourceManager):
             self.tarball.extract(self.location)
         for patch in self.patches:
             patch_cmd = [
-                'patch', f"--directory={self.location}", '--forward', f"--input={patch}",
-                '--strip=1'
+                'patch',
+                f"--directory={self.location}",
+                '--forward',
+                f"--input={patch}",
+                '--strip=1',
             ]
             try:
                 subprocess.run(patch_cmd, capture_output=True, check=True, text=True)

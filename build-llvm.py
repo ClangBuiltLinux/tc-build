@@ -287,9 +287,13 @@ opt_options.add_argument('--pgo',
                          '''),
                          nargs='+',
                          choices=[
-                             'kernel-defconfig', 'kernel-allmodconfig', 'kernel-allyesconfig',
-                             'kernel-defconfig-slim', 'kernel-allmodconfig-slim',
-                             'kernel-allyesconfig-slim', 'llvm'
+                             'kernel-defconfig',
+                             'kernel-allmodconfig',
+                             'kernel-allyesconfig',
+                             'kernel-defconfig-slim',
+                             'kernel-allmodconfig-slim',
+                             'kernel-allyesconfig-slim',
+                             'llvm',
                          ])
 parser.add_argument('--quiet-cmake',
                     help=textwrap.dedent('''\
@@ -397,7 +401,7 @@ else:
 # Validate and prepare Linux source if doing BOLT or PGO with kernel benchmarks
 # Check for issues early, as these technologies are time consuming, so a user
 # might step away from the build once it looks like it has started
-if args.bolt or (args.pgo and list(x for x in args.pgo if 'kernel' in x)):
+if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
     lsm = LinuxSourceManager()
     if args.linux_folder:
         if not (linux_folder := Path(args.linux_folder).resolve()).exists():
@@ -587,8 +591,8 @@ if args.pgo:
         kernel_builder.folders.build = Path(build_folder, 'linux')
         kernel_builder.folders.source = lsm.location
         kernel_builder.toolchain_prefix = instrumented.folders.build
-        for pgo_target in pgo_targets:
-            pgo_target = pgo_target.split('-')
+        for item in pgo_targets:
+            pgo_target = item.split('-')
 
             config_target = pgo_target[0]
             # For BOLT or "slim" PGO, we limit the number of kernels we build for
@@ -612,11 +616,11 @@ if args.pgo:
                     llvm_targets = [instrumented.host_target()]
                 else:
                     llvm_targets = final.targets[0:1]
-            else:  # full
-                if 'all' in final.targets:
-                    llvm_targets = llvm_source.default_targets()
-                else:
-                    llvm_targets = final.targets
+            # full
+            elif 'all' in final.targets:
+                llvm_targets = llvm_source.default_targets()
+            else:
+                llvm_targets = final.targets
 
             kernel_builder.matrix[config_target] = llvm_targets
 
