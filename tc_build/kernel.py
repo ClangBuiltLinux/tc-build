@@ -254,7 +254,7 @@ class S390KernelBuilder(KernelBuilder):
     def can_use_ias(self):
         return True
 
-    def need_binutils(self):
+    def needs_binutils(self):
         return True
 
 
