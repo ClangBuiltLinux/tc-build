@@ -29,7 +29,7 @@ class KernelBuilder(Builder):
 
         self.bolt_instrumentation = False
         self.bolt_sampling_output = None
-        self.config_target = None
+        self.config_targets = None
         self.cross_compile = None
         self.make_variables = {
             'ARCH': arch,
@@ -77,7 +77,7 @@ class KernelBuilder(Builder):
             ]  # yapf: disable
         make_cmd += ['make', '-C', self.folders.source, f"-skj{os.cpu_count()}"]
         make_cmd += [f"{key}={self.make_variables[key]}" for key in sorted(self.make_variables)]
-        make_cmd += [self.config_target, 'all']
+        make_cmd += [*self.config_targets, 'all']
 
         # If the user has any CFLAGS in their environment, they can cause issues when building tools.
         # Ideally, the kernel would always clobber user flags via ':=' but we deal with reality.
@@ -137,7 +137,7 @@ class ArmV5KernelBuilder(ArmKernelBuilder):
     def __init__(self):
         super().__init__()
 
-        self.config_target = 'multi_v5_defconfig'
+        self.config_targets = ['multi_v5_defconfig']
 
 
 class ArmV6KernelBuilder(ArmKernelBuilder):
@@ -145,7 +145,7 @@ class ArmV6KernelBuilder(ArmKernelBuilder):
     def __init__(self):
         super().__init__()
 
-        self.config_target = 'aspeed_g5_defconfig'
+        self.config_targets = ['aspeed_g5_defconfig']
 
 
 class ArmV7KernelBuilder(ArmKernelBuilder):
@@ -153,7 +153,7 @@ class ArmV7KernelBuilder(ArmKernelBuilder):
     def __init__(self):
         super().__init__()
 
-        self.config_target = 'multi_v7_defconfig'
+        self.config_targets = ['multi_v7_defconfig']
 
 
 class Arm64KernelBuilder(KernelBuilder):
@@ -173,7 +173,7 @@ class MIPSKernelBuilder(KernelBuilder):
     def __init__(self):
         super().__init__('mips')
 
-        self.config_target = 'malta_defconfig'
+        self.config_targets = ['malta_defconfig']
 
 
 class PowerPCKernelBuilder(KernelBuilder):
@@ -190,7 +190,7 @@ class PowerPC32KernelBuilder(PowerPCKernelBuilder):
     def __init__(self):
         super().__init__()
 
-        self.config_target = 'pmac32_defconfig'
+        self.config_targets = ['pmac32_defconfig', 'disable-werror.config']
         self.cross_compile = 'powerpc-linux-gnu-'
 
 
@@ -199,7 +199,7 @@ class PowerPC64KernelBuilder(PowerPCKernelBuilder):
     def __init__(self):
         super().__init__()
 
-        self.config_target = 'pseries_defconfig'
+        self.config_targets = ['pseries_defconfig', 'disable-werror.config']
         self.cross_compile = 'powerpc64-linux-gnu-'
 
         # https://github.com/ClangBuiltLinux/linux/issues/602
@@ -211,7 +211,7 @@ class PowerPC64LEKernelBuilder(PowerPCKernelBuilder):
     def __init__(self):
         super().__init__()
 
-        self.config_target = 'powernv_defconfig'
+        self.config_targets = ['powernv_defconfig', 'disable-werror.config']
         self.cross_compile = 'powerpc64le-linux-gnu-'
 
     # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
@@ -313,14 +313,14 @@ class LLVMKernelBuilder(Builder):
                         ]
                     elif llvm_target in allconfig_capable_builders:
                         builder = allconfig_capable_builders[llvm_target]()
-                        builder.config_target = config_target
+                        builder.config_targets = [config_target]
                         builders.append(builder)
                 continue
 
             for llvm_target in llvm_targets:
                 if llvm_target in allconfig_capable_builders:
                     builder = allconfig_capable_builders[llvm_target]()
-                    builder.config_target = config_target
+                    builder.config_targets = [config_target]
                     builders.append(builder)
 
         lsm = LinuxSourceManager()
