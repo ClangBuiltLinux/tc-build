@@ -214,6 +214,14 @@ class PowerPC64LEKernelBuilder(PowerPCKernelBuilder):
         self.config_targets = ['powernv_defconfig', 'disable-werror.config']
         self.cross_compile = 'powerpc64le-linux-gnu-'
 
+    def build(self):
+        self.toolchain_version = self.get_toolchain_version()
+        # https://github.com/ClangBuiltLinux/linux/issues/1260
+        if self.toolchain_version < (12, 0, 0):
+            self.make_variables['LD'] = self.cross_compile + 'ld'
+
+        super().build()
+
     # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
     def can_use_ias(self):
         return self.toolchain_version >= (14, 0, 2)
