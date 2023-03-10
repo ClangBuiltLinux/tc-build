@@ -228,6 +228,12 @@ class RISCVKernelBuilder(KernelBuilder):
     def __init__(self):
         super().__init__('riscv')
 
+        self.cross_compile = 'riscv64-linux-gnu-'
+
+    # https://github.com/llvm/llvm-project/commit/bbea64250f65480d787e1c5ff45c4de3ec2dcda8
+    def can_use_ias(self):
+        return self.toolchain_version >= (13, 0, 0)
+
 
 class S390KernelBuilder(KernelBuilder):
 
