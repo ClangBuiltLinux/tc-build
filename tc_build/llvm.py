@@ -416,11 +416,39 @@ class LLVMInstrumentedBuilder(LLVMBuilder):
 
         self.cmake_defines['LLVM_BUILD_INSTRUMENTED'] = 'IR'
         self.cmake_defines['LLVM_BUILD_RUNTIME'] = 'OFF'
-        # The next two defines is needed to avoid thousands of warnings
+        self.cmake_defines['LLVM_LINK_LLVM_DYLIB'] = 'ON'
+
+    def configure(self):
+        # The following defines are needed to avoid thousands of warnings
         # along the lines of:
         # "Unable to track new values: Running out of static counters."
-        self.cmake_defines['LLVM_LINK_LLVM_DYLIB'] = 'ON'
-        self.cmake_defines['LLVM_VP_COUNTERS_PER_SITE'] = '6'
+        # They require LLVM_LINK_DYLIB to be enabled, which is done above.
+        cmake_options = Path(self.folders.source, 'llvm/cmake/modules/HandleLLVMOptions.cmake')
+        cmake_text = cmake_options.read_text(encoding='utf-8')
+        if 'LLVM_VP_COUNTERS_PER_SITE' in cmake_text:
+            self.cmake_defines['LLVM_VP_COUNTERS_PER_SITE'] = '6'
+        else:
+            cflags = []
+            cxxflags = []
+
+            if 'CMAKE_C_FLAGS' in self.cmake_defines:
+                cflags += self.cmake_defines['CMAKE_C_FLAGS'].split(' ')
+            if 'CMAKE_CXX_FLAGS' in self.cmake_defines:
+                cxxflags += self.cmake_defines['CMAKE_CXX_FLAGS'].split(' ')
+
+            vp_counters = [
+                '-Xclang',
+                '-mllvm',
+                '-Xclang',
+                '-vp-counters-per-site=6',
+            ]
+            cflags += vp_counters
+            cxxflags += vp_counters
+
+            self.cmake_defines['CMAKE_C_FLAGS'] = ' '.join(cflags)
+            self.cmake_defines['CMAKE_CXX_FLAGS'] = ' '.join(cxxflags)
+
+        super().configure()
 
     def generate_profdata(self):
         if not (profiles := list(self.folders.build.joinpath('profiles').glob('*.profraw'))):
