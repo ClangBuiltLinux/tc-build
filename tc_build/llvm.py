@@ -2,6 +2,7 @@
 
 import contextlib
 import glob
+import os
 from pathlib import Path
 import platform
 import re
@@ -255,8 +256,12 @@ class LLVMBuilder(Builder):
 
         # By default, the Linux triples are for glibc, which might not work on
         # musl-based systems. If clang is available, get the default target triple
-        # from it so that clang without a '--target' flag always works.
-        if shutil.which('clang'):
+        # from it so that clang without a '--target' flag always works. This
+        # behavior can be opted out of by setting DISTRIBUTING=1 in the
+        # script's environment, in case the builder intends to distribute the
+        # toolchain, as this may not be portable. Since distribution is not a
+        # primary goal of tc-build, this is not abstracted further.
+        if shutil.which('clang') and not os.environ.get('DISTRIBUTING'):
             default_target_triple = subprocess.run(['clang', '-print-target-triple'],
                                                    capture_output=True,
                                                    check=True,
