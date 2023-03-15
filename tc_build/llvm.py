@@ -32,6 +32,7 @@ class LLVMBuilder(Builder):
         # impact clang's ability to show colors for certain output like
         # warnings.
         self.cmake_defines = {'LLVM_ENABLE_TERMINFO': 'OFF'}
+        self.install_targets = []
         self.tools = None
         self.projects = []
         self.quiet_cmake = False
@@ -152,7 +153,11 @@ class LLVMBuilder(Builder):
             self.bolt_clang()
 
         if self.folders.install:
-            self.run_cmd([*ninja_cmd, 'install'], capture_output=True)
+            if self.install_targets:
+                install_targets = [f"install-{target}" for target in self.install_targets]
+            else:
+                install_targets = ['install']
+            self.run_cmd([*ninja_cmd, *install_targets], capture_output=True)
             utils.create_gitignore(self.folders.install)
 
     def can_use_perf(self):

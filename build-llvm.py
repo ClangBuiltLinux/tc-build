@@ -163,6 +163,19 @@ parser.add_argument('-i',
 
                     '''),
                     type=str)
+parser.add_argument('--install-targets',
+                    help=textwrap.dedent('''\
+                    By default, the script will just run the 'install' target to install the toolchain to
+                    the desired prefix. To produce a slimmer toolchain, specify the desired targets to
+                    install using this options.
+
+                    The values passed to this parameter will be automatically prepended with 'install-'.
+
+                    Example: '--install-targets clang lld' will make ninja invoke 'install-clang' and
+                             'install-lld'.
+
+                    '''),
+                    nargs='+')
 parser.add_argument('-l',
                     '--llvm-folder',
                     help=textwrap.dedent('''\
@@ -639,6 +652,7 @@ final.check_targets = args.check_targets
 final.cmake_defines.update(common_cmake_defines)
 final.folders.build = Path(build_folder, 'final')
 final.folders.install = Path(args.install_folder).resolve() if args.install_folder else None
+final.install_targets = args.install_targets
 final.quiet_cmake = args.quiet_cmake
 final.show_commands = args.show_build_commands
 
