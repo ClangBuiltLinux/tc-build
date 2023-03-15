@@ -225,6 +225,8 @@ class LLVMBuilder(Builder):
 
         if self.tools.ar:
             self.cmake_defines['CMAKE_AR'] = self.tools.ar
+        if self.tools.ranlib:
+            self.cmake_defines['CMAKE_RANLIB'] = self.tools.ranlib
         if 'CMAKE_BUILD_TYPE' not in self.cmake_defines:
             self.cmake_defines['CMAKE_BUILD_TYPE'] = 'Release'
         self.cmake_defines['CMAKE_C_COMPILER'] = self.tools.cc
