@@ -309,30 +309,22 @@ class LLVMKernelBuilder(Builder):
         # they are duplicated if both "defconfig" and "allmodconfig" are
         # requested.
         for config_target, llvm_targets in self.matrix.items():
-            if config_target == 'defconfig':
-                for llvm_target in llvm_targets:
-                    if llvm_target == 'ARM':
-                        builders += [
-                            ArmV5KernelBuilder(),
-                            ArmV6KernelBuilder(),
-                            ArmV7KernelBuilder(),
-                        ]
-                    elif llvm_target == 'Mips':
-                        builders.append(MIPSKernelBuilder())
-                    elif llvm_target == 'PowerPC':
-                        builders += [
-                            PowerPC32KernelBuilder(),
-                            PowerPC64KernelBuilder(),
-                            PowerPC64LEKernelBuilder(),
-                        ]
-                    elif llvm_target in allconfig_capable_builders:
-                        builder = allconfig_capable_builders[llvm_target]()
-                        builder.config_targets = [config_target]
-                        builders.append(builder)
-                continue
-
             for llvm_target in llvm_targets:
-                if llvm_target in allconfig_capable_builders:
+                if config_target == 'defconfig' and llvm_target == 'ARM':
+                    builders += [
+                        ArmV5KernelBuilder(),
+                        ArmV6KernelBuilder(),
+                        ArmV7KernelBuilder(),
+                    ]
+                elif config_target == 'defconfig' and llvm_target == 'Mips':
+                    builders.append(MIPSKernelBuilder())
+                elif config_target == 'defconfig' and llvm_target == 'PowerPC':
+                    builders += [
+                        PowerPC32KernelBuilder(),
+                        PowerPC64KernelBuilder(),
+                        PowerPC64LEKernelBuilder(),
+                    ]
+                elif llvm_target in allconfig_capable_builders:
                     builder = allconfig_capable_builders[llvm_target]()
                     builder.config_targets = [config_target]
                     builders.append(builder)
