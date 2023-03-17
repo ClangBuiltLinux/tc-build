@@ -293,10 +293,7 @@ class LLVMBuilder(Builder):
         return uname_to_llvm.get(platform.machine())
 
     def host_target_is_enabled(self):
-        if 'all' in self.targets:
-            return True
-
-        return self.host_target() in self.targets
+        return 'all' in self.targets or self.host_target() in self.targets
 
     def project_is_enabled(self, project):
         return 'all' in self.projects or project in self.projects
