@@ -10,6 +10,9 @@ try:
 except ModuleNotFoundError:
     from . import utils
 
+# When doing verification, read 128MiB at a time
+BYTES_TO_READ = 131072
+
 
 class Tarball:
 
@@ -50,7 +53,7 @@ class Tarball:
                 raise RuntimeError(
                     f"No supported hashlib for {self.remote_checksum_name}, add support for it?")
             with self.local_location.open('rb') as file:
-                while (data := file.read(131072)):
+                while (data := file.read(BYTES_TO_READ)):
                     file_hash.update(data)
 
             computed_checksum = file_hash.hexdigest()
