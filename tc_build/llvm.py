@@ -536,6 +536,7 @@ class LLVMSourceManager:
 
         self.git(['checkout', ref])
 
+        local_ref = None
         with contextlib.suppress(subprocess.CalledProcessError):
             local_ref = self.git_capture(['symbolic-ref', '-q', 'HEAD'])
         if local_ref and local_ref.startswith('refs/heads/'):
