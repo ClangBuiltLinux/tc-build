@@ -19,6 +19,13 @@ except ModuleNotFoundError:
     from . import utils
 
 
+def get_all_targets(llvm_folder):
+    contents = Path(llvm_folder, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
+    if not (match := re.search(r'set\(LLVM_ALL_TARGETS([\w|\s]+)\)', contents)):
+        raise RuntimeError('Could not find LLVM_ALL_TARGETS?')
+    return [val for target in match.group(1).splitlines() if (val := target.strip())]
+
+
 class LLVMBuilder(Builder):
 
     def __init__(self):
@@ -330,10 +337,7 @@ class LLVMBuilder(Builder):
         if not self.targets:
             raise RuntimeError('No targets set?')
 
-        contents = Path(self.folders.source, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
-        if not (match := re.search(r'set\(LLVM_ALL_TARGETS([\w|\s]+)\)', contents)):
-            raise RuntimeError('Could not find LLVM_ALL_TARGETS?')
-        all_targets = [val for target in match.group(1).splitlines() if (val := target.strip())]
+        all_targets = get_all_targets(self.folders.source)
 
         for target in self.targets:
             if target in ('all', 'host'):
@@ -486,7 +490,13 @@ class LLVMSourceManager:
         return ['clang', 'compiler-rt', 'lld', 'polly']
 
     def default_targets(self):
-        return ['AArch64', 'ARM', 'BPF', 'Hexagon', 'Mips', 'PowerPC', 'RISCV', 'SystemZ', 'X86']
+        all_targets = get_all_targets(self.repo)
+        targets = ['AArch64', 'ARM', 'BPF', 'Hexagon', 'Mips', 'PowerPC', 'RISCV', 'SystemZ', 'X86']
+
+        if 'LoongArch' in all_targets:
+            targets.append('LoongArch')
+
+        return targets
 
     def download(self, ref, shallow=False):
         if self.repo.exists():
