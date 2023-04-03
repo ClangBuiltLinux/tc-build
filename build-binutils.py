@@ -91,10 +91,11 @@ if args.build_folder:
 else:
     build_folder = Path(tc_build_folder, 'build/binutils')
 
+default_targets = bsm.default_targets()
 if args.targets:
-    targets = bsm.default_targets() if 'all' in args.targets else set(args.targets)
+    targets = default_targets if 'all' in args.targets else set(args.targets)
 else:
-    targets = bsm.default_targets()
+    targets = default_targets
 
 targets_to_builder = {
     'arm': tc_build.binutils.ArmBinutilsBuilder,
@@ -108,6 +109,8 @@ targets_to_builder = {
     's390x': tc_build.binutils.S390XBinutilsBuilder,
     'x86_64': tc_build.binutils.X8664BinutilsBuilder,
 }
+if 'loongarch64' in default_targets:
+    targets_to_builder['loongarch64'] = tc_build.binutils.LoongArchBinutilsBuilder
 for item in targets:
     target = item.split('-', maxsplit=1)[0]
     if target in targets_to_builder:

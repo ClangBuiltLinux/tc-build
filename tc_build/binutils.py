@@ -119,6 +119,15 @@ class AArch64BinutilsBuilder(NoMultilibBinutilsBuilder):
         self.target = 'aarch64-linux-gnu'
 
 
+class LoongArchBinutilsBuilder(StandardBinutilsBuilder):
+
+    def __init__(self):
+        super().__init__()
+
+        self.native_arch = 'loongarch64'
+        self.target = 'loongarch64-linux-gnu'
+
+
 class MipsBinutilsBuilder(StandardBinutilsBuilder):
 
     def __init__(self, endian_suffix=''):
@@ -197,7 +206,7 @@ class X8664BinutilsBuilder(StandardBinutilsBuilder):
 class BinutilsSourceManager(SourceManager):
 
     def default_targets(self):
-        return [
+        targets = [
             'aarch64',
             'arm',
             'mips',
@@ -209,6 +218,9 @@ class BinutilsSourceManager(SourceManager):
             's390x',
             'x86_64',
         ]
+        if Path(self.location, 'gas/config/tc-loongarch.c').exists():
+            targets.append('loongarch64')
+        return targets
 
     def prepare(self):
         if not self.location:
