@@ -4,11 +4,7 @@ import hashlib
 import re
 import subprocess
 
-# Allows being imported via tc_build package or directly in REPL
-try:
-    import utils
-except ModuleNotFoundError:
-    from . import utils
+import tc_build.utils
 
 # When doing verification, read 128MiB at a time
 BYTES_TO_READ = 131072
@@ -33,14 +29,14 @@ class Tarball:
         if not self.remote_tarball_name:
             self.remote_tarball_name = self.local_location.name
 
-        utils.curl(f"{self.base_download_url}/{self.remote_tarball_name}",
-                   destination=self.local_location)
+        tc_build.utils.curl(f"{self.base_download_url}/{self.remote_tarball_name}",
+                            destination=self.local_location)
 
         # If there is a remote checksum file, download it, find the checksum
         # for the particular tarball, compute the downloaded file's checksum,
         # and finally compare the two.
         if self.remote_checksum_name:
-            checksums = utils.curl(f"{self.base_download_url}/{self.remote_checksum_name}")
+            checksums = tc_build.utils.curl(f"{self.base_download_url}/{self.remote_checksum_name}")
             if not (match := re.search(
                     fr"([0-9a-f]+)\s+{self.remote_tarball_name}$", checksums, flags=re.M)):
                 raise RuntimeError(f"Could not find checksum for {self.remote_tarball_name}?")
@@ -80,7 +76,7 @@ class Tarball:
             '--strip-components=1',
         ]
 
-        utils.print_info(f"Extracting {self.local_location} into {extraction_location}...")
+        tc_build.utils.print_info(f"Extracting {self.local_location} into {extraction_location}...")
         subprocess.run(tar_cmd, check=True)
 
 

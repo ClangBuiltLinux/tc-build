@@ -6,15 +6,9 @@ import shutil
 import subprocess
 import time
 
-# Allows being imported via tc_build package or directly in REPL
-try:
-    from builder import Builder
-    from source import SourceManager
-    import utils
-except ModuleNotFoundError:
-    from .builder import Builder
-    from .source import SourceManager
-    from . import utils
+from tc_build.builder import Builder
+from tc_build.source import SourceManager
+import tc_build.utils
 
 
 class KernelBuilder(Builder):
@@ -56,7 +50,7 @@ class KernelBuilder(Builder):
             self.make_variables['HOSTCXX'] = 'g++'
         if self.needs_binutils():
             if not shutil.which(f"{self.cross_compile}elfedit"):
-                utils.print_warning(
+                tc_build.utils.print_warning(
                     f"binutils for {self.make_variables['ARCH']} ('{self.cross_compile}') could not be found, skipping kernel build..."
                 )
                 return
@@ -86,7 +80,7 @@ class KernelBuilder(Builder):
         self.clean_build_folder()
         build_start = time.time()
         self.run_cmd(make_cmd)
-        utils.print_info(f"Build duration: {utils.get_duration(build_start)}")
+        tc_build.utils.print_info(f"Build duration: {tc_build.utils.get_duration(build_start)}")
 
     def can_use_ias(self):
         return True
@@ -260,7 +254,8 @@ class S390KernelBuilder(KernelBuilder):
         self.toolchain_version = self.get_toolchain_version()
         if self.toolchain_version <= (15, 0, 0):
             # https://git.kernel.org/linus/30d17fac6aaedb40d111bb159f4b35525637ea78
-            utils.print_warning('s390 does not build with LLVM < 15.0.0, skipping build...')
+            tc_build.utils.print_warning(
+                's390 does not build with LLVM < 15.0.0, skipping build...')
             return
 
         super().build()
@@ -331,7 +326,7 @@ class LLVMKernelBuilder(Builder):
 
         lsm = LinuxSourceManager()
         lsm.location = self.folders.source
-        utils.print_info(f"Building Linux {lsm.get_kernelversion()} for profiling...")
+        tc_build.utils.print_info(f"Building Linux {lsm.get_kernelversion()} for profiling...")
 
         for builder in builders:
             builder.bolt_instrumentation = self.bolt_instrumentation
@@ -386,8 +381,8 @@ class LinuxSourceManager(SourceManager):
                 # not the user's fault if we forget to drop a patch that has
                 # been applied.
                 if 'Reversed (or previously applied) patch detected' in err.stdout:
-                    utils.print_warning(
+                    tc_build.utils.print_warning(
                         f"Patch ('{patch}') has already been applied, consider removing it")
                 else:
                     raise err
-        utils.print_info(f"Source sucessfully prepared in {self.location}")
+        tc_build.utils.print_info(f"Source sucessfully prepared in {self.location}")
