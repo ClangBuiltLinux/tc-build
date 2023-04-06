@@ -7,11 +7,7 @@ import re
 import shutil
 import subprocess
 
-# Allows being imported via tc_build package or directly in REPL
-try:
-    import utils
-except ModuleNotFoundError:
-    from . import utils
+import tc_build.utils
 
 
 class HostTools:
@@ -120,7 +116,7 @@ class HostTools:
 
     def generate_versioned_binaries(self):
         try:
-            cmakelists_txt = utils.curl(
+            cmakelists_txt = tc_build.utils.curl(
                 'https://raw.githubusercontent.com/llvm/llvm-project/main/llvm/CMakeLists.txt')
         except subprocess.CalledProcessError:
             llvm_tot_ver = 16
@@ -140,7 +136,7 @@ class HostTools:
             else:
                 ld_to_print = self.ld if 'ld.' in self.ld else f"ld.{self.ld}"
                 print(f"LD: {shutil.which(ld_to_print)}")
-        utils.flush_std_err_out()
+        tc_build.utils.flush_std_err_out()
 
     def validate_ld(self, ld, warn=False):
         if not ld:
@@ -155,7 +151,7 @@ class HostTools:
                            text=True)
         except subprocess.CalledProcessError:
             if warn:
-                utils.print_warning(
+                tc_build.utils.print_warning(
                     f"LD value ('{ld}') is not supported by CC ('{self.cc}'), ignoring it...")
             return None
 
