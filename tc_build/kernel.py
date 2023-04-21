@@ -193,7 +193,7 @@ class PowerPC64KernelBuilder(PowerPCKernelBuilder):
     def __init__(self):
         super().__init__()
 
-        self.config_targets = ['pseries_defconfig', 'disable-werror.config']
+        self.config_targets = ['ppc64_guest_defconfig', 'disable-werror.config']
         self.cross_compile = 'powerpc64-linux-gnu-'
 
         # https://github.com/ClangBuiltLinux/linux/issues/602
