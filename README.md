@@ -28,6 +28,7 @@ These scripts have been tested in a Docker image of the following distributions 
               clang \
               cmake \
               curl \
+              libstdc++-12-dev \
               file \
               flex \
               git \
