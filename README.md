@@ -33,6 +33,7 @@ These scripts have been tested in a Docker image of the following distributions 
               git \
               libelf-dev \
               libssl-dev \
+              libstdc++-$(apt list libstdc++6 2>/dev/null | grep -Eos '[0-9]+\.[0-9]+\.[0-9]+' | head -1 | cut -d . -f 1)-dev \
               lld \
               make \
               ninja-build \
