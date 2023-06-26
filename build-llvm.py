@@ -17,7 +17,7 @@ from tc_build.tools import HostTools, StageTools
 GOOD_REVISION = '012ea747ed0275c499f69c82ac0f635f4c76f746'
 
 # The version of the Linux kernel that the script downloads if necessary
-DEFAULT_KERNEL_FOR_PGO = (6, 3, 0)
+DEFAULT_KERNEL_FOR_PGO = (6, 4, 0)
 
 parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
 clone_options = parser.add_mutually_exclusive_group()
