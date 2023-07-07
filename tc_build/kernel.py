@@ -287,6 +287,7 @@ class LLVMKernelBuilder(Builder):
             'AArch64': Arm64KernelBuilder,
             'ARM': ArmKernelBuilder,
             'Hexagon': HexagonKernelBuilder,
+            'PowerPC': PowerPC64KernelBuilder,
             'RISCV': RISCVKernelBuilder,
             'SystemZ': S390KernelBuilder,
             'X86': X8664KernelBuilder,
