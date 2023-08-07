@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import contextlib
-import glob
 import os
 from pathlib import Path
 import platform
@@ -255,7 +254,7 @@ class LLVMBuilder(Builder):
         # Clear Linux needs a different target to find all of the C++ header files, otherwise
         # stage 2+ compiles will fail without this
         # We figure this out based on the existence of x86_64-generic-linux in the C++ headers path
-        if glob.glob('/usr/include/c++/*/x86_64-generic-linux'):
+        if list(Path('/usr/include/c++').glob('*/x86_64-generic-linux')):
             self.cmake_defines['LLVM_HOST_TRIPLE'] = 'x86_64-generic-linux'
 
         # By default, the Linux triples are for glibc, which might not work on
