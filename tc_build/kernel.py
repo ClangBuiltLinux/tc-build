@@ -16,7 +16,7 @@ class KernelBuilder(Builder):
     # If the user supplies their own kernel source, it must be at least this
     # version to ensure that all the build commands work, as the build commands
     # were written to target at least this version.
-    MINIMUM_SUPPORTED_VERSION = (6, 1, 7)
+    MINIMUM_SUPPORTED_VERSION = (6, 5, 0)
 
     def __init__(self, arch):
         super().__init__()
@@ -196,11 +196,16 @@ class PowerPC64KernelBuilder(PowerPCKernelBuilder):
         self.config_targets = ['ppc64_guest_defconfig', 'disable-werror.config']
         self.cross_compile = 'powerpc64-linux-gnu-'
 
-        # https://github.com/ClangBuiltLinux/linux/issues/602
-        self.make_variables['LD'] = self.cross_compile + 'ld'
+    # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
+    def can_use_ias(self):
+        return self.toolchain_version >= (14, 0, 2)
+
+    # https://github.com/ClangBuiltLinux/linux/issues/1601
+    def needs_binutils(self):
+        return True
 
 
-class PowerPC64LEKernelBuilder(PowerPCKernelBuilder):
+class PowerPC64LEKernelBuilder(PowerPC64KernelBuilder):
 
     def __init__(self):
         super().__init__()
@@ -215,14 +220,6 @@ class PowerPC64LEKernelBuilder(PowerPCKernelBuilder):
             self.make_variables['LD'] = self.cross_compile + 'ld'
 
         super().build()
-
-    # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
-    def can_use_ias(self):
-        return self.toolchain_version >= (14, 0, 2)
-
-    # https://github.com/ClangBuiltLinux/linux/issues/1601
-    def needs_binutils(self):
-        return True
 
 
 class RISCVKernelBuilder(KernelBuilder):
@@ -290,6 +287,7 @@ class LLVMKernelBuilder(Builder):
             'AArch64': Arm64KernelBuilder,
             'ARM': ArmKernelBuilder,
             'Hexagon': HexagonKernelBuilder,
+            'PowerPC': PowerPC64KernelBuilder,
             'RISCV': RISCVKernelBuilder,
             'SystemZ': S390KernelBuilder,
             'X86': X8664KernelBuilder,
