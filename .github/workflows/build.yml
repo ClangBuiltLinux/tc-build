@@ -7,7 +7,7 @@ jobs:
   build-test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Install dependencies
       run: bash ci.sh deps
     - name: Build LLVM
