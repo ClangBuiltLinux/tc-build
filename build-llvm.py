@@ -540,7 +540,7 @@ if (use_bootstrap := not args.build_stage1_only):
 
     bootstrap.check_dependencies()
     bootstrap.configure()
-    bootstrap.build()
+    bootstrap.build('distribution')
 
 # If the user did not specify CMAKE_C_FLAGS or CMAKE_CXX_FLAGS, add them as empty
 # to paste stage 2 to ensure there are no environment issues (since CFLAGS and CXXFLAGS
@@ -571,7 +571,7 @@ if args.pgo:
 
     tc_build.utils.print_header('Building LLVM (instrumented)')
     instrumented.configure()
-    instrumented.build()
+    instrumented.build('all' if args.full_toolchain else 'distribution')
 
     tc_build.utils.print_header('Generating PGO profiles')
     pgo_builders = []
