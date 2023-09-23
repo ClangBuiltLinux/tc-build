@@ -364,7 +364,16 @@ class LLVMSlimBuilder(LLVMBuilder):
 
         slim_llvm_defines = {
             # Tools needed by bootstrapping
-            'LLVM_DISTRIBUTION_COMPONENTS': 'clang;clang-resource-headers;lld;llvm-ar;llvm-nm;llvm-ranlib;llvm-objcopy;llvm-objdump;llvm-readelf;llvm-strip',
+            'LLVM_DISTRIBUTION_COMPONENTS': ';'.join(['clang',
+                                                      'clang-resource-headers',
+                                                      'lld',
+                                                      'llvm-ar',
+                                                      'llvm-nm',
+                                                      'llvm-ranlib',
+                                                      'llvm-objcopy',
+                                                      'llvm-objdump',
+                                                      'llvm-readelf',
+                                                      'llvm-strip']),
             # Don't build bindings; they are for other languages that the kernel does not use
             'LLVM_ENABLE_BINDINGS': 'OFF',
             # Don't build Ocaml documentation
