@@ -362,6 +362,9 @@ class LLVMSlimBuilder(LLVMBuilder):
             'CLANG_PLUGIN_SUPPORT': 'OFF',
         }
 
+        llvm_build_runtime = self.cmake_defines.get('LLVM_BUILD_RUNTIME', 'ON') == 'ON'
+        build_compiler_rt = self.project_is_enabled('compiler-rt') and llvm_build_runtime
+
         distribution_components = [
             'clang',
             'clang-resource-headers',
@@ -376,7 +379,7 @@ class LLVMSlimBuilder(LLVMBuilder):
         ]
         if self.project_is_enabled('bolt'):
             distribution_components.append('bolt')
-        if self.project_is_enabled('compiler-rt'):
+        if build_compiler_rt:
             distribution_components += ['llvm-profdata', 'profile']
 
         slim_llvm_defines = {
@@ -407,8 +410,7 @@ class LLVMSlimBuilder(LLVMBuilder):
         self.cmake_defines.update(slim_llvm_defines)
         if self.project_is_enabled('clang'):
             self.cmake_defines.update(slim_clang_defines)
-        if self.project_is_enabled('compiler-rt') and self.cmake_defines.get(
-                'LLVM_BUILD_RUNTIME', 'ON') == 'ON':
+        if build_compiler_rt:
             self.cmake_defines.update(slim_compiler_rt_defines)
 
         super().configure()
