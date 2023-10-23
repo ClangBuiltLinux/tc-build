@@ -40,6 +40,17 @@ parser.add_argument('-b',
 
                     '''),
                     type=str)
+parser.add_argument('--build-targets',
+                    default=['all'],
+                    help=textwrap.dedent('''\
+                    By default, the 'all' target is used as the build target for the final stage. With
+                    this option, targets such as 'distribution' could be used to generate a slimmer
+                    toolchain or targets such as 'clang' or 'llvm-ar' could be used to just test building
+                    individual tools for a bisect.
+
+                    NOTE: This only applies to the final stage build to avoid complicating tc-build internals.
+                    '''),
+                    nargs='+')
 parser.add_argument('--bolt',
                     help=textwrap.dedent('''\
                     Optimize the final clang binary with BOLT (Binary Optimization and Layout Tool), which can
@@ -526,6 +537,7 @@ if (use_bootstrap := not args.build_stage1_only):
     tc_build.utils.print_header('Building LLVM (bootstrap)')
 
     bootstrap = LLVMBootstrapBuilder()
+    bootstrap.build_targets = ['distribution']
     bootstrap.ccache = not args.no_ccache
     bootstrap.cmake_defines.update(common_cmake_defines)
     bootstrap.folders.build = Path(build_folder, 'bootstrap')
@@ -540,7 +552,7 @@ if (use_bootstrap := not args.build_stage1_only):
 
     bootstrap.check_dependencies()
     bootstrap.configure()
-    bootstrap.build('distribution')
+    bootstrap.build()
 
 # If the user did not specify CMAKE_C_FLAGS or CMAKE_CXX_FLAGS, add them as empty
 # to paste stage 2 to ensure there are no environment issues (since CFLAGS and CXXFLAGS
@@ -558,6 +570,7 @@ if args.pgo:
         instrumented = LLVMInstrumentedBuilder()
     else:
         instrumented = LLVMSlimInstrumentedBuilder()
+    instrumented.build_targets = ['all' if args.full_toolchain else 'distribution']
     instrumented.cmake_defines.update(common_cmake_defines)
     # We run the tests on the instrumented stage if the LLVM benchmark was enabled
     instrumented.check_targets = args.check_targets if 'llvm' in args.pgo else None
@@ -571,7 +584,7 @@ if args.pgo:
 
     tc_build.utils.print_header('Building LLVM (instrumented)')
     instrumented.configure()
-    instrumented.build('all' if args.full_toolchain else 'distribution')
+    instrumented.build()
 
     tc_build.utils.print_header('Generating PGO profiles')
     pgo_builders = []
@@ -648,6 +661,7 @@ if args.pgo:
     instrumented.generate_profdata()
 
 # Final build
+final.build_targets = args.build_targets
 final.check_targets = args.check_targets
 final.cmake_defines.update(common_cmake_defines)
 final.folders.build = Path(build_folder, 'final')
