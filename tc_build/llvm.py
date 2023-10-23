@@ -375,20 +375,25 @@ class LLVMSlimBuilder(LLVMBuilder):
         llvm_build_runtime = self.cmake_defines.get('LLVM_BUILD_RUNTIME', 'ON') == 'ON'
         build_compiler_rt = self.project_is_enabled('compiler-rt') and llvm_build_runtime
 
-        distribution_components = [
-            'clang',
-            'clang-resource-headers',
-            'lld',
-            'llvm-ar',
-            'llvm-nm',
-            'llvm-objcopy',
-            'llvm-objdump',
-            'llvm-ranlib',
-            'llvm-readelf',
-            'llvm-strip',
-        ]
+        llvm_build_tools = self.cmake_defines.get('LLVM_BUILD_TOOLS', 'ON') == 'ON'
+
+        distribution_components = []
+        if llvm_build_tools:
+            distribution_components += [
+                'llvm-ar',
+                'llvm-nm',
+                'llvm-objcopy',
+                'llvm-objdump',
+                'llvm-ranlib',
+                'llvm-readelf',
+                'llvm-strip',
+            ]
         if self.project_is_enabled('bolt'):
             distribution_components.append('bolt')
+        if self.project_is_enabled('clang'):
+            distribution_components += ['clang', 'clang-resource-headers']
+        if self.project_is_enabled('lld'):
+            distribution_components.append('lld')
         if build_compiler_rt:
             distribution_components += ['llvm-profdata', 'profile']
 
