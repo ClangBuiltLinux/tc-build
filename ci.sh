@@ -99,7 +99,7 @@ function do_llvm() {
         --install-folder "$install" \
         --projects clang lld \
         --quiet-cmake \
-        --ref release/16.x \
+        --ref release/17.x \
         --shallow-clone \
         --show-build-commands \
         --targets X86 \
