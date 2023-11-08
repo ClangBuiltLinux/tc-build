@@ -143,12 +143,12 @@ class LLVMBuilder(Builder):
             raise RuntimeError('BOLT requested without a builder?')
 
         build_start = time.time()
-        ninja_cmd = ['ninja', '-C', self.folders.build, *self.build_targets]
-        self.run_cmd(ninja_cmd)
+        base_ninja_cmd = ['ninja', '-C', self.folders.build]
+        self.run_cmd([*base_ninja_cmd, *self.build_targets])
 
         if self.check_targets:
             check_targets = [f"check-{target}" for target in self.check_targets]
-            self.run_cmd([*ninja_cmd, *check_targets])
+            self.run_cmd([*base_ninja_cmd, *check_targets])
 
         tc_build.utils.print_info(f"Build duration: {tc_build.utils.get_duration(build_start)}")
 
@@ -160,7 +160,7 @@ class LLVMBuilder(Builder):
                 install_targets = [f"install-{target}" for target in self.install_targets]
             else:
                 install_targets = ['install']
-            self.run_cmd([*ninja_cmd, *install_targets], capture_output=True)
+            self.run_cmd([*base_ninja_cmd, *install_targets], capture_output=True)
             tc_build.utils.create_gitignore(self.folders.install)
 
     def can_use_perf(self):
