@@ -95,11 +95,13 @@ function do_llvm() {
     "$base"/build-llvm.py \
         --assertions \
         --build-stage1-only \
+        --build-target distribution \
         --check-targets clang lld llvm \
         --install-folder "$install" \
+        --install-target distribution \
         --projects clang lld \
         --quiet-cmake \
-        --ref release/16.x \
+        --ref release/17.x \
         --shallow-clone \
         --show-build-commands \
         --targets X86 \
