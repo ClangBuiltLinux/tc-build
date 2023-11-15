@@ -598,6 +598,14 @@ if args.pgo:
         llvm_builder.show_commands = args.show_build_commands
         llvm_builder.targets = final.targets
         llvm_builder.tools = StageTools(Path(instrumented.folders.build, 'bin'))
+        # clang-tblgen and llvm-tblgen may not be available from the
+        # instrumented folder if the user did not pass '--full-toolchain', as
+        # only the tools included in the distribution will be available. In
+        # that case, use the bootstrap versions, which should not matter much
+        # for profiling sake.
+        if not args.full_toolchain:
+            llvm_builder.tools.clang_tblgen = Path(bootstrap.folders.build, 'bin/clang-tblgen')
+            llvm_builder.tools.llvm_tblgen = Path(bootstrap.folders.build, 'bin/llvm-tblgen')
         pgo_builders.append(llvm_builder)
 
     # If the user specified both a full and slim build of the same type, remove
