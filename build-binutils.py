@@ -42,8 +42,8 @@ parser.add_argument('-m',
                     '--march',
                     metavar='ARCH',
                     help='''
-                    Add -march=ARCH and -mtune=ARCH to CFLAGS to optimize the toolchain for the target
-                    host processor.
+                    Add -march=ARCH to CFLAGS to optimize the toolchain for the processor that it will be
+                    running on.
                     ''',
                     type=str)
 parser.add_argument('--show-build-commands',
@@ -120,7 +120,14 @@ for item in targets:
             builder.folders.install = Path(args.install_folder).resolve()
         builder.folders.source = bsm.location
         if args.march:
-            builder.cflags += [f"-march={args.march}", f"-mtune={args.march}"]
+            builder.cflags.append(f"-march={args.march}")
+            # -march implies -mtune except for x86-64-v{2,3,4}, which are
+            # documented to imply -mtune=generic. If the user has requested one
+            # of these values, it is a safe assumption they only care about
+            # running on their machine, so add -mtune=native to further
+            # optimize the toolchain for their machine.
+            if 'x86-64-v' in args.march:
+                builder.cflags.append('-mtune=native')
         builder.show_commands = args.show_build_commands
         builder.build()
     else:
