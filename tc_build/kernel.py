@@ -162,6 +162,23 @@ class HexagonKernelBuilder(KernelBuilder):
         super().__init__('hexagon')
 
 
+class LoongArchKernelBuilder(KernelBuilder):
+
+    def __init__(self):
+        super().__init__('loongarch')
+
+    def build(self):
+        self.toolchain_version = self.get_toolchain_version()
+        # https://git.kernel.org/linus/4d35d6e56447a5d09ccd1c1b3a6d3783b2947670
+        if self.toolchain_version < (min_version := (18, 0, 0)):
+            tc_build.utils.print_warning(
+                f"LoongArch does not build with LLVM < {'.'.join(map(str, min_version))}, skipping build..."
+            )
+            return
+
+        super().build()
+
+
 class MIPSKernelBuilder(KernelBuilder):
 
     def __init__(self):
@@ -281,6 +298,9 @@ class LLVMKernelBuilder(Builder):
         self.toolchain_prefix = None
 
     def build(self):
+        lsm = LinuxSourceManager()
+        lsm.location = self.folders.source
+
         builders = []
 
         allconfig_capable_builders = {
@@ -292,6 +312,14 @@ class LLVMKernelBuilder(Builder):
             'SystemZ': S390KernelBuilder,
             'X86': X8664KernelBuilder,
         }
+
+        # https://git.kernel.org/stable/c/ab3f300524697919f64ae920e904d0836b4057b0
+        # is needed to build ARCH=loongarch without disabling any
+        # configurations (in addition to a copy of clang > 18.0.0 but that is
+        # check when the build is invoked because it depends on the build of
+        # the compiler).
+        if lsm.get_version() >= (6, 6, 8):
+            allconfig_capable_builders['LoongArch'] = LoongArchKernelBuilder
 
         # This is a little convoluted :/
         # The overall idea here is to avoid duplicating builds, so the
@@ -322,8 +350,6 @@ class LLVMKernelBuilder(Builder):
                     builder.config_targets = [config_target]
                     builders.append(builder)
 
-        lsm = LinuxSourceManager()
-        lsm.location = self.folders.source
         tc_build.utils.print_info(f"Building Linux {lsm.get_kernelversion()} for profiling...")
 
         for builder in builders:
