@@ -117,9 +117,10 @@ class HostTools:
     def generate_versioned_binaries(self):
         try:
             cmakelists_txt = tc_build.utils.curl(
-                'https://raw.githubusercontent.com/llvm/llvm-project/main/llvm/CMakeLists.txt')
+                'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
+            )
         except subprocess.CalledProcessError:
-            llvm_tot_ver = 16
+            llvm_tot_ver = 19
         else:
             if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
                 raise RuntimeError('Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?')
