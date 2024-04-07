@@ -16,7 +16,7 @@ class KernelBuilder(Builder):
     # If the user supplies their own kernel source, it must be at least this
     # version to ensure that all the build commands work, as the build commands
     # were written to target at least this version.
-    MINIMUM_SUPPORTED_VERSION = (6, 5, 0)
+    MINIMUM_SUPPORTED_VERSION = (6, 9, 0)
 
     def __init__(self, arch):
         super().__init__()
@@ -258,12 +258,6 @@ class S390KernelBuilder(KernelBuilder):
 
         self.cross_compile = 's390x-linux-gnu-'
 
-        # LD: https://github.com/ClangBuiltLinux/linux/issues/1524
-        # OBJCOPY: https://github.com/ClangBuiltLinux/linux/issues/1530
-        # OBJDUMP: https://github.com/ClangBuiltLinux/linux/issues/859
-        for key in ['LD', 'OBJCOPY', 'OBJDUMP']:
-            self.make_variables[key] = self.cross_compile + key.lower()
-
     def build(self):
         self.toolchain_version = self.get_toolchain_version()
         if self.toolchain_version <= (15, 0, 0):
@@ -272,13 +266,40 @@ class S390KernelBuilder(KernelBuilder):
                 's390 does not build with LLVM < 15.0.0, skipping build...')
             return
 
+        # LD: https://github.com/ClangBuiltLinux/linux/issues/1524
+        # OBJCOPY: https://github.com/ClangBuiltLinux/linux/issues/1530
+        gnu_vars = []
+
+        # https://github.com/llvm/llvm-project/pull/75643
+        lld_res = subprocess.run([Path(self.toolchain_prefix, 'bin/ld.lld'), '-m', 'elf64_s390'],
+                                 capture_output=True,
+                                 check=False,
+                                 text=True)
+        if 'error: unknown emulation:' in lld_res.stderr:
+            gnu_vars.append('LD')
+
+        # https://github.com/llvm/llvm-project/pull/81841
+        objcopy_res = subprocess.run([
+            Path(self.toolchain_prefix, 'bin/llvm-objcopy'), '-I', 'binary', '-O', 'elf64-s390',
+            '-', '/dev/null'
+        ],
+                                     capture_output=True,
+                                     check=False,
+                                     input='',
+                                     text=True)
+        if 'error: invalid output format:' in objcopy_res.stderr:
+            gnu_vars.append('OBJCOPY')
+
+        for key in gnu_vars:
+            self.make_variables[key] = self.cross_compile + key.lower()
+
         super().build()
 
     def can_use_ias(self):
         return True
 
     def needs_binutils(self):
-        return True
+        return 'LD' in self.make_variables or 'OBJCOPY' in self.make_variables
 
 
 class X8664KernelBuilder(KernelBuilder):
