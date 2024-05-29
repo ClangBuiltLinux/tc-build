@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from tempfile import NamedTemporaryFile
 import time
 
 from tc_build.builder import Builder
@@ -23,7 +24,7 @@ class KernelBuilder(Builder):
 
         self.bolt_instrumentation = False
         self.bolt_sampling_output = None
-        self.config_targets = None
+        self.config_targets = []
         self.cross_compile = None
         self.make_variables = {
             'ARCH': arch,
@@ -60,6 +61,34 @@ class KernelBuilder(Builder):
             self.make_variables['LLVM_IAS'] = '0'
         self.make_variables['O'] = self.folders.build
 
+        self.clean_build_folder()
+
+        kconfig_allconfig = None
+        # allmodconfig enables CONFIG_WERROR and other subsystem specific
+        # -Werror configurations. Ensure all known configurations get disabled
+        # via KCONFIG_ALLCONFIG, as they may override KCFLAGS=-Werror.
+        if 'allmodconfig' in self.config_targets:
+            self.folders.build.mkdir(parents=True)
+
+            # Using a context manager for this would seriously convolute this
+            # code, as we need to use the name of the object in make_cmd but
+            # delete it after actually running the command so the rest of the
+            # code after this function would need another level of indent. We
+            # know that from this point forward, the function can only throw an
+            # exception when calling make_cmd, so we can just wrap that in a
+            # try: ... finally: ... statement to ensure that this file is
+            # always cleaned up.
+            # pylint: disable-next=consider-using-with
+            kconfig_allconfig = NamedTemporaryFile(dir=self.folders.build)
+
+            configs_to_disable = ['DRM_WERROR', 'WERROR']
+            kconfig_allconfig_text = ''.join(f"CONFIG_{val}=n\n"
+                                             for val in configs_to_disable).encode('utf-8')
+
+            kconfig_allconfig.write(kconfig_allconfig_text)
+            kconfig_allconfig.seek(0)
+            self.make_variables['KCONFIG_ALLCONFIG'] = kconfig_allconfig.name
+
         make_cmd = []
         if self.bolt_sampling_output:
             make_cmd += [
@@ -77,9 +106,12 @@ class KernelBuilder(Builder):
         # Ideally, the kernel would always clobber user flags via ':=' but we deal with reality.
         os.environ.pop('CFLAGS', '')
 
-        self.clean_build_folder()
         build_start = time.time()
-        self.run_cmd(make_cmd)
+        try:
+            self.run_cmd(make_cmd)
+        finally:
+            if kconfig_allconfig:
+                kconfig_allconfig.close()
         tc_build.utils.print_info(f"Build duration: {tc_build.utils.get_duration(build_start)}")
 
     def can_use_ias(self):
