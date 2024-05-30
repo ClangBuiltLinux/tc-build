@@ -30,11 +30,7 @@ class LLVMBuilder(Builder):
         self.build_targets = ['all']
         self.ccache = False
         self.check_targets = []
-        # Removes system dependency on terminfo to keep the dynamic library
-        # dependencies slim.  This can be unconditionally done as it does not
-        # impact clang's ability to show colors for certain output like
-        # warnings.
-        self.cmake_defines = {'LLVM_ENABLE_TERMINFO': 'OFF'}
+        self.cmake_defines = {}
         self.install_targets = []
         self.tools = None
         self.projects = []
@@ -252,6 +248,18 @@ class LLVMBuilder(Builder):
             self.cmake_defines['CMAKE_INSTALL_PREFIX'] = self.folders.install
 
         self.cmake_defines['LLVM_ENABLE_PROJECTS'] = ';'.join(self.projects)
+        # Remove system dependency on terminfo to keep the dynamic library
+        # dependencies slim. This can be done unconditionally when the option
+        # exists, as it does not impact clang's ability to show colors for
+        # certain output like warnings. If the option does not exist, it means
+        # that the linked change from clang-19 is present, which basically
+        # makes LLVM_ENABLE_TERMINFO=OFF the default, so do not add it in that
+        # case to avoid a cmake warning.
+        # https://github.com/llvm/llvm-project/commit/6bf450c7a60fa62c642e39836566da94bb9bbc91
+        llvm_cmakelists = Path(self.folders.source, 'llvm/CMakeLists.txt')
+        llvm_cmakelists_txt = llvm_cmakelists.read_text(encoding='utf-8')
+        if 'LLVM_ENABLE_TERMINFO' in llvm_cmakelists_txt:
+            self.cmake_defines['LLVM_ENABLE_TERMINFO'] = 'OFF'
         # execinfo.h might not exist (Alpine Linux) but the GWP ASAN library
         # depends on it. Disable the option to avoid breaking the build, the
         # kernel does not depend on it.
