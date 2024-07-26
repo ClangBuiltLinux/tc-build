@@ -29,8 +29,9 @@ class Tarball:
         if not self.remote_tarball_name:
             self.remote_tarball_name = self.local_location.name
 
-        tc_build.utils.curl(f"{self.base_download_url}/{self.remote_tarball_name}",
-                            destination=self.local_location)
+        full_url = f"{self.base_download_url}/{self.remote_tarball_name}"
+        tc_build.utils.print_info(f"Downloading {full_url} to {self.local_location}...")
+        tc_build.utils.curl(full_url, destination=self.local_location)
 
         # If there is a remote checksum file, download it, find the checksum
         # for the particular tarball, compute the downloaded file's checksum,
