@@ -459,7 +459,10 @@ class LinuxSourceManager(SourceManager):
                 # been applied.
                 if 'Reversed (or previously applied) patch detected' in err.stdout:
                     tc_build.utils.print_warning(
-                        f"Patch ('{patch}') has already been applied, consider removing it")
+                        f"{patch} has already been applied in {self.location}, consider removing it"
+                    )
                 else:
                     raise err
-        tc_build.utils.print_info(f"Source sucessfully prepared in {self.location}")
+            else:
+                tc_build.utils.print_info(f"Applied {patch} to {self.location}")
+        tc_build.utils.print_info(f"Source successfully prepared in {self.location}")
