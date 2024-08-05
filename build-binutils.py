@@ -8,7 +8,7 @@ import time
 import tc_build.binutils
 import tc_build.utils
 
-LATEST_BINUTILS_RELEASE = (2, 42, 0)
+LATEST_BINUTILS_RELEASE = (2, 43, 0)
 
 parser = ArgumentParser()
 parser.add_argument('-B',
