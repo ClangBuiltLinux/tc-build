@@ -79,7 +79,7 @@ class KernelBuilder(Builder):
             # try: ... finally: ... statement to ensure that this file is
             # always cleaned up.
             # pylint: disable-next=consider-using-with
-            kconfig_allconfig = NamedTemporaryFile(dir=self.folders.build)
+            kconfig_allconfig = NamedTemporaryFile(dir=self.folders.build)  # noqa: SIM115
 
             configs_to_disable = ['DRM_WERROR', 'WERROR']
             kconfig_allconfig_text = ''.join(f"CONFIG_{val}=n\n"
