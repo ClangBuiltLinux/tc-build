@@ -14,10 +14,10 @@ from tc_build.kernel import KernelBuilder, LinuxSourceManager, LLVMKernelBuilder
 from tc_build.tools import HostTools, StageTools
 
 # This is a known good revision of LLVM for building the kernel
-GOOD_REVISION = '15397583e3d85eb1f1a051de26eb409aaedd3b54'
+GOOD_REVISION = '2ab9233f4f393c240c37ef092de09d907fe5c890'
 
 # The version of the Linux kernel that the script downloads if necessary
-DEFAULT_KERNEL_FOR_PGO = (6, 10, 0)
+DEFAULT_KERNEL_FOR_PGO = (6, 11, 0)
 
 parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
 clone_options = parser.add_mutually_exclusive_group()
