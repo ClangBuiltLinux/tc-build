@@ -533,7 +533,10 @@ class LLVMSourceManager:
 
     def default_targets(self):
         all_targets = get_all_targets(self.repo)
-        targets = ['AArch64', 'ARM', 'BPF', 'Hexagon', 'Mips', 'PowerPC', 'RISCV', 'SystemZ', 'X86']
+        targets = [
+            'AArch64', 'ARM', 'BPF', 'Hexagon', 'Mips', 'PowerPC', 'RISCV', 'Sparc', 'SystemZ',
+            'X86'
+        ]
 
         if 'LoongArch' in all_targets:
             targets.append('LoongArch')
