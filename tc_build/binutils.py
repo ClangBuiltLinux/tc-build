@@ -18,6 +18,7 @@ class BinutilsBuilder(Builder):
         self.configure_flags = [
             '--disable-compressed-debug-sections',
             '--disable-gdb',
+            '--disable-gprofng',
             '--disable-nls',
             '--disable-werror',
             '--enable-deterministic-archives',
@@ -27,9 +28,6 @@ class BinutilsBuilder(Builder):
             '--quiet',
             '--with-system-zlib',
         ]
-        # gprofng uses glibc APIs that might not be available on musl
-        if tc_build.utils.libc_is_musl():
-            self.configure_flags.append('--disable-gprofng')
         self.configure_vars = {
             'CC': 'gcc',
             'CXX': 'g++',
