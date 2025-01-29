@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import platform
+from tempfile import TemporaryDirectory
 
 from tc_build.builder import Builder
 from tc_build.source import SourceManager
@@ -28,6 +29,7 @@ class BinutilsBuilder(Builder):
             '--quiet',
             '--with-system-zlib',
         ]
+
         self.configure_vars = {
             'CC': 'gcc',
             'CXX': 'g++',
@@ -66,6 +68,8 @@ class BinutilsBuilder(Builder):
         if self.folders.install:
             self.run_cmd([*make_cmd, 'install'])
             tc_build.utils.create_gitignore(self.folders.install)
+            # Clean temporary dir containing docs after installing
+            self.tmpdir.cleanup()
 
 
 class StandardBinutilsBuilder(BinutilsBuilder):
