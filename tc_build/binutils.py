@@ -56,20 +56,23 @@ class BinutilsBuilder(Builder):
         self.folders.build.mkdir(exist_ok=True, parents=True)
         tc_build.utils.print_header(f"Building {self.target} binutils")
 
-        configure_cmd = [
-            Path(self.folders.source, 'configure'),
-            *self.configure_flags,
-        ] + [f"{var}={val}" for var, val in self.configure_vars.items()]
-        self.run_cmd(configure_cmd, cwd=self.folders.build)
+        # Redirect unwanted docs to a temporary dir
+        with TemporaryDirectory() as tmpdir:
+            doc_dirs = ['infodir', 'htmldir', 'pdfdir', 'mandir']
+            self.configure_flags += [f"--{d}={tmpdir}" for d in doc_dirs]
 
-        make_cmd = ['make', '-C', self.folders.build, '-s', f"-j{os.cpu_count()}", 'V=0']
-        self.run_cmd(make_cmd)
+            configure_cmd = [
+                Path(self.folders.source, 'configure'),
+                *self.configure_flags,
+            ] + [f"{var}={val}" for var, val in self.configure_vars.items()]
+            self.run_cmd(configure_cmd, cwd=self.folders.build)
 
-        if self.folders.install:
-            self.run_cmd([*make_cmd, 'install'])
-            tc_build.utils.create_gitignore(self.folders.install)
-            # Clean temporary dir containing docs after installing
-            self.tmpdir.cleanup()
+            make_cmd = ['make', '-C', self.folders.build, '-s', f"-j{os.cpu_count()}", 'V=0']
+            self.run_cmd(make_cmd)
+
+            if self.folders.install:
+                self.run_cmd([*make_cmd, 'install'])
+                tc_build.utils.create_gitignore(self.folders.install)
 
 
 class StandardBinutilsBuilder(BinutilsBuilder):
