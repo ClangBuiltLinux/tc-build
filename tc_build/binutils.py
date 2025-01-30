@@ -58,8 +58,8 @@ class BinutilsBuilder(Builder):
 
         # Redirect unwanted docs to a temporary dir
         with TemporaryDirectory() as tmpdir:
-            doc_dirs = ['infodir', 'htmldir', 'pdfdir', 'mandir']
-            self.configure_flags += [f"--{d}={tmpdir}" for d in doc_dirs]
+            doc_dirs = ('info', 'html', 'pdf', 'man')
+            self.configure_flags += [f"--{doc}dir={tmpdir}" for doc in doc_dirs]
 
             configure_cmd = [
                 Path(self.folders.source, 'configure'),
