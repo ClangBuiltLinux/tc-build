@@ -56,7 +56,8 @@ class BinutilsBuilder(Builder):
         self.folders.build.mkdir(exist_ok=True, parents=True)
         tc_build.utils.print_header(f"Building {self.target} binutils")
 
-        # Redirect unwanted docs to a temporary dir
+        # Binutils does not provide a configuration flag to disable installation of documentation directly.
+        # Instead, we redirect generated docs to a temporary directory, deleting them after installation.
         with TemporaryDirectory() as tmpdir:
             doc_dirs = ('info', 'html', 'pdf', 'man')
             self.configure_flags += [f"--{doc}dir={tmpdir}" for doc in doc_dirs]
