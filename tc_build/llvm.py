@@ -434,6 +434,7 @@ class LLVMSlimBuilder(LLVMBuilder):
         if build_compiler_rt:
             distribution_components.append('llvm-profdata')
             if self.llvm_major_version >= 21:
+                distribution_components.append('runtimes')
                 runtime_distribution_components.append('profile')
             else:
                 distribution_components.append('profile')
