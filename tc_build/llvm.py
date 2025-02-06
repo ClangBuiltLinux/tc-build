@@ -12,6 +12,8 @@ import time
 from tc_build.builder import Builder
 import tc_build.utils
 
+LLVM_VER_FOR_RUNTIMES = 20
+
 
 def get_all_targets(llvm_folder):
     contents = Path(llvm_folder, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
@@ -251,7 +253,8 @@ class LLVMBuilder(Builder):
 
         # https://github.com/llvm/llvm-project/commit/b593110d89aea76b8b10152b24ece154bff3e4b5
         llvm_enable_projects = self.projects.copy()
-        if self.llvm_major_version >= 21 and self.project_is_enabled('compiler-rt'):
+        if self.llvm_major_version >= LLVM_VER_FOR_RUNTIMES and self.project_is_enabled(
+                'compiler-rt'):
             llvm_enable_projects.remove('compiler-rt')
             self.cmake_defines['LLVM_ENABLE_RUNTIMES'] = 'compiler-rt'
         self.cmake_defines['LLVM_ENABLE_PROJECTS'] = ';'.join(llvm_enable_projects)
@@ -433,7 +436,7 @@ class LLVMSlimBuilder(LLVMBuilder):
             distribution_components.append('lld')
         if build_compiler_rt:
             distribution_components.append('llvm-profdata')
-            if self.llvm_major_version >= 21:
+            if self.llvm_major_version >= LLVM_VER_FOR_RUNTIMES:
                 distribution_components.append('runtimes')
                 runtime_distribution_components.append('profile')
             else:
