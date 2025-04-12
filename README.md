@@ -37,6 +37,7 @@ These scripts have been tested in a Docker image of the following distributions 
               lld \
               make \
               ninja-build \
+              pkg-config \
               python3-dev \
               texinfo \
               u-boot-tools \
@@ -183,6 +184,18 @@ bfd plugin: LLVM gold plugin has failed to create LTO module: Unknown attribute 
 ```
 
 Having a standalone copy of binutils (ideally in the same folder at the LLVM toolchain so that only one `PATH` modification is needed) works around this without any adverse side effects. Another workaround is bind mounting the new `LLVMgold.so` to `/usr/lib/LLVMgold.so`.
+
+## build-rust.py
+
+By default, `./build-rust.py` will clone Rust and build it using an LLVM previously built by `./build-llvm.py`, e.g.:
+
+```sh
+./build-llvm.py && ./build-rust.py
+```
+
+This script does not apply any Rust-specific patches to LLVM.
+
+Run `./build-rust.py -h` for more options and information.
 
 ## Contributing
 
