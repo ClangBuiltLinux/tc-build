@@ -223,7 +223,7 @@ parser.add_argument('-l',
                     By default, the script will clone the llvm-project into the tc-build repo. If you have
                     another LLVM checkout that you would like to work out of, pass it to this parameter.
                     This can either be an absolute or relative path. Implies '--no-update'. When this
-                    option is supplied, '--ref' and '--use-good-revison' do nothing, as the script does
+                    option is supplied, '--ref' and '--use-good-revision' do nothing, as the script does
                     not manipulate a repository it does not own.
 
                     '''),
