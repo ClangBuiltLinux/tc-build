@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import contextlib
 import hashlib
+from pathlib import Path
 import re
 import subprocess
 
@@ -86,3 +88,67 @@ class SourceManager:
     def __init__(self, location=None):
         self.location = location
         self.tarball = Tarball()
+
+
+class GitSourceManager:
+
+    def __init__(self, repo):
+        self.repo = repo
+
+        # Will be set by derived classes but used here
+        self._pretty_name = ''
+        self._repo_url = ''
+
+    def download(self, ref, shallow=False):
+        if self.repo.exists():
+            return
+
+        tc_build.utils.print_header(f"Downloading {self._pretty_name}")
+
+        git_clone = ['git', 'clone']
+        if shallow:
+            git_clone.append('--depth=1')
+            if ref != 'main':
+                git_clone.append('--no-single-branch')
+        git_clone += [self._repo_url, self.repo]
+
+        subprocess.run(git_clone, check=True)
+
+        self.git(['checkout', ref])
+
+    def git(self, cmd, capture_output=False):
+        return subprocess.run(['git', *cmd],
+                              capture_output=capture_output,
+                              check=True,
+                              cwd=self.repo,
+                              text=True)
+
+    def git_capture(self, cmd):
+        return self.git(cmd, capture_output=True).stdout.strip()
+
+    def is_shallow(self):
+        git_dir = self.git_capture(['rev-parse', '--git-dir'])
+        return Path(git_dir, 'shallow').exists()
+
+    def ref_exists(self, ref):
+        try:
+            self.git(['show-branch', ref])
+        except subprocess.CalledProcessError:
+            return False
+        return True
+
+    def update(self, ref):
+        tc_build.utils.print_header(f"Updating {self._pretty_name}")
+
+        self.git(['fetch', 'origin'])
+
+        if self.is_shallow() and not self.ref_exists(ref):
+            raise RuntimeError(f"Repo is shallow and supplied ref ('{ref}') does not exist!")
+
+        self.git(['checkout', ref])
+
+        local_ref = None
+        with contextlib.suppress(subprocess.CalledProcessError):
+            local_ref = self.git_capture(['symbolic-ref', '-q', 'HEAD'])
+        if local_ref and local_ref.startswith('refs/heads/'):
+            self.git(['pull', '--rebase', 'origin', local_ref.replace('refs/heads/', '')])

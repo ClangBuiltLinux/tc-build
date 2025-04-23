@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import contextlib
 import os
 from pathlib import Path
 import platform
@@ -10,6 +9,7 @@ import subprocess
 import time
 
 from tc_build.builder import Builder
+from tc_build.source import GitSourceManager
 import tc_build.utils
 
 LLVM_VER_FOR_RUNTIMES = 20
@@ -673,10 +673,13 @@ class LLVMSlimInstrumentedBuilder(LLVMInstrumentedBuilder, LLVMSlimBuilder):
     pass
 
 
-class LLVMSourceManager:
+class LLVMSourceManager(GitSourceManager):
 
     def __init__(self, repo):
-        self.repo = repo
+        super().__init__(repo)
+
+        self._pretty_name = 'LLVM'
+        self._repo_url = 'https://github.com/llvm/llvm-project.git'
 
     def default_projects(self):
         return ['clang', 'compiler-rt', 'lld', 'polly']
@@ -692,57 +695,3 @@ class LLVMSourceManager:
             targets.append('LoongArch')
 
         return targets
-
-    def download(self, ref, shallow=False):
-        if self.repo.exists():
-            return
-
-        tc_build.utils.print_header('Downloading LLVM')
-
-        git_clone = ['git', 'clone']
-        if shallow:
-            git_clone.append('--depth=1')
-            if ref != 'main':
-                git_clone.append('--no-single-branch')
-        git_clone += ['https://github.com/llvm/llvm-project', self.repo]
-
-        subprocess.run(git_clone, check=True)
-
-        self.git(['checkout', ref])
-
-    def git(self, cmd, capture_output=False):
-        return subprocess.run(['git', *cmd],
-                              capture_output=capture_output,
-                              check=True,
-                              cwd=self.repo,
-                              text=True)
-
-    def git_capture(self, cmd):
-        return self.git(cmd, capture_output=True).stdout.strip()
-
-    def is_shallow(self):
-        git_dir = self.git_capture(['rev-parse', '--git-dir'])
-        return Path(git_dir, 'shallow').exists()
-
-    def ref_exists(self, ref):
-        try:
-            self.git(['show-branch', ref])
-        except subprocess.CalledProcessError:
-            return False
-        return True
-
-    def update(self, ref):
-        tc_build.utils.print_header('Updating LLVM')
-
-        self.git(['fetch', 'origin'])
-
-        if self.is_shallow() and not self.ref_exists(ref):
-            raise RuntimeError(f"Repo is shallow and supplied ref ('{ref}') does not exist!")
-
-        self.git(['checkout', ref])
-
-        local_ref = None
-        with contextlib.suppress(subprocess.CalledProcessError):
-            local_ref = self.git_capture(['symbolic-ref', '-q', 'HEAD'])
-        if local_ref and local_ref.startswith('refs/heads/'):
-            self.git(['pull', '--rebase', 'origin', local_ref.replace('refs/heads/', '')])
