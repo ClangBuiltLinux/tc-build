@@ -32,7 +32,10 @@ class LLVMBuilder(Builder):
         self.build_targets = ['all']
         self.ccache = False
         self.check_targets = []
-        self.cmake_defines = {}
+        self.cmake_defines = {
+            # Reduce dynamic dependencies
+            'LLVM_ENABLE_LIBXML2': 'OFF',
+        }
         self.install_targets = []
         self.llvm_major_version = 0
         self.tools = None
