@@ -35,6 +35,10 @@ class LLVMBuilder(Builder):
         self.cmake_defines = {
             # Reduce dynamic dependencies
             'LLVM_ENABLE_LIBXML2': 'OFF',
+            # While this option reduces build resources and disk space, it
+            # increases start up time for the tools dynamically linked against
+            # it and limits optimization opportunities for LTO, PGO, and BOLT.
+            'LLVM_LINK_LLVM_DYLIB': 'OFF',
         }
         self.install_targets = []
         self.llvm_major_version = 0
