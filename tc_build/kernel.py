@@ -26,6 +26,7 @@ class KernelBuilder(Builder):
         self.bolt_sampling_output = None
         self.config_targets = []
         self.cross_compile = None
+        self.lsm = None
         self.make_variables = {
             'ARCH': arch,
             # We do not want warnings to cause build failures when profiling.
@@ -337,6 +338,18 @@ class X8664KernelBuilder(KernelBuilder):
     def __init__(self):
         super().__init__('x86_64')
 
+    def build(self):
+        if not self.lsm:
+            raise RuntimeError('build() called without LinuxSourceManager?')
+
+        if self.get_toolchain_version() < (15, 0, 0) and self.lsm.get_version() >= (6, 15, 0):
+            # https://git.kernel.org/linus/7861640aac52bbbb3dc2cd40fb93dfb3b3d0f43c
+            tc_build.utils.print_warning(
+                'x86_64 does not build with LLVM < 15.0.0 and Linux >= 6.15.0, skipping build...')
+            return
+
+        super().build()
+
 
 class LLVMKernelBuilder(Builder):
 
@@ -408,6 +421,7 @@ class LLVMKernelBuilder(Builder):
             builder.bolt_sampling_output = self.bolt_sampling_output
             builder.folders.build = self.folders.build
             builder.folders.source = self.folders.source
+            builder.lsm = lsm
             builder.toolchain_prefix = self.toolchain_prefix
             builder.build()
 
