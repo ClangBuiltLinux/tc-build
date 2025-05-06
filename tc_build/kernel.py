@@ -418,6 +418,7 @@ class LinuxSourceManager(SourceManager):
         super().__init__(location)
 
         self.patches = []
+        self._version = ()
 
     def get_kernelversion(self):
         return subprocess.run(['make', '-s', 'kernelversion'],
@@ -431,7 +432,10 @@ class LinuxSourceManager(SourceManager):
     # particular version.
     def get_version(self):
         # elem.split('-')[0] in case we are dealing with an -rc release.
-        return tuple(int(elem.split('-')[0]) for elem in self.get_kernelversion().split('.', 3))
+        if not self._version:
+            self._version = tuple(
+                int(elem.split('-')[0]) for elem in self.get_kernelversion().split('.', 3))
+        return self._version
 
     def prepare(self):
         self.tarball.download()
