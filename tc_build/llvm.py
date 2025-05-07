@@ -243,9 +243,9 @@ class LLVMBuilder(Builder):
         # disable the optimization when compiler-rt is enabled and there is an
         # install directory. Ideally thin archives should still be usable for
         # non-compiler-rt projects.
-        if not (self.folders.install and self.project_is_enabled('compiler-rt')):
-            self.cmake_defines['CMAKE_CXX_ARCHIVE_CREATE'] = '<CMAKE_AR> DqcT <TARGET> <OBJECTS>'
-        self.cmake_defines['CMAKE_CXX_ARCHIVE_FINISH'] = 'true'
+        #if not (self.folders.install and self.project_is_enabled('compiler-rt')):
+        #    self.cmake_defines['CMAKE_CXX_ARCHIVE_CREATE'] = '<CMAKE_AR> DqcT <TARGET> <OBJECTS>'
+        #self.cmake_defines['CMAKE_CXX_ARCHIVE_FINISH'] = 'true'
 
         if self.tools.ranlib:
             self.cmake_defines['CMAKE_RANLIB'] = self.tools.ranlib
@@ -430,7 +430,11 @@ class LLVMSlimBuilder(LLVMBuilder):
 
         self.set_llvm_major_version()
 
-        distribution_components = []
+        distribution_components = [
+            'llvm-config',
+            'llvm-headers',
+            'llvm-libraries',
+        ]
         runtime_distribution_components = []
         if llvm_build_tools:
             distribution_components += [
