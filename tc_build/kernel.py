@@ -175,6 +175,19 @@ class ArmV6KernelBuilder(ArmKernelBuilder):
 
         self.config_targets = ['aspeed_g5_defconfig']
 
+    def build(self):
+        if not self.lsm:
+            raise RuntimeError('build() called without LinuxSourceManager?')
+
+        if self.get_toolchain_version() < (14, 0, 0) and self.lsm.get_version() >= (6, 14, 0):
+            # https://github.com/ClangBuiltLinux/continuous-integration2/pull/807
+            tc_build.utils.print_warning(
+                'aspeed_g5_defconfig does not build with LLVM < 14.0.0 and Linux >= 6.14.0, skipping build...'
+            )
+            return
+
+        super().build()
+
 
 class ArmV7KernelBuilder(ArmKernelBuilder):
 
