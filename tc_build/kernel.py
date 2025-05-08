@@ -33,12 +33,9 @@ class KernelBuilder(Builder):
         }
         self.show_commands = True
         self.toolchain_prefix = None
-        self.toolchain_version = None
+        self.toolchain_version = ()
 
     def build(self):
-        if not self.toolchain_version:
-            self.toolchain_version = self.get_toolchain_version()
-
         if self.bolt_instrumentation:
             self.make_variables['CC'] = Path(self.toolchain_prefix, 'bin/clang.inst')
         # The user may have configured clang without the host target, in which
@@ -118,6 +115,9 @@ class KernelBuilder(Builder):
         return True
 
     def get_toolchain_version(self):
+        if self.toolchain_version:
+            return self.toolchain_version
+
         if not self.toolchain_prefix:
             raise RuntimeError('get_toolchain_version(): No toolchain prefix set?')
         if not (clang := Path(self.toolchain_prefix, 'bin/clang')).exists():
@@ -131,7 +131,8 @@ class KernelBuilder(Builder):
                                       input=clang_input,
                                       text=True).stdout.strip()
 
-        return tuple(int(elem) for elem in clang_output.split(' '))
+        self.toolchain_version = tuple(int(elem) for elem in clang_output.split(' '))
+        return self.toolchain_version
 
     def can_use_clang_as_hostcc(self):
         clang = Path(self.toolchain_prefix, 'bin/clang')
@@ -155,7 +156,7 @@ class ArmKernelBuilder(KernelBuilder):
         self.cross_compile = 'arm-linux-gnueabi-'
 
     def can_use_ias(self):
-        return self.toolchain_version >= (13, 0, 0)
+        return self.get_toolchain_version() >= (13, 0, 0)
 
 
 class ArmV5KernelBuilder(ArmKernelBuilder):
@@ -200,9 +201,8 @@ class LoongArchKernelBuilder(KernelBuilder):
         super().__init__('loongarch')
 
     def build(self):
-        self.toolchain_version = self.get_toolchain_version()
         # https://git.kernel.org/linus/4d35d6e56447a5d09ccd1c1b3a6d3783b2947670
-        if self.toolchain_version < (min_version := (18, 0, 0)):
+        if self.get_toolchain_version() < (min_version := (18, 0, 0)):
             tc_build.utils.print_warning(
                 f"LoongArch does not build with LLVM < {'.'.join(map(str, min_version))}, skipping build..."
             )
@@ -247,7 +247,7 @@ class PowerPC64KernelBuilder(PowerPCKernelBuilder):
 
     # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
     def can_use_ias(self):
-        return self.toolchain_version >= (14, 0, 2)
+        return self.get_toolchain_version() >= (14, 0, 2)
 
     # https://github.com/ClangBuiltLinux/linux/issues/1601
     def needs_binutils(self):
@@ -263,9 +263,8 @@ class PowerPC64LEKernelBuilder(PowerPC64KernelBuilder):
         self.cross_compile = 'powerpc64le-linux-gnu-'
 
     def build(self):
-        self.toolchain_version = self.get_toolchain_version()
         # https://github.com/ClangBuiltLinux/linux/issues/1260
-        if self.toolchain_version < (12, 0, 0):
+        if self.get_toolchain_version() < (12, 0, 0):
             self.make_variables['LD'] = self.cross_compile + 'ld'
 
         super().build()
@@ -280,7 +279,7 @@ class RISCVKernelBuilder(KernelBuilder):
 
     # https://github.com/llvm/llvm-project/commit/bbea64250f65480d787e1c5ff45c4de3ec2dcda8
     def can_use_ias(self):
-        return self.toolchain_version >= (13, 0, 0)
+        return self.get_toolchain_version() >= (13, 0, 0)
 
 
 class S390KernelBuilder(KernelBuilder):
@@ -291,8 +290,7 @@ class S390KernelBuilder(KernelBuilder):
         self.cross_compile = 's390x-linux-gnu-'
 
     def build(self):
-        self.toolchain_version = self.get_toolchain_version()
-        if self.toolchain_version <= (15, 0, 0):
+        if self.get_toolchain_version() <= (15, 0, 0):
             # https://git.kernel.org/linus/30d17fac6aaedb40d111bb159f4b35525637ea78
             tc_build.utils.print_warning(
                 's390 does not build with LLVM < 15.0.0, skipping build...')
