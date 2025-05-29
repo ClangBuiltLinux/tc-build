@@ -1,0 +1,41 @@
+From d897dae472f267dc17c80544c0e6e51d10e52480 Mon Sep 17 00:00:00 2001
+From: Kees Cook <kees@kernel.org>
+Date: Fri, 2 May 2025 15:41:57 -0700
+Subject: scsi: qedf: Use designated initializer for struct qed_fcoe_cb_ops
+
+Recent fixes to the randstruct GCC plugin allowed it to notice that this
+structure is entirely function pointers and is therefore subject to
+randomization, but doing so requires that it always use designated
+initializers. Explicitly specify the "common" member as being
+initialized. Silences:
+
+drivers/scsi/qedf/qedf_main.c:702:9: error: positional initialization of field in 'struct' declared with 'designated_init' attribute [-Werror=designated-init]
+  702 |         {
+      |         ^
+
+Fixes: c2ea09b193d2 ("randstruct: gcc-plugin: Remove bogus void member")
+Signed-off-by: Kees Cook <kees@kernel.org>
+Link: https://lore.kernel.org/r/20250502224156.work.617-kees@kernel.org
+Signed-off-by: Martin K. Petersen <martin.petersen@oracle.com>
+---
+Link: https://git.kernel.org/mkp/scsi/c/d897dae472f267dc17c80544c0e6e51d10e52480
+---
+ drivers/scsi/qedf/qedf_main.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/scsi/qedf/qedf_main.c b/drivers/scsi/qedf/qedf_main.c
+index 436bd29d5ebae6..6b1ebab36fa35b 100644
+--- a/drivers/scsi/qedf/qedf_main.c
++++ b/drivers/scsi/qedf/qedf_main.c
+@@ -699,7 +699,7 @@ static u32 qedf_get_login_failures(void *cookie)
+ }
+ 
+ static struct qed_fcoe_cb_ops qedf_cb_ops = {
+-	{
++	.common = {
+ 		.link_update = qedf_link_update,
+ 		.bw_update = qedf_bw_update,
+ 		.schedule_recovery_handler = qedf_schedule_recovery_handler,
+-- 
+cgit 1.2.3-korg
+

@@ -1,0 +1,93 @@
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH v2] wifi: iwlwifi: mld: Work around Clang loop unrolling
+ bug
+From: Kees Cook <kees@kernel.org>
+Date: Fri, 25 Apr 2025 11:44:22 -0700
+Message-Id: <20250425184418.it.308-kees@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+The nested loop in iwl_mld_send_proto_offload() confuses Clang into
+thinking there could be final loop iteration past the end of the "nsc"
+array (which is only 4 entries). The FORTIFY checking in memcmp()
+(via ipv6_addr_cmp()) notices this (due to the available bytes in the
+out-of-bounds position of &nsc[4] being 0), and errors out, failing
+the build. For some reason (likely due to architectural loop unrolling
+configurations), this is only exposed on ARM builds currently. Due to
+Clang's lack of inline tracking[1], the warning is not very helpful:
+
+include/linux/fortify-string.h:719:4: error: call to '__read_overflow' declared with 'error' attribute: detected read beyond size of object (1st parameter)
+  719 |                         __read_overflow();
+      |                         ^
+1 error generated.
+
+But this was tracked down to iwl_mld_send_proto_offload()'s
+ipv6_addr_cmp() call.
+
+An upstream Clang bug has been filed[2] to track this, but for now.
+Fix the build by explicitly bounding the inner loop by "n_nsc", which is
+what "c" is already limited to. Additionally do not repeat the ns_config
+and targ_addrs array sizes with their open-coded names since they can
+be determined at compile-time with ARRAY_SIZE().
+
+Reported-by: Nathan Chancellor <nathan@kernel.org>
+Closes: https://github.com/ClangBuiltLinux/linux/issues/2076
+Link: https://github.com/llvm/llvm-project/pull/73552 [1]
+Link: https://github.com/llvm/llvm-project/issues/136603 [2]
+Signed-off-by: Kees Cook <kees@kernel.org>
+Reviewed-by: Nathan Chancellor <nathan@kernel.org>
+Link: https://lore.kernel.org/r/20250425184418.it.308-kees@kernel.org
+---
+ v2:
+  - move "j < n_nsc" forward to stabilize loop bounds (Nathan)
+  - use ARRAY_SIZE() for robustness
+ v1: https://lore.kernel.org/all/20250421204153.work.935-kees@kernel.org/
+Cc: Miri Korenblit <miriam.rachel.korenblit@intel.com>
+Cc: Johannes Berg <johannes.berg@intel.com>
+Cc: Yedidya Benshimol <yedidya.ben.shimol@intel.com>
+Cc: Emmanuel Grumbach <emmanuel.grumbach@intel.com>
+Cc: Avraham Stern <avraham.stern@intel.com>
+Cc: <linux-wireless@vger.kernel.org>
+---
+ drivers/net/wireless/intel/iwlwifi/mld/d3.c | 14 +++++---------
+ 1 file changed, 5 insertions(+), 9 deletions(-)
+
+diff --git a/drivers/net/wireless/intel/iwlwifi/mld/d3.c b/drivers/net/wireless/intel/iwlwifi/mld/d3.c
+index dc736fdc176d..c51a6596617d 100644
+--- a/drivers/net/wireless/intel/iwlwifi/mld/d3.c
++++ b/drivers/net/wireless/intel/iwlwifi/mld/d3.c
+@@ -1728,17 +1728,13 @@ iwl_mld_send_proto_offload(struct iwl_mld *mld,
+ #if IS_ENABLED(CONFIG_IPV6)
+ 	struct iwl_mld_vif *mld_vif = iwl_mld_vif_from_mac80211(vif);
+ 	struct iwl_mld_wowlan_data *wowlan_data = &mld_vif->wowlan_data;
+-	struct iwl_ns_config *nsc;
+-	struct iwl_targ_addr *addrs;
+-	int n_nsc, n_addrs;
++	const int n_addrs = ARRAY_SIZE(cmd->targ_addrs);
++	struct iwl_targ_addr *addrs = cmd->targ_addrs;
++	const int n_nsc = ARRAY_SIZE(cmd->ns_config);
++	struct iwl_ns_config *nsc = cmd->ns_config;
+ 	int i, c;
+ 	int num_skipped = 0;
+ 
+-	nsc = cmd->ns_config;
+-	n_nsc = IWL_PROTO_OFFLOAD_NUM_NS_CONFIG_V3L;
+-	addrs = cmd->targ_addrs;
+-	n_addrs = IWL_PROTO_OFFLOAD_NUM_IPV6_ADDRS_V3L;
+-
+ 	/* For each address we have (and that will fit) fill a target
+ 	 * address struct and combine for NS offload structs with the
+ 	 * solicited node addresses.
+@@ -1759,7 +1755,7 @@ iwl_mld_send_proto_offload(struct iwl_mld *mld,
+ 
+ 		addrconf_addr_solict_mult(&wowlan_data->target_ipv6_addrs[i],
+ 					  &solicited_addr);
+-		for (j = 0; j < c; j++)
++		for (j = 0; j < n_nsc && j < c; j++)
+ 			if (ipv6_addr_cmp(&nsc[j].dest_ipv6_addr,
+ 					  &solicited_addr) == 0)
+ 				break;
+-- 
+2.34.1
+
