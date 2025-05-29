@@ -26,6 +26,7 @@ class KernelBuilder(Builder):
         self.bolt_sampling_output = None
         self.config_targets = []
         self.cross_compile = None
+        self.lsm = None
         self.make_variables = {
             'ARCH': arch,
             # We do not want warnings to cause build failures when profiling.
@@ -33,12 +34,9 @@ class KernelBuilder(Builder):
         }
         self.show_commands = True
         self.toolchain_prefix = None
-        self.toolchain_version = None
+        self.toolchain_version = ()
 
     def build(self):
-        if not self.toolchain_version:
-            self.toolchain_version = self.get_toolchain_version()
-
         if self.bolt_instrumentation:
             self.make_variables['CC'] = Path(self.toolchain_prefix, 'bin/clang.inst')
         # The user may have configured clang without the host target, in which
@@ -118,6 +116,9 @@ class KernelBuilder(Builder):
         return True
 
     def get_toolchain_version(self):
+        if self.toolchain_version:
+            return self.toolchain_version
+
         if not self.toolchain_prefix:
             raise RuntimeError('get_toolchain_version(): No toolchain prefix set?')
         if not (clang := Path(self.toolchain_prefix, 'bin/clang')).exists():
@@ -131,7 +132,8 @@ class KernelBuilder(Builder):
                                       input=clang_input,
                                       text=True).stdout.strip()
 
-        return tuple(int(elem) for elem in clang_output.split(' '))
+        self.toolchain_version = tuple(int(elem) for elem in clang_output.split(' '))
+        return self.toolchain_version
 
     def can_use_clang_as_hostcc(self):
         clang = Path(self.toolchain_prefix, 'bin/clang')
@@ -155,7 +157,7 @@ class ArmKernelBuilder(KernelBuilder):
         self.cross_compile = 'arm-linux-gnueabi-'
 
     def can_use_ias(self):
-        return self.toolchain_version >= (13, 0, 0)
+        return self.get_toolchain_version() >= (13, 0, 0)
 
 
 class ArmV5KernelBuilder(ArmKernelBuilder):
@@ -172,6 +174,19 @@ class ArmV6KernelBuilder(ArmKernelBuilder):
         super().__init__()
 
         self.config_targets = ['aspeed_g5_defconfig']
+
+    def build(self):
+        if not self.lsm:
+            raise RuntimeError('build() called without LinuxSourceManager?')
+
+        if self.get_toolchain_version() < (14, 0, 0) and self.lsm.get_version() >= (6, 14, 0):
+            # https://github.com/ClangBuiltLinux/continuous-integration2/pull/807
+            tc_build.utils.print_warning(
+                'aspeed_g5_defconfig does not build with LLVM < 14.0.0 and Linux >= 6.14.0, skipping build...'
+            )
+            return
+
+        super().build()
 
 
 class ArmV7KernelBuilder(ArmKernelBuilder):
@@ -200,9 +215,8 @@ class LoongArchKernelBuilder(KernelBuilder):
         super().__init__('loongarch')
 
     def build(self):
-        self.toolchain_version = self.get_toolchain_version()
         # https://git.kernel.org/linus/4d35d6e56447a5d09ccd1c1b3a6d3783b2947670
-        if self.toolchain_version < (min_version := (18, 0, 0)):
+        if self.get_toolchain_version() < (min_version := (18, 0, 0)):
             tc_build.utils.print_warning(
                 f"LoongArch does not build with LLVM < {'.'.join(map(str, min_version))}, skipping build..."
             )
@@ -247,7 +261,7 @@ class PowerPC64KernelBuilder(PowerPCKernelBuilder):
 
     # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
     def can_use_ias(self):
-        return self.toolchain_version >= (14, 0, 2)
+        return self.get_toolchain_version() >= (14, 0, 2)
 
     # https://github.com/ClangBuiltLinux/linux/issues/1601
     def needs_binutils(self):
@@ -263,9 +277,8 @@ class PowerPC64LEKernelBuilder(PowerPC64KernelBuilder):
         self.cross_compile = 'powerpc64le-linux-gnu-'
 
     def build(self):
-        self.toolchain_version = self.get_toolchain_version()
         # https://github.com/ClangBuiltLinux/linux/issues/1260
-        if self.toolchain_version < (12, 0, 0):
+        if self.get_toolchain_version() < (12, 0, 0):
             self.make_variables['LD'] = self.cross_compile + 'ld'
 
         super().build()
@@ -280,7 +293,7 @@ class RISCVKernelBuilder(KernelBuilder):
 
     # https://github.com/llvm/llvm-project/commit/bbea64250f65480d787e1c5ff45c4de3ec2dcda8
     def can_use_ias(self):
-        return self.toolchain_version >= (13, 0, 0)
+        return self.get_toolchain_version() >= (13, 0, 0)
 
 
 class S390KernelBuilder(KernelBuilder):
@@ -291,8 +304,7 @@ class S390KernelBuilder(KernelBuilder):
         self.cross_compile = 's390x-linux-gnu-'
 
     def build(self):
-        self.toolchain_version = self.get_toolchain_version()
-        if self.toolchain_version <= (15, 0, 0):
+        if self.get_toolchain_version() <= (15, 0, 0):
             # https://git.kernel.org/linus/30d17fac6aaedb40d111bb159f4b35525637ea78
             tc_build.utils.print_warning(
                 's390 does not build with LLVM < 15.0.0, skipping build...')
@@ -338,6 +350,18 @@ class X8664KernelBuilder(KernelBuilder):
 
     def __init__(self):
         super().__init__('x86_64')
+
+    def build(self):
+        if not self.lsm:
+            raise RuntimeError('build() called without LinuxSourceManager?')
+
+        if self.get_toolchain_version() < (15, 0, 0) and self.lsm.get_version() >= (6, 15, 0):
+            # https://git.kernel.org/linus/7861640aac52bbbb3dc2cd40fb93dfb3b3d0f43c
+            tc_build.utils.print_warning(
+                'x86_64 does not build with LLVM < 15.0.0 and Linux >= 6.15.0, skipping build...')
+            return
+
+        super().build()
 
 
 class LLVMKernelBuilder(Builder):
@@ -410,6 +434,7 @@ class LLVMKernelBuilder(Builder):
             builder.bolt_sampling_output = self.bolt_sampling_output
             builder.folders.build = self.folders.build
             builder.folders.source = self.folders.source
+            builder.lsm = lsm
             builder.toolchain_prefix = self.toolchain_prefix
             builder.build()
 
@@ -420,6 +445,7 @@ class LinuxSourceManager(SourceManager):
         super().__init__(location)
 
         self.patches = []
+        self._version = ()
 
     def get_kernelversion(self):
         return subprocess.run(['make', '-s', 'kernelversion'],
@@ -433,7 +459,10 @@ class LinuxSourceManager(SourceManager):
     # particular version.
     def get_version(self):
         # elem.split('-')[0] in case we are dealing with an -rc release.
-        return tuple(int(elem.split('-')[0]) for elem in self.get_kernelversion().split('.', 3))
+        if not self._version:
+            self._version = tuple(
+                int(elem.split('-')[0]) for elem in self.get_kernelversion().split('.', 3))
+        return self._version
 
     def prepare(self):
         self.tarball.download()
