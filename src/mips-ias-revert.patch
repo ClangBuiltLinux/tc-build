@@ -1,0 +1,202 @@
+diff --git a/arch/mips/include/asm/idle.h b/arch/mips/include/asm/idle.h
+index c7d75807d13f..0992cad9c632 100644
+--- a/arch/mips/include/asm/idle.h
++++ b/arch/mips/include/asm/idle.h
+@@ -6,10 +6,11 @@
+ #include <linux/linkage.h>
+ 
+ extern void (*cpu_wait)(void);
+-extern asmlinkage void r4k_wait(void);
++extern void r4k_wait(void);
++extern asmlinkage void __r4k_wait(void);
+ extern void r4k_wait_irqoff(void);
+ 
+-static inline int using_skipover_handler(void)
++static inline int using_rollback_handler(void)
+ {
+ 	return cpu_wait == r4k_wait;
+ }
+diff --git a/arch/mips/kernel/genex.S b/arch/mips/kernel/genex.S
+index 08c0a01d9a29..a572ce36a24f 100644
+--- a/arch/mips/kernel/genex.S
++++ b/arch/mips/kernel/genex.S
+@@ -104,59 +104,48 @@ handle_vcei:
+ 
+ 	__FINIT
+ 
+-	.section .cpuidle.text,"ax"
+-	/* Align to 32 bytes for the maximum idle interrupt region size. */
+-	.align	5
+-LEAF(r4k_wait)
+-	/* Keep the ISA bit clear for calculations on local labels here. */
+-0:	.fill 	0
+-	/* Start of idle interrupt region. */
+-	local_irq_enable
+-	/*
+-	 * If an interrupt lands here, before going idle on the next
+-	 * instruction, we must *NOT* go idle since the interrupt could
+-	 * have set TIF_NEED_RESCHED or caused a timer to need resched.
+-	 * Fall through -- see skipover_handler below -- and have the
+-	 * idle loop take care of things.
+-	 */
+-1:	.fill	0
+-	/* The R2 EI/EHB sequence takes 8 bytes, otherwise pad up.  */
+-	.if		1b - 0b > 32
+-	.error	"overlong idle interrupt region"
+-	.elseif	1b - 0b > 8
+-	.align	4
+-	.endif
+-2:	.fill	0
+-	.equ	r4k_wait_idle_size, 2b - 0b
+-	/* End of idle interrupt region; size has to be a power of 2. */
++	.align	5	/* 32 byte rollback region */
++LEAF(__r4k_wait)
++	.set	push
++	.set	noreorder
++	/* start of rollback region */
++	LONG_L	t0, TI_FLAGS($28)
++	nop
++	andi	t0, _TIF_NEED_RESCHED
++	bnez	t0, 1f
++	 nop
++	nop
++	nop
++#ifdef CONFIG_CPU_MICROMIPS
++	nop
++	nop
++	nop
++	nop
++#endif
+ 	.set	MIPS_ISA_ARCH_LEVEL_RAW
+-r4k_wait_insn:
+ 	wait
+-r4k_wait_exit:
+-	.set	mips0
+-	local_irq_disable
++	/* end of rollback region (the region size must be power of two) */
++1:
+ 	jr	ra
+-	END(r4k_wait)
+-	.previous
++	 nop
++	.set	pop
++	END(__r4k_wait)
+ 
+-	.macro	BUILD_SKIPOVER_PROLOGUE handler
+-	FEXPORT(skipover_\handler)
++	.macro	BUILD_ROLLBACK_PROLOGUE handler
++	FEXPORT(rollback_\handler)
+ 	.set	push
+ 	.set	noat
+ 	MFC0	k0, CP0_EPC
+-	/* Subtract/add 2 to let the ISA bit propagate through the mask.  */
+-	PTR_LA	k1, r4k_wait_insn - 2
+-	ori 	k0, r4k_wait_idle_size - 2
+-	.set	noreorder
++	PTR_LA	k1, __r4k_wait
++	ori	k0, 0x1f	/* 32 byte rollback region */
++	xori	k0, 0x1f
+ 	bne	k0, k1, \handler
+-	PTR_ADDIU 	k0, r4k_wait_exit - r4k_wait_insn + 2
+-	.set	reorder
+ 	MTC0	k0, CP0_EPC
+ 	.set pop
+ 	.endm
+ 
+ 	.align	5
+-BUILD_SKIPOVER_PROLOGUE handle_int
++BUILD_ROLLBACK_PROLOGUE handle_int
+ NESTED(handle_int, PT_SIZE, sp)
+ 	.cfi_signal_frame
+ #ifdef CONFIG_TRACE_IRQFLAGS
+@@ -276,7 +265,7 @@ NESTED(except_vec_ejtag_debug, 0, sp)
+  * This prototype is copied to ebase + n*IntCtl.VS and patched
+  * to invoke the handler
+  */
+-BUILD_SKIPOVER_PROLOGUE except_vec_vi
++BUILD_ROLLBACK_PROLOGUE except_vec_vi
+ NESTED(except_vec_vi, 0, sp)
+ 	SAVE_SOME docfi=1
+ 	SAVE_AT docfi=1
+diff --git a/arch/mips/kernel/idle.c b/arch/mips/kernel/idle.c
+index 80e8a04a642e..5abc8b7340f8 100644
+--- a/arch/mips/kernel/idle.c
++++ b/arch/mips/kernel/idle.c
+@@ -35,6 +35,13 @@ static void __cpuidle r3081_wait(void)
+ 	write_c0_conf(cfg | R30XX_CONF_HALT);
+ }
+ 
++void __cpuidle r4k_wait(void)
++{
++	raw_local_irq_enable();
++	__r4k_wait();
++	raw_local_irq_disable();
++}
++
+ /*
+  * This variant is preferable as it allows testing need_resched and going to
+  * sleep depending on the outcome atomically.  Unfortunately the "It is
+diff --git a/arch/mips/kernel/smp-cps.c b/arch/mips/kernel/smp-cps.c
+index cc26d56f3ab6..e85bd087467e 100644
+--- a/arch/mips/kernel/smp-cps.c
++++ b/arch/mips/kernel/smp-cps.c
+@@ -332,8 +332,6 @@ static void __init cps_prepare_cpus(unsigned int max_cpus)
+ 	mips_cps_cluster_bootcfg = kcalloc(nclusters,
+ 					   sizeof(*mips_cps_cluster_bootcfg),
+ 					   GFP_KERNEL);
+-	if (!mips_cps_cluster_bootcfg)
+-		goto err_out;
+ 
+ 	if (nclusters > 1)
+ 		mips_cm_update_property();
+@@ -350,8 +348,6 @@ static void __init cps_prepare_cpus(unsigned int max_cpus)
+ 		mips_cps_cluster_bootcfg[cl].core_power =
+ 			kcalloc(BITS_TO_LONGS(ncores), sizeof(unsigned long),
+ 				GFP_KERNEL);
+-		if (!mips_cps_cluster_bootcfg[cl].core_power)
+-			goto err_out;
+ 
+ 		/* Allocate VPE boot configuration structs */
+ 		for (c = 0; c < ncores; c++) {
+diff --git a/arch/mips/kernel/traps.c b/arch/mips/kernel/traps.c
+index 8ec1e185b35c..39e248d0ed59 100644
+--- a/arch/mips/kernel/traps.c
++++ b/arch/mips/kernel/traps.c
+@@ -77,7 +77,7 @@
+ #include "access-helper.h"
+ 
+ extern void check_wait(void);
+-extern asmlinkage void skipover_handle_int(void);
++extern asmlinkage void rollback_handle_int(void);
+ extern asmlinkage void handle_int(void);
+ extern asmlinkage void handle_adel(void);
+ extern asmlinkage void handle_ades(void);
+@@ -2066,7 +2066,7 @@ void *set_vi_handler(int n, vi_handler_t addr)
+ {
+ 	extern const u8 except_vec_vi[];
+ 	extern const u8 except_vec_vi_ori[], except_vec_vi_end[];
+-	extern const u8 skipover_except_vec_vi[];
++	extern const u8 rollback_except_vec_vi[];
+ 	unsigned long handler;
+ 	unsigned long old_handler = vi_handlers[n];
+ 	int srssets = current_cpu_data.srsets;
+@@ -2095,7 +2095,7 @@ void *set_vi_handler(int n, vi_handler_t addr)
+ 			change_c0_srsmap(0xf << n*4, 0 << n*4);
+ 	}
+ 
+-	vec_start = using_skipover_handler() ? skipover_except_vec_vi :
++	vec_start = using_rollback_handler() ? rollback_except_vec_vi :
+ 					       except_vec_vi;
+ #if defined(CONFIG_CPU_MICROMIPS) || defined(CONFIG_CPU_BIG_ENDIAN)
+ 	ori_offset = except_vec_vi_ori - vec_start + 2;
+@@ -2426,8 +2426,8 @@ void __init trap_init(void)
+ 	if (board_be_init)
+ 		board_be_init();
+ 
+-	set_except_vector(EXCCODE_INT, using_skipover_handler() ?
+-					skipover_handle_int : handle_int);
++	set_except_vector(EXCCODE_INT, using_rollback_handler() ?
++					rollback_handle_int : handle_int);
+ 	set_except_vector(EXCCODE_MOD, handle_tlbm);
+ 	set_except_vector(EXCCODE_TLBL, handle_tlbl);
+ 	set_except_vector(EXCCODE_TLBS, handle_tlbs);
