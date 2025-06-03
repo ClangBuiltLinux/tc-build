@@ -290,16 +290,6 @@ class LLVMBuilder(Builder):
 
         if self.tools.ar:
             self.cmake_defines['CMAKE_AR'] = self.tools.ar
-        # Utilize thin archives to save space. Use the deprecated -T for
-        # compatibility with binutils<2.38 and llvm-ar<14. Unfortunately, thin
-        # archives make compiler-rt archives not easily distributable, so we
-        # disable the optimization when compiler-rt is enabled and there is an
-        # install directory. Ideally thin archives should still be usable for
-        # non-compiler-rt projects.
-        if not (self.folders.install and self.project_is_enabled('compiler-rt')):
-            self.cmake_defines['CMAKE_CXX_ARCHIVE_CREATE'] = '<CMAKE_AR> DqcT <TARGET> <OBJECTS>'
-        self.cmake_defines['CMAKE_CXX_ARCHIVE_FINISH'] = 'true'
-
         if self.tools.ranlib:
             self.cmake_defines['CMAKE_RANLIB'] = self.tools.ranlib
         if 'CMAKE_BUILD_TYPE' not in self.cmake_defines:
