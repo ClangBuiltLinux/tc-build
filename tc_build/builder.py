@@ -32,6 +32,12 @@ class Builder:
             else:
                 self.folders.build.unlink()
 
+    def make_build_folder(self):
+        if not self.folders.build:
+            raise RuntimeError('No build folder set?')
+
+        self.folders.build.mkdir(parents=True)
+
     def run_cmd(self, cmd, capture_output=False, cwd=None):
         if self.show_commands:
             # Acts sort of like 'set -x' in bash
