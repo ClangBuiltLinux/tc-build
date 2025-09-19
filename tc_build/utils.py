@@ -1,8 +1,19 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import subprocess
 import sys
+import re
 import time
+
+
+def cpu_is_apple_silicon():
+    cpuinfo = Path('/proc/cpuinfo').read_text(encoding='utf-8')
+    if match := re.search(r"implementer\s+:\s+(\w+)", cpuinfo):
+        # https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/arm64/include/asm/cputype.h?h=v6.17-rc4#n62
+        return match.groups()[0] == '0x61'
+    # If we cannot prove that it is Apple Silicon, we assume it is not
+    return False
 
 
 def create_gitignore(folder):
