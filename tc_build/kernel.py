@@ -408,7 +408,14 @@ class LLVMKernelBuilder(Builder):
         # requested.
         for config_target, llvm_targets in self.matrix.items():
             for llvm_target in llvm_targets:
-                if config_target == 'defconfig' and llvm_target == 'ARM':
+                if config_target == 'defconfig' and llvm_target == 'AArch64':
+                    builder = allconfig_capable_builders[llvm_target]()
+                    # For arm64, defconfig is quite large. To be quicker and
+                    # not use as much space for profiling data, use
+                    # 'virtconfig'.
+                    builder.config_targets = ['virtconfig']
+                    builders.append(builder)
+                elif config_target == 'defconfig' and llvm_target == 'ARM':
                     builders += [
                         ArmV5KernelBuilder(),
                         ArmV6KernelBuilder(),
