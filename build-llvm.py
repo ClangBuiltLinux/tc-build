@@ -13,6 +13,14 @@ from tc_build.llvm import LLVMBootstrapBuilder, LLVMBuilder, LLVMInstrumentedBui
 from tc_build.kernel import KernelBuilder, LinuxSourceManager, LLVMKernelBuilder
 from tc_build.tools import HostTools, StageTools
 
+try:
+    # pylint: disable-next=ungrouped-imports
+    from argparse import BooleanOptionalAction
+    # 'store_true' sets 'default' implicitly, do it explicitly to match
+    BOOL_ARGS = {'action': BooleanOptionalAction, 'default': False}
+except ImportError:
+    BOOL_ARGS = {'action': 'store_true'}
+
 # This is a known good revision of LLVM for building the kernel
 GOOD_REVISION = 'd5802c30ae6cf296489daf12b36582e9e1d658bb'
 
@@ -29,7 +37,7 @@ parser.add_argument('--assertions',
                     issues when compiling but it will increase compile times by 15-20%%.
 
                     '''),
-                    action='store_true')
+                    **BOOL_ARGS)
 parser.add_argument('-b',
                     '--build-folder',
                     help=textwrap.dedent('''\
