@@ -78,6 +78,13 @@ class LLVMBuilder(Builder):
                 clang_inst,
                 clang,
             ]
+            # When running an instrumented binary on certain platforms (namely
+            # Apple Silicon), there may be hangs due to instrumentation in
+            # between exclusive load and store instructions:
+            # https://github.com/llvm/llvm-project/issues/153492
+            # Enable conservative instrumentation to avoid this.
+            if tc_build.utils.cpu_is_apple_silicon():
+                clang_inst_cmd.append('--conservative-instrumentation')
             self.run_cmd(clang_inst_cmd)
 
             self.bolt_builder.bolt_instrumentation = True
