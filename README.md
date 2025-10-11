@@ -89,6 +89,45 @@ These scripts have been tested in a Docker image of the following distributions 
             python3 \
             uboot-tools
   ```
+* ### Gentoo
+
+  A convenient way to manage all the required packages is to use [package sets](https://wiki.gentoo.org/wiki//etc/portage/sets). Create a set for tc-build:
+
+  ```
+  $ sudo mkdir /etc/portage/sets && sudo $EDITOR /etc/portage/sets/tc-build
+  ```
+
+  With the file `tc-build` containing:
+
+  ```
+  llvm-core/clang
+  llvm-core/lld
+  sys-libs/binutils-libs
+  dev-build/cmake
+  dev-vcs/git
+  dev-util/ccache
+  dev-libs/elfutils
+  app-arch/cpio
+  dev-embedded/u-boot-tools
+  ```
+
+  Afterwards emerge the set:
+
+  ```
+  $ sudo emerge --ask --verbose @tc-build
+  ```
+
+  To avoid building from source Gentoo also provides [binary packages](https://wiki.gentoo.org/wiki/Binary_package_guide).
+
+  ```
+  $ sudo emerge --ask --verbose --getbinpkg @tc-build
+  ```
+
+  Or for short:
+
+  ```
+  $ sudo emerge -avg @tc-build
+  ```
 
 * ### Clear Linux
 
