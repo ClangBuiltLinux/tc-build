@@ -15,11 +15,19 @@ import tc_build.utils
 LLVM_VER_FOR_RUNTIMES = 20
 
 
-def get_all_targets(llvm_folder):
+def get_all_targets(llvm_folder, experimental=False):
+    variables = ['LLVM_ALL_TARGETS']
+    if experimental:
+        variables.append('LLVM_ALL_EXPERIMENTAL_TARGETS')
+
     contents = Path(llvm_folder, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
-    if not (match := re.search(r'set\(LLVM_ALL_TARGETS([\w|\s]+)\)', contents)):
-        raise RuntimeError('Could not find LLVM_ALL_TARGETS?')
-    return [val for target in match.group(1).splitlines() if (val := target.strip())]
+
+    targets = []
+    for variable in variables:
+        if not (match := re.search(fr"set\({variable}([\w|\s]+)\)", contents)):
+            raise RuntimeError(f"Could not find {variables}?")
+        targets += [val for target in match.group(1).splitlines() if (val := target.strip())]
+    return targets
 
 
 class LLVMBuilder(Builder):
@@ -305,9 +313,26 @@ class LLVMBuilder(Builder):
             self.cmake_defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
         if self.tools.llvm_tblgen:
             self.cmake_defines['LLVM_TABLEGEN'] = self.tools.llvm_tblgen
-        self.cmake_defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(self.targets)
         if self.tools.ld:
             self.cmake_defines['LLVM_USE_LINKER'] = self.tools.ld
+
+        # Separate "standard" targets from experimental targets. We know that
+        # all values in targets are valid at this point from the
+        # validate_targets() call above. If a value is not in the supported
+        # standard targets list, it must be an experimental target.
+        supported_standard_targets = get_all_targets(self.folders.source)
+        standard_targets = []
+        experimental_targets = []
+        for target in self.targets:
+            if target in supported_standard_targets:
+                standard_targets.append(target)
+            else:
+                experimental_targets.append(target)
+        if standard_targets:
+            self.cmake_defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(standard_targets)
+        if experimental_targets:
+            self.cmake_defines['LLVM_EXPERIMENTAL_TARGETS_TO_BUILD'] = ';'.join(
+                experimental_targets)
 
         # Clear Linux needs a different target to find all of the C++ header files, otherwise
         # stage 2+ compiles will fail without this
@@ -404,7 +429,7 @@ class LLVMBuilder(Builder):
         if not self.targets:
             raise RuntimeError('No targets set?')
 
-        all_targets = get_all_targets(self.folders.source)
+        all_targets = get_all_targets(self.folders.source, experimental=True)
 
         for target in self.targets:
             if target in ('all', 'host'):
@@ -414,7 +439,7 @@ class LLVMBuilder(Builder):
                 # tuple() for shorter pretty printing versus instead of
                 # ('{"', '".join(all_targets)}')
                 raise RuntimeError(
-                    f"Requested target ('{target}') was not found in LLVM_ALL_TARGETS {tuple(all_targets)}, check spelling?"
+                    f"Requested target ('{target}') was not found in LLVM_ALL_TARGETS or LLVM_ALL_EXPERIMENTAL_TARGETS {tuple(all_targets)}, check spelling?"
                 )
 
 
