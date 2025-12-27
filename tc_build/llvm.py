@@ -22,6 +22,13 @@ def get_all_targets(llvm_folder):
     return [val for target in match.group(1).splitlines() if (val := target.strip())]
 
 
+def get_experimental_targets(llvm_folder):
+    contents = Path(llvm_folder, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
+    if not (match := re.search(r'set\(LLVM_ALL_EXPERIMENTAL_TARGETS([\w|\s]+)\)', contents)):
+        raise RuntimeError('Could not find LLVM_ALL_EXPERIMENTAL_TARGETS?')
+    return [val for target in match.group(1).splitlines() if (val := target.strip())]
+
+
 class LLVMBuilder(Builder):
 
     def __init__(self):
@@ -46,6 +53,7 @@ class LLVMBuilder(Builder):
         self.projects = []
         self.quiet_cmake = False
         self.targets = []
+        self.experimental_targets = []
 
     def bolt_clang(self):
         # Default to instrumentation, as it should be universally available.
@@ -306,6 +314,8 @@ class LLVMBuilder(Builder):
         if self.tools.llvm_tblgen:
             self.cmake_defines['LLVM_TABLEGEN'] = self.tools.llvm_tblgen
         self.cmake_defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(self.targets)
+        self.cmake_defines['LLVM_EXPERIMENTAL_TARGETS_TO_BUILD'] = ';'.join(
+            self.experimental_targets)
         if self.tools.ld:
             self.cmake_defines['LLVM_USE_LINKER'] = self.tools.ld
 
@@ -405,6 +415,7 @@ class LLVMBuilder(Builder):
             raise RuntimeError('No targets set?')
 
         all_targets = get_all_targets(self.folders.source)
+        experimental_targets = get_experimental_targets(self.folders.source)
 
         for target in self.targets:
             if target in ('all', 'host'):
@@ -415,6 +426,12 @@ class LLVMBuilder(Builder):
                 # ('{"', '".join(all_targets)}')
                 raise RuntimeError(
                     f"Requested target ('{target}') was not found in LLVM_ALL_TARGETS {tuple(all_targets)}, check spelling?"
+                )
+
+        for target in self.experimental_targets:
+            if target not in experimental_targets:
+                raise RuntimeError(
+                    f"Requested target ('{target}') was not found in LLVM_ALL_EXPERIMENTAL_TARGETS {tuple(experimental_targets)}, check spelling?"
                 )
 
 
