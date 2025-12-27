@@ -391,6 +391,19 @@ parser.add_argument('-t',
 
                     '''),
                     nargs='+')
+parser.add_argument('-T',
+                    '--experimental-targets',
+                    help=textwrap.dedent('''\
+                    LLVM is multitargeted by default. Currently, this script doesn't enable any experiemtnal,
+                    backends. If you would like to override this, you can use this parameter and supply
+                    a list of targets supported by LLVM_EXPERIMENTAL_TARGETS_TO_BUILD:
+
+                    https://llvm.org/docs/CMake.html#llvm-specific-variables
+
+                    Example: -T ARC CSKY M68k Xtensa
+
+                    '''),
+                    nargs='+')
 clone_options.add_argument('--use-good-revision',
                            help=textwrap.dedent('''\
                     By default, the script updates LLVM to the latest tip of tree revision, which may at times be
@@ -492,8 +505,11 @@ def_llvm_builder_cls = LLVMBuilder if args.full_toolchain else LLVMSlimBuilder
 # that the user can correct the issue sooner rather than later.
 final = def_llvm_builder_cls()
 final.folders.source = llvm_folder
-if args.targets:
-    final.targets = args.targets
+if args.targets or args.experimental_targets:
+    if args.targets:
+        final.targets = args.targets
+    if args.experimental_targets:
+        final.experimental_targets = args.experimental_targets
     final.validate_targets()
 else:
     final.targets = ['all'] if args.full_toolchain else llvm_source.default_targets()
