@@ -16,13 +16,22 @@ LLVM_VER_FOR_RUNTIMES = 20
 
 
 def get_all_targets(llvm_folder, experimental=False):
+    contents = Path(llvm_folder, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
+    targets = []
+
     variables = ['LLVM_ALL_TARGETS']
     if experimental:
-        variables.append('LLVM_ALL_EXPERIMENTAL_TARGETS')
+        # Introduced by https://github.com/llvm/llvm-project/commit/1908820d6de5004964e85608070e7c869fc81eac in LLVM 17
+        if 'LLVM_ALL_EXPERIMENTAL_TARGETS' in contents:
+            variables.append('LLVM_ALL_EXPERIMENTAL_TARGETS')
+        else:
+            # Manually populate experimental targets based on list above
+            possible_experimental_targets = ('ARC', 'CSKY', 'DirectX', 'M68k', 'SPIRV', 'Xtensa')
+            targets += [
+                target for target in possible_experimental_targets
+                if Path(llvm_folder, 'llvm/lib/Target', target).exists()
+            ]
 
-    contents = Path(llvm_folder, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
-
-    targets = []
     for variable in variables:
         if not (match := re.search(fr"set\({variable}([\w|\s]+)\)", contents)):
             raise RuntimeError(f"Could not find {variables}?")
