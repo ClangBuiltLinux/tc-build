@@ -37,8 +37,9 @@ class KernelBuilder(Builder):
         self.toolchain_version = ()
 
     def build(self):
+        bin_folder = Path(self.toolchain_prefix, 'bin')
         if self.bolt_instrumentation:
-            self.make_variables['CC'] = Path(self.toolchain_prefix, 'bin/clang.inst')
+            self.make_variables['CC'] = Path(bin_folder, 'clang.inst')
         # The user may have configured clang without the host target, in which
         # case we need to use GCC for compiling the host utilities.
         if self.can_use_clang_as_hostcc():
@@ -54,7 +55,7 @@ class KernelBuilder(Builder):
                 )
                 return
             self.make_variables['CROSS_COMPILE'] = self.cross_compile
-        self.make_variables['LLVM'] = f"{self.toolchain_prefix}/bin/"
+        self.make_variables['LLVM'] = f"{bin_folder}/"
         if not self.can_use_ias():
             self.make_variables['LLVM_IAS'] = '0'
         self.make_variables['O'] = self.folders.build
