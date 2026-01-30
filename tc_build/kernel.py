@@ -145,7 +145,7 @@ class KernelBuilder(Builder):
     def _test_clang(self, args=None):
         clang = Path(self.toolchain_prefix, 'bin/clang')
 
-        clang_args = ['-x', 'c', '-o', '/dev/null', '/dev/null']
+        clang_args = ['-x', 'c', '-o', '/dev/null', '-']
         if args:
             if isinstance(args, str):
                 clang_args.append(args)
@@ -154,8 +154,14 @@ class KernelBuilder(Builder):
             else:
                 raise ValueError(f"Invalid type for args: {args}")
 
+        prog = 'int main(void) { return 0; }'
+
         try:
-            subprocess.run([clang, *clang_args], capture_output=True, check=True)
+            subprocess.run([clang, *clang_args],
+                           capture_output=True,
+                           check=True,
+                           input=prog,
+                           text=True)
         except subprocess.CalledProcessError:
             return False
         return True
