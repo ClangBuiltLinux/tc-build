@@ -137,17 +137,28 @@ class KernelBuilder(Builder):
         return self.toolchain_version
 
     def can_use_clang_as_hostcc(self):
-        clang = Path(self.toolchain_prefix, 'bin/clang')
-        try:
-            subprocess.run([clang, '-x', 'c', '-c', '-o', '/dev/null', '/dev/null'],
-                           capture_output=True,
-                           check=True)
-        except subprocess.CalledProcessError:
-            return False
-        return True
+        return self._test_clang('-c')
 
     def needs_binutils(self):
         return not self.can_use_ias()
+
+    def _test_clang(self, args=None):
+        clang = Path(self.toolchain_prefix, 'bin/clang')
+
+        clang_args = ['-x', 'c', '-o', '/dev/null', '/dev/null']
+        if args:
+            if isinstance(args, str):
+                clang_args.append(args)
+            elif isinstance(args, list):
+                clang_args.extend(args)
+            else:
+                raise ValueError(f"Invalid type for args: {args}")
+
+        try:
+            subprocess.run([clang, *clang_args], capture_output=True, check=True)
+        except subprocess.CalledProcessError:
+            return False
+        return True
 
 
 class ArmKernelBuilder(KernelBuilder):
