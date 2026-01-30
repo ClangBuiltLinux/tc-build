@@ -45,6 +45,8 @@ class KernelBuilder(Builder):
         if self.can_use_clang_as_hostcc():
             if 'CC' in self.make_variables:
                 self.make_variables['HOSTCC'] = self.make_variables['CC']
+            if self._test_clang(ld_path := f"--ld-path={bin_folder}/ld.lld"):
+                self.make_variables['HOSTLDFLAGS'] = ld_path
         else:
             self.make_variables['HOSTCC'] = 'gcc'
             self.make_variables['HOSTCXX'] = 'g++'
