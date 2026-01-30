@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 import platform
+import subprocess
 from tempfile import TemporaryDirectory
 
 from tc_build.builder import Builder
@@ -51,6 +52,15 @@ class BinutilsBuilder(Builder):
 
         self.configure_vars['CFLAGS'] = ' '.join(self.cflags)
         self.configure_vars['CXXFLAGS'] = ' '.join(self.cflags)
+
+        # Avoid "input SFrame sections with different format versions prevent
+        # .sframe generation" error by discarding .sframe altogether if
+        # possible, as we may be linking against libraries with their own
+        # .sframe sections and versions.
+        ld_help = subprocess.run(['ld', '--help'], capture_output=True, check=True,
+                                 text=True).stdout
+        if '--discard-sframe' in ld_help:
+            self.configure_vars['LDFLAGS'] = '-Wl,--discard-sframe'
 
         self.clean_build_folder()
         self.folders.build.mkdir(exist_ok=True, parents=True)
