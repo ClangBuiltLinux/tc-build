@@ -37,13 +37,16 @@ class KernelBuilder(Builder):
         self.toolchain_version = ()
 
     def build(self):
+        bin_folder = Path(self.toolchain_prefix, 'bin')
         if self.bolt_instrumentation:
-            self.make_variables['CC'] = Path(self.toolchain_prefix, 'bin/clang.inst')
+            self.make_variables['CC'] = Path(bin_folder, 'clang.inst')
         # The user may have configured clang without the host target, in which
         # case we need to use GCC for compiling the host utilities.
         if self.can_use_clang_as_hostcc():
             if 'CC' in self.make_variables:
                 self.make_variables['HOSTCC'] = self.make_variables['CC']
+            if self._test_clang(ld_path := f"--ld-path={bin_folder}/ld.lld"):
+                self.make_variables['HOSTLDFLAGS'] = ld_path
         else:
             self.make_variables['HOSTCC'] = 'gcc'
             self.make_variables['HOSTCXX'] = 'g++'
@@ -54,7 +57,7 @@ class KernelBuilder(Builder):
                 )
                 return
             self.make_variables['CROSS_COMPILE'] = self.cross_compile
-        self.make_variables['LLVM'] = f"{self.toolchain_prefix}/bin/"
+        self.make_variables['LLVM'] = f"{bin_folder}/"
         if not self.can_use_ias():
             self.make_variables['LLVM_IAS'] = '0'
         self.make_variables['O'] = self.folders.build
@@ -136,17 +139,34 @@ class KernelBuilder(Builder):
         return self.toolchain_version
 
     def can_use_clang_as_hostcc(self):
-        clang = Path(self.toolchain_prefix, 'bin/clang')
-        try:
-            subprocess.run([clang, '-x', 'c', '-c', '-o', '/dev/null', '/dev/null'],
-                           capture_output=True,
-                           check=True)
-        except subprocess.CalledProcessError:
-            return False
-        return True
+        return self._test_clang('-c')
 
     def needs_binutils(self):
         return not self.can_use_ias()
+
+    def _test_clang(self, args=None):
+        clang = Path(self.toolchain_prefix, 'bin/clang')
+
+        clang_args = ['-x', 'c', '-o', '/dev/null', '-']
+        if args:
+            if isinstance(args, str):
+                clang_args.append(args)
+            elif isinstance(args, list):
+                clang_args.extend(args)
+            else:
+                raise ValueError(f"Invalid type for args: {args}")
+
+        prog = 'int main(void) { return 0; }'
+
+        try:
+            subprocess.run([clang, *clang_args],
+                           capture_output=True,
+                           check=True,
+                           input=prog,
+                           text=True)
+        except subprocess.CalledProcessError:
+            return False
+        return True
 
 
 class ArmKernelBuilder(KernelBuilder):
