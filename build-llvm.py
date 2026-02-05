@@ -236,6 +236,14 @@ parser.add_argument('--lto',
                     '''),
                     type=str,
                     choices=['thin', 'full'])
+parser.add_argument('-m',
+                    '--multicall',
+                    help=textwrap.dedent('''\
+                    Build LLVM as a multicall binary via the LLVM_TOOL_LLVM_DRIVER_BUILD CMake option.
+                    This results in a much smaller installation on disk.
+
+                    '''),
+                    action='store_true')
 parser.add_argument('-n',
                     '--no-update',
                     help=textwrap.dedent('''\
@@ -536,6 +544,8 @@ if args.assertions:
 if args.vendor_string:
     common_cmake_defines['CLANG_VENDOR'] = args.vendor_string
     common_cmake_defines['LLD_VENDOR'] = args.vendor_string
+if args.multicall:
+    common_cmake_defines['LLVM_TOOL_LLVM_DRIVER_BUILD'] = 'ON'
 if args.defines:
     defines = dict(define.split('=', 1) for define in args.defines)
     common_cmake_defines.update(defines)
