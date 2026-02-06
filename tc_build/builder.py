@@ -36,4 +36,16 @@ class Builder:
         if self.show_commands:
             # Acts sort of like 'set -x' in bash
             print(f"$ {' '.join([shlex.quote(str(elem)) for elem in cmd])}", flush=True)
-        return subprocess.run(cmd, capture_output=capture_output, check=True, cwd=cwd)
+        try:
+            return subprocess.run(cmd,
+                                  capture_output=capture_output,
+                                  check=True,
+                                  cwd=cwd,
+                                  text=True)
+        except subprocess.CalledProcessError as err:
+            if capture_output:
+                if err.stdout:
+                    print(err.stdout)
+                if err.stderr:
+                    print(err.stderr)
+            raise err
