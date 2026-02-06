@@ -74,17 +74,18 @@ class LLVMBuilder(Builder):
 
         tc_build.utils.print_header(f"Performing BOLT with {mode}")
 
-        # clang-#: original binary
-        # clang.bolt: BOLT optimized binary
+        # real_binary: clang-# or llvm (if multicall is enabled)
+        # bolt_binary: clang.bolt or llvm.bolt
         # .bolt will become original binary after optimization
-        clang = Path(self.folders.build, 'bin/clang').resolve()
-        clang_bolt = clang.with_name('clang.bolt')
+        real_binary = Path(self.folders.build, 'bin/clang').resolve()
+        binary_prefix = 'llvm' if self.multicall_is_enabled() else 'clang'
+        bolt_binary = real_binary.with_name(f"{binary_prefix}.bolt")
 
-        bolt_profile = Path(self.folders.build, 'clang.fdata')
+        bolt_profile = Path(self.folders.build, f"{binary_prefix}.fdata")
 
         if mode == 'instrumentation':
-            # clang.inst: instrumented binary, will be removed after generating profiles
-            clang_inst = clang.with_name('clang.inst')
+            # clang.inst / llvm.inst: instrumented binary, will be removed after generating profiles
+            inst_binary = real_binary.with_name(f"{binary_prefix}.inst")
 
             clang_inst_cmd = [
                 self.tools.llvm_bolt,
@@ -92,8 +93,8 @@ class LLVMBuilder(Builder):
                 f"--instrumentation-file={bolt_profile}",
                 '--instrumentation-file-append-pid',
                 '-o',
-                clang_inst,
-                clang,
+                inst_binary,
+                real_binary,
             ]
             # When running an instrumented binary on certain platforms (namely
             # Apple Silicon), there may be hangs due to instrumentation in
@@ -104,7 +105,18 @@ class LLVMBuilder(Builder):
                 clang_inst_cmd.append('--conservative-instrumentation')
             self.run_cmd(clang_inst_cmd)
 
-            self.bolt_builder.bolt_instrumentation = True
+            if binary_prefix == 'llvm':
+                # The multicall tools are all symlinked to the 'llvm' binary.
+                # To avoid having to mess with those symlinks, perform a
+                # shuffle of the real binary with the instrumented binary for
+                # the build process.
+                orig_binary = real_binary.with_name('llvm.orig')
+                real_binary.replace(orig_binary)  # mv llvm llvm.orig
+                inst_binary.replace(real_binary)  # mv llvm.inst llvm
+            else:
+                # This option changes CC when building Linux, which is only
+                # needed when just clang is instrumented.
+                self.bolt_builder.bolt_instrumentation = True
 
         if mode == 'sampling':
             self.bolt_builder.bolt_sampling_output = Path(self.folders.build, 'perf.data')
@@ -115,6 +127,11 @@ class LLVMBuilder(Builder):
         # With instrumentation, we need to combine the profiles we generated,
         # as they are separated by PID
         if mode == 'instrumentation':
+            # Undo shuffle from above
+            if binary_prefix == 'llvm':
+                real_binary.replace(inst_binary)  # mv llvm llvm.inst
+                orig_binary.replace(real_binary)  # mv llvm.orig llvm
+
             fdata_files = bolt_profile.parent.glob(f"{bolt_profile.name}.*.fdata")
 
             # merge-fdata will print one line for each .fdata it merges.
@@ -139,7 +156,7 @@ class LLVMBuilder(Builder):
                 self.bolt_builder.bolt_sampling_output,
                 '-o',
                 bolt_profile,
-                clang,
+                real_binary,
             ]
             self.run_cmd(perf2bolt_cmd)
             self.bolt_builder.bolt_sampling_output.unlink()
@@ -166,18 +183,18 @@ class LLVMBuilder(Builder):
             '--dyno-stats',
             f"--icf={icf_val}",
             '-o',
-            clang_bolt,
+            bolt_binary,
             f"--reorder-blocks={'cache+' if use_cache_plus else 'ext-tsp'}",
             f"--reorder-functions={reorder_funcs_val}",
             '--split-all-cold',
             f"--split-functions{'=3' if use_sf_val else ''}",
             '--use-gnu-stack',
-            clang,
+            real_binary,
         ]
         self.run_cmd(clang_opt_cmd)
-        clang_bolt.replace(clang)
+        bolt_binary.replace(real_binary)
         if mode == 'instrumentation':
-            clang_inst.unlink()
+            inst_binary.unlink()
 
     def build(self):
         if not self.folders.build:
@@ -388,6 +405,26 @@ class LLVMBuilder(Builder):
     def host_target_is_enabled(self):
         return 'all' in self.targets or self.host_target() in self.targets
 
+    def llvm_driver_binaries(self, project):
+        # Find all CMakeLists.txt for LLVM or clang tools that have multicall driver support
+        cmakelists_txts = [
+            cmakelists_txt
+            for path in Path(self.folders.source, project).glob('tools/*/CMakeLists.txt')
+            if '  GENERATE_DRIVER' in (cmakelists_txt := path.read_text(encoding='utf-8'))
+        ]
+        skip_tools = (
+            # llvm-mt depends on libxml2, which we explicitly do not link against
+            'llvm-mt', )
+        # Return the values of the add_clang_tool() or add_llvm_tool() CMake macros
+        return [
+            tool for cmakelists_txt in cmakelists_txts
+            if (match := re.search(r"^add_(?:clang|llvm)_tool\((.*)$", cmakelists_txt, flags=re.M))
+            and (tool := match.groups()[0]) not in skip_tools
+        ]
+
+    def multicall_is_enabled(self):
+        return self.cmake_defines.get('LLVM_TOOL_LLVM_DRIVER_BUILD', 'OFF') == 'ON'
+
     def project_is_enabled(self, project):
         return 'all' in self.projects or project in self.projects
 
@@ -495,10 +532,22 @@ class LLVMSlimBuilder(LLVMBuilder):
                 'llvm-readelf',
                 'llvm-strip',
             ]
+            # If multicall is enabled, we need to add all possible tools to the
+            # distribution components list to prevent them from being built as
+            # standalone tools, which may break the build for tools like
+            # llvm-symbolizer because they need LLVMDebuginfod but it is not
+            # linked in that configuration. While this does build a little more
+            # code for the 'distribution' target, it should result in only a
+            # slight increase in installation size due to being a multicall
+            # binary.
+            if self.multicall_is_enabled():
+                distribution_components += [item for item in self.llvm_driver_binaries('llvm') if item not in distribution_components]
         if self.project_is_enabled('bolt'):
             distribution_components.append('bolt')
         if self.project_is_enabled('clang'):
             distribution_components += ['clang', 'clang-resource-headers']
+            if self.multicall_is_enabled():
+                distribution_components += [item for item in self.llvm_driver_binaries('clang') if item not in distribution_components]
         if self.project_is_enabled('lld'):
             distribution_components.append('lld')
         if build_compiler_rt:
@@ -573,16 +622,18 @@ class LLVMInstrumentedBuilder(LLVMBuilder):
 
         self.cmake_defines['LLVM_BUILD_INSTRUMENTED'] = 'IR'
         self.cmake_defines['LLVM_BUILD_RUNTIME'] = 'OFF'
-        self.cmake_defines['LLVM_LINK_LLVM_DYLIB'] = 'ON'
 
     def configure(self):
+        no_multicall = not self.multicall_is_enabled()
         # The following defines are needed to avoid thousands of warnings
         # along the lines of:
         # "Unable to track new values: Running out of static counters."
-        # They require LLVM_LINK_DYLIB to be enabled, which is done above.
+        # LLVM_VP_COUNTERS_PER_SITE requires LLVM_LINK_DYLIB, which is only
+        # done when multicall is not enabled. If multicall is enabled, we need
+        # to use CMAKE_C{,XX}_FLAGS.
         cmake_options = Path(self.folders.source, 'llvm/cmake/modules/HandleLLVMOptions.cmake')
         cmake_text = cmake_options.read_text(encoding='utf-8')
-        if 'LLVM_VP_COUNTERS_PER_SITE' in cmake_text:
+        if no_multicall and 'LLVM_VP_COUNTERS_PER_SITE' in cmake_text:
             self.cmake_defines['LLVM_VP_COUNTERS_PER_SITE'] = '6'
         else:
             cflags = []
@@ -604,6 +655,13 @@ class LLVMInstrumentedBuilder(LLVMBuilder):
 
             self.cmake_defines['CMAKE_C_FLAGS'] = ' '.join(cflags)
             self.cmake_defines['CMAKE_CXX_FLAGS'] = ' '.join(cxxflags)
+
+        # These are currently incompatible:
+        # https://github.com/llvm/llvm-project/pull/133596
+        # But that should not matter much in this case because multicall uses
+        # much less disk space.
+        if no_multicall:
+            self.cmake_defines['LLVM_LINK_LLVM_DYLIB'] = 'ON'
 
         super().configure()
 
