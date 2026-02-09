@@ -25,7 +25,7 @@ except ImportError:
 GOOD_REVISION = '81c5d468cf00d6e41112fba6c89d6c40013bcbda'
 
 # The version of the Linux kernel that the script downloads if necessary
-DEFAULT_KERNEL_FOR_PGO = (6, 18, 0)
+DEFAULT_KERNEL_FOR_PGO = (6, 19, 0)
 
 parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
 clone_options = parser.add_mutually_exclusive_group()
