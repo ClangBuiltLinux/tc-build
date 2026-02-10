@@ -17,7 +17,7 @@ index c7d75807d13f..0992cad9c632 100644
  	return cpu_wait == r4k_wait;
  }
 diff --git a/arch/mips/kernel/genex.S b/arch/mips/kernel/genex.S
-index 08c0a01d9a29..a572ce36a24f 100644
+index be1b049d856f..a572ce36a24f 100644
 --- a/arch/mips/kernel/genex.S
 +++ b/arch/mips/kernel/genex.S
 @@ -104,59 +104,48 @@ handle_vcei:
@@ -29,7 +29,7 @@ index 08c0a01d9a29..a572ce36a24f 100644
 -	.align	5
 -LEAF(r4k_wait)
 -	/* Keep the ISA bit clear for calculations on local labels here. */
--0:	.fill 	0
+-0:	.fill	0
 -	/* Start of idle interrupt region. */
 -	local_irq_enable
 -	/*
@@ -41,7 +41,7 @@ index 08c0a01d9a29..a572ce36a24f 100644
 -	 */
 -1:	.fill	0
 -	/* The R2 EI/EHB sequence takes 8 bytes, otherwise pad up.  */
--	.if		1b - 0b > 32
+-	.if	1b - 0b > 32
 -	.error	"overlong idle interrupt region"
 -	.elseif	1b - 0b > 8
 -	.align	4
@@ -91,13 +91,13 @@ index 08c0a01d9a29..a572ce36a24f 100644
  	MFC0	k0, CP0_EPC
 -	/* Subtract/add 2 to let the ISA bit propagate through the mask.  */
 -	PTR_LA	k1, r4k_wait_insn - 2
--	ori 	k0, r4k_wait_idle_size - 2
+-	ori	k0, r4k_wait_idle_size - 2
 -	.set	noreorder
 +	PTR_LA	k1, __r4k_wait
 +	ori	k0, 0x1f	/* 32 byte rollback region */
 +	xori	k0, 0x1f
  	bne	k0, k1, \handler
--	PTR_ADDIU 	k0, r4k_wait_exit - r4k_wait_insn + 2
+-	 PTR_ADDIU	k0, r4k_wait_exit - r4k_wait_insn + 2
 -	.set	reorder
  	MTC0	k0, CP0_EPC
  	.set pop
@@ -136,28 +136,6 @@ index 80e8a04a642e..5abc8b7340f8 100644
  /*
   * This variant is preferable as it allows testing need_resched and going to
   * sleep depending on the outcome atomically.  Unfortunately the "It is
-diff --git a/arch/mips/kernel/smp-cps.c b/arch/mips/kernel/smp-cps.c
-index cc26d56f3ab6..e85bd087467e 100644
---- a/arch/mips/kernel/smp-cps.c
-+++ b/arch/mips/kernel/smp-cps.c
-@@ -332,8 +332,6 @@ static void __init cps_prepare_cpus(unsigned int max_cpus)
- 	mips_cps_cluster_bootcfg = kcalloc(nclusters,
- 					   sizeof(*mips_cps_cluster_bootcfg),
- 					   GFP_KERNEL);
--	if (!mips_cps_cluster_bootcfg)
--		goto err_out;
- 
- 	if (nclusters > 1)
- 		mips_cm_update_property();
-@@ -350,8 +348,6 @@ static void __init cps_prepare_cpus(unsigned int max_cpus)
- 		mips_cps_cluster_bootcfg[cl].core_power =
- 			kcalloc(BITS_TO_LONGS(ncores), sizeof(unsigned long),
- 				GFP_KERNEL);
--		if (!mips_cps_cluster_bootcfg[cl].core_power)
--			goto err_out;
- 
- 		/* Allocate VPE boot configuration structs */
- 		for (c = 0; c < ncores; c++) {
 diff --git a/arch/mips/kernel/traps.c b/arch/mips/kernel/traps.c
 index 8ec1e185b35c..39e248d0ed59 100644
 --- a/arch/mips/kernel/traps.c
