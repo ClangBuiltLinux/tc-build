@@ -8,7 +8,7 @@ import time
 import tc_build.binutils
 import tc_build.utils
 
-LATEST_BINUTILS_RELEASE = (2, 45, 0)
+LATEST_BINUTILS_RELEASE = (2, 46, 0)
 
 parser = ArgumentParser()
 parser.add_argument('-B',
@@ -78,7 +78,10 @@ if args.binutils_folder:
         raise RuntimeError(f"Provided binutils source ('{bsm.location}') does not exist?")
 else:
     # Turns (2, 40, 0) into 2.40 and (2, 40, 1) into 2.40.1 to follow tarball names
-    folder_name = 'binutils-' + '.'.join(str(x) for x in LATEST_BINUTILS_RELEASE if x)
+    # folder_name = 'binutils-' + '.'.join(str(x) for x in LATEST_BINUTILS_RELEASE if x)
+    # This logic does not hold for the 2.46 tarball unfortunately:
+    # https://inbox.sourceware.org/binutils/b30e780b-abc4-437b-bdcf-bb743a1c9eea@redhat.com/
+    folder_name = 'binutils-' + '.'.join(map(str, LATEST_BINUTILS_RELEASE))
 
     bsm.location = Path(tc_build_folder, 'src', folder_name)
     bsm.tarball.base_download_url = 'https://sourceware.org/pub/binutils/releases'
