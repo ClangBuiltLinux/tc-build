@@ -133,7 +133,7 @@ class HostTools:
                 'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
             )
         except subprocess.CalledProcessError:
-            llvm_tot_ver = 19
+            llvm_tot_ver = 23
         else:
             if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
                 raise RuntimeError('Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?')
