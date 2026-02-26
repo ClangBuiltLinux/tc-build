@@ -13,7 +13,7 @@ from tc_build.source import GitSourceManager
 import tc_build.utils
 
 LLVM_VER_FOR_RUNTIMES = 20
-VALID_DISTRIBUTION_PROFILES = ('none', 'bootstrap', 'kernel')
+VALID_DISTRIBUTION_PROFILES = ('none', 'bootstrap', 'kernel', 'rust')
 
 
 def get_all_targets(llvm_folder, experimental=False):
@@ -397,20 +397,38 @@ class LLVMBuilder(Builder):
         # There are two distribution profiles.
         # bootstrap: Used for stage one to build the rest of LLVM
         # kernel: All tools used to build the kernel
+        # rust: All tools, libraries, and headers needed to build Rust
         # For the most part, bootstrap is a subset of kernel, aside from the
         # tools and libraries for building an instrumented compiler.
+        # rust is a superset of kernel for ease of implementation.
+        if self.distribution_profile == 'rust':
+            distribution_components += [
+                'llvm-config',
+                'llvm-headers',
+                'llvm-libraries',
+            ]
         if llvm_build_tools:
             distribution_components += [
                 'llvm-ar',
                 'llvm-ranlib',
             ]
-            if self.distribution_profile == 'kernel':
+            if self.distribution_profile in ('kernel', 'rust'):
                 distribution_components += [
                     'llvm-nm',
                     'llvm-objcopy',
                     'llvm-objdump',
                     'llvm-readelf',
                     'llvm-strip',
+                ]
+            if self.distribution_profile == 'rust':
+                distribution_components += [
+                    'llc',
+                    'llvm-as',
+                    'llvm-cov',
+                    'llvm-dis',
+                    'llvm-link',
+                    'llvm-size',
+                    'opt',
                 ]
             # If multicall is enabled, we need to add all possible tools to the
             # distribution components list to prevent them from being built as
@@ -437,13 +455,18 @@ class LLVMBuilder(Builder):
         if self.project_is_enabled('lld'):
             distribution_components.append('lld')
 
-        if self.distribution_profile == 'bootstrap' and build_compiler_rt:
+        if self.distribution_profile in ('bootstrap', 'rust'):
             distribution_components.append('llvm-profdata')
+
+        if self.distribution_profile == 'bootstrap' and build_compiler_rt:
             if self.llvm_major_version >= LLVM_VER_FOR_RUNTIMES:
                 distribution_components.append('runtimes')
                 runtime_distribution_components.append('profile')
             else:
                 distribution_components.append('profile')
+
+        if self.distribution_profile == 'rust' and self.project_is_enabled('polly'):
+            distribution_components.append('PollyISL')
 
         if distribution_components:
             self.cmake_defines['LLVM_DISTRIBUTION_COMPONENTS'] = ';'.join(distribution_components)

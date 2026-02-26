@@ -173,6 +173,7 @@ parser.add_argument('--distribution-profile',
                         none      - do not set LLVM_DISTRIBUTION_COMPONENTS at all
                         bootstrap - components needed to build LLVM itself
                         kernel    - components needed to build the Linux kernel
+                        rust      - components needed to build the Rust toolchain via build-rust.py
 
                     The default is 'none' when '--full-toolchain' is enabled, 'kernel' if not.
 
