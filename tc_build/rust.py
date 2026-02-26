@@ -51,6 +51,7 @@ class RustBuilder(Builder):
             '--release-description', self.vendor_string,
             '--disable-docs',
             '--enable-locked-deps',
+            '--enable-verbose-configure',
             '--tools', 'cargo,clippy,rustdoc,rustfmt,src',
             '--prefix', install_folder,
             '--sysconfdir', 'etc',
