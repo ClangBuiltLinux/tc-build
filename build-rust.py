@@ -84,7 +84,7 @@ parser.add_argument('-r',
                     does not own.
 
                     '''),
-                    default='master',
+                    default='main',
                     type=str)
 parser.add_argument('--show-build-commands',
                     help=textwrap.dedent('''\
