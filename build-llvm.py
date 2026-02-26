@@ -9,7 +9,7 @@ import time
 
 import tc_build.utils
 
-from tc_build.llvm import LLVMBootstrapBuilder, LLVMBuilder, LLVMInstrumentedBuilder, LLVMSlimBuilder, LLVMSlimInstrumentedBuilder, LLVMSourceManager
+from tc_build.llvm import LLVMBootstrapBuilder, LLVMBuilder, LLVMInstrumentedBuilder, LLVMSlimBuilder, LLVMSlimInstrumentedBuilder, LLVMSourceManager, VALID_DISTRIBUTION_PROFILES
 from tc_build.kernel import KernelBuilder, LinuxSourceManager, LLVMKernelBuilder
 from tc_build.tools import HostTools, StageTools
 
@@ -158,6 +158,27 @@ parser.add_argument('-D',
 
                     '''),
                     nargs='+')
+parser.add_argument('--distribution-profile',
+                    help=textwrap.dedent('''\
+                    Smartly set value of LLVM_DISTRIBUTION_COMPONENTS for final build stage. Use in
+                    combination with
+
+                            --build-targets distribution
+                            --install-targets distribution
+
+                    to generate a smaller toolchain installation.
+
+                    Accepts the following values:
+
+                        none      - do not set LLVM_DISTRIBUTION_COMPONENTS at all
+                        bootstrap - components needed to build LLVM itself
+                        kernel    - components needed to build the Linux kernel
+
+                    The default is 'none' when '--full-toolchain' is enabled, 'kernel' if not.
+
+                    '''),
+                    type=str,
+                    choices=VALID_DISTRIBUTION_PROFILES)
 parser.add_argument('-f',
                     '--full-toolchain',
                     help=textwrap.dedent('''\
@@ -690,6 +711,8 @@ if args.pgo:
 final.build_targets = args.build_targets
 final.check_targets = args.check_targets
 final.cmake_defines.update(common_cmake_defines)
+if args.distribution_profile:
+    final.distribution_profile = args.distribution_profile
 final.folders.build = Path(build_folder, 'final')
 final.folders.install = Path(args.install_folder).resolve() if args.install_folder else None
 final.install_targets = args.install_targets
