@@ -100,6 +100,7 @@ function do_llvm() {
         --build-stage1-only \
         --build-target distribution \
         --check-targets clang lld llvm \
+        --distribution-profile rust \
         --install-folder "$install" \
         --install-target distribution \
         --projects clang lld \
