@@ -28,6 +28,9 @@ class HostTools:
         self.merge_fdata = None
         self.perf2bolt = None
 
+    def cc_is_multicall(self, cc):
+        return Path(cc).resolve().name == 'llvm'
+
     def find_host_ar(self):
         # GNU ar is the default, no need for llvm-ar if using GCC
         if not self.cc_is_clang:
@@ -40,16 +43,26 @@ class HostTools:
 
     def find_host_cc(self):
         # resolve() is called here and below to get /usr/lib/llvm-#/bin/... for
-        # versioned LLVM binaries on Debian and Ubuntu.
+        # versioned LLVM binaries on Debian and Ubuntu. We do not want to
+        # resolve a multicall binary though, as the symlink is how it works
+        # properly.
         if (cc := self.from_env('CC')):
-            return cc.resolve()
+            return cc if self.cc_is_multicall(cc) else cc.resolve()
+
+        # As a special case, see if the first clang command in PATH is a
+        # multicall binary, as there will be no clang-<ver> binary or symlink,
+        # so the versioned binary logic below may result in a clang-<ver>
+        # binary from PATH "overriding" the clang symlink to llvm. We generally
+        # want clang-<ver> to override clang though because clang-<ver> may be
+        # newer than a plain clang binary (such as when using apt.llvm.org).
+        if (clang := shutil.which('clang')) and self.cc_is_multicall(clang):
+            return Path(clang)
 
         possible_c_compilers = [*self.generate_versioned_binaries(), 'clang', 'gcc']
         for compiler in possible_c_compilers:
             if (cc := shutil.which(compiler)):
                 break
-
-        if not cc:
+        else:
             raise RuntimeError('Neither clang nor gcc could be found on your system?')
 
         return Path(cc).resolve()  # resolve() for Debian/Ubuntu variants
@@ -120,7 +133,7 @@ class HostTools:
                 'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
             )
         except subprocess.CalledProcessError:
-            llvm_tot_ver = 19
+            llvm_tot_ver = 23
         else:
             if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
                 raise RuntimeError('Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?')
