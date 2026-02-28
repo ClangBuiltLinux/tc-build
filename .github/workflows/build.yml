@@ -12,6 +12,8 @@ jobs:
       run: bash ci.sh deps
     - name: Build LLVM
       run: bash ci.sh llvm
+    - name: Build Rust
+      run: bash ci.sh rust
     - name: Build binutils
       run: bash ci.sh binutils
     - name: Build kernel

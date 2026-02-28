@@ -9,7 +9,7 @@ set -eu
 function parse_parameters() {
     while (($#)); do
         case $1 in
-            all | binutils | deps | kernel | llvm) action=$1 ;;
+            all | binutils | deps | kernel | llvm | rust) action=$1 ;;
             *) exit 33 ;;
         esac
         shift
@@ -19,6 +19,7 @@ function parse_parameters() {
 function do_all() {
     do_deps
     do_llvm
+    do_rust
     do_binutils
     do_kernel
 }
@@ -54,6 +55,7 @@ function do_deps() {
         lld \
         make \
         ninja-build \
+        pkg-config \
         python3 \
         texinfo \
         xz-utils \
@@ -100,6 +102,7 @@ function do_llvm() {
         --build-stage1-only \
         --build-target distribution \
         --check-targets clang lld llvm \
+        --distribution-profile rust \
         --install-folder "$install" \
         --install-target distribution \
         --projects clang lld \
@@ -109,6 +112,14 @@ function do_llvm() {
         --show-build-commands \
         --targets X86 \
         "${extra_args[@]}"
+}
+
+function do_rust() {
+    "$base"/build-rust.py \
+        --debug \
+        --llvm-install-folder "$install" \
+        --install-folder "$install" \
+        --show-build-commands
 }
 
 parse_parameters "$@"
