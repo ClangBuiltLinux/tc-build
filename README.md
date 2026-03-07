@@ -14,7 +14,7 @@ There are times where a tip of tree LLVM build will have some issue fixed and it
 
 ## Getting started
 
-These scripts have been tested in a Docker image of the following distributions with the following packages installed. LLVM has [minimum host tool version requirements](https://llvm.org/docs/GettingStarted.html#software) so the latest stable version of the chosen distribution should be used whenever possible to ensure recent versions of the tools are used. Build errors from within LLVM are expected if the tool version is not recent enough, in which case it will need to be built from source or installed through other means.
+These scripts have been tested in a Docker image of the following distributions with the following packages installed. LLVM has [minimum host tool version requirements](https://llvm.org/docs/GettingStarted.html#software) so the latest stable version of the chosen distribution should be used whenever possible to ensure recent versions of the tools are used. Build errors from within LLVM are expected if the tool version is not recent enough, in which case it will need to be built from source or installed through other means. The scripts have been validated against Python 3.9 and newer. These scripts should be distribution agnostic. Please feel free to add different distribution install commands here through a pull request.
 
 * ### Debian/Ubuntu
 
@@ -129,41 +129,6 @@ These scripts have been tested in a Docker image of the following distributions 
   ```
   $ sudo emerge -avg @tc-build
   ```
-
-* ### Clear Linux
-
-  ```
-  swupd bundle-add c-basic \
-                   ccache \
-                   curl \
-                   dev-utils \
-                   devpkg-elfutils \
-                   devpkg-openssl \
-                   git \
-                   python3-basic \
-                   which
-  ```
-
-  Additionally, to build PowerPC kernels, you will need to build the U-Boot tools because there is no distribution package. The U-Boot tarballs can be found [here](https://ftp.denx.de/pub/u-boot/) and they can be built and used like so:
-
-  ```
-  $ curl -LSs https://ftp.denx.de/pub/u-boot/u-boot-2021.01.tar.bz2 | tar -xjf -
-  $ cd u-boot-2021.01
-  $ make -j"$(nproc)" defconfig tools-all
-  ...
-  $ sudo install -Dm755 tools/mkimage /usr/local/bin/mkimage
-  $ mkimage -V
-  mkimage version 2021.01
-  ```
-
-  Lastly, Clear Linux has `${CC}`, `${CXX}`, `${CFLAGS}`, and `${CXXFLAGS}` in the environment, which messes with the heuristics of the script for selecting a compiler. By default, the script will attempt to use `clang` and `ld.lld` but the environment's value of `${CC}` and `${CXX}` is respected first so `gcc` and `g++` will be used. Clear Linux has optimized their `gcc` and `g++` so this is fine but if you would like to use `clang` and `clang++` instead, invoke the script like so:
-
-  ```
-  $ CC=clang CFLAGS= CXX=clang++ CXXFLAGS= ./build-llvm.py ...
-  ```
-
-
-Python 3.5.3+ is recommended, as that is what the script has been tested against. These scripts should be distribution agnostic. Please feel free to add different distribution install commands here through a pull request.
 
 ## build-llvm.py
 
