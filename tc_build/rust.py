@@ -14,6 +14,7 @@ class RustBuilder(Builder):
     def __init__(self):
         super().__init__()
 
+        self.configure_set_args = []
         self.llvm_install_folder = None
         self.debug = False
         self.vendor_string = ''
@@ -64,6 +65,9 @@ class RustBuilder(Builder):
 
         if self.debug:
             configure_cmd.append('--enable-debug')
+
+        for val in self.configure_set_args:
+            configure_cmd += ['--set', val]
 
         self.clean_build_folder()
         self.make_build_folder()

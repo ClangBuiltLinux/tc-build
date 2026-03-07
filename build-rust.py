@@ -35,6 +35,23 @@ parser.add_argument('-b',
 
                     '''),
                     type=str)
+parser.add_argument('-c',
+                    '--configure-set-args',
+                    help=textwrap.dedent('''\
+                    Pass the provided values to configure via the '--set' argument.
+
+                    For example:
+
+                        --configure-set-args build.foo=false build.bar=true
+
+                    would pass
+
+                        --set build.foo=false --set build.bar=true
+
+                    to configure.
+
+                    '''),
+                    nargs='+')
 parser.add_argument('-i',
                     '--install-folder',
                     help=textwrap.dedent('''\
@@ -161,6 +178,8 @@ final.folders.source = rust_folder
 final.folders.build = Path(build_folder, 'final')
 final.folders.install = Path(args.install_folder).resolve() if args.install_folder else None
 final.llvm_install_folder = llvm_install_folder
+if args.configure_set_args:
+    final.configure_set_args += args.configure_set_args
 final.debug = args.debug
 final.vendor_string = args.vendor_string
 final.show_commands = args.show_build_commands
