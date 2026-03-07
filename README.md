@@ -158,11 +158,11 @@ Run `./build-rust.py -h` for more options and information.
 
 This repository openly welcomes pull requests! There are a few presubmit checks that run to make sure the code stays consistently formatted and free of bugs.
 
-1. All Python files must be passed through [`yapf`](https://github.com/google/yapf). See the installation section for how to get it (it may also be available through your package manager).
+1. All Python files must be passed through [`ruff`](https://github.com/astral-sh/ruff) for linting and [`yapf`](https://github.com/google/yapf) for style.
 
-2. All shell files must be passed through [`shfmt`](https://github.com/mvdan/sh) (specifically `shfmt -ci -i 4 -w`) and emit no [`shellcheck`](https://github.com/koalaman/shellcheck) warnings.
+2. All shell files must be passed through [`shellcheck`](https://github.com/koalaman/shellcheck) for linting and [`shfmt`](https://github.com/mvdan/sh) (specifically `shfmt -ci -i 4 -w`) for style.
 
-The presubmit checks will do these things for you and fail if the code is not formatted properly or has a shellcheck warning. Running these tools on the command line before submitting will make it easier to get your code merged.
+These presubmit checks run via GitHub Actions on push or pull request, failing if the code is not formatted properly or has lint warnings. Running these tools on the command line before submitting will make it easier to get your code merged.
 
 Additionally, please write a detailed commit message about why you are submitting your change.
 
