@@ -10,7 +10,6 @@ import tc_build.utils
 
 
 class RustBuilder(Builder):
-
     def __init__(self):
         super().__init__()
 
@@ -46,7 +45,7 @@ class RustBuilder(Builder):
         # 'codegen-tests' requires '-DLLVM_INSTALL_UTILS=ON'.
         install_folder = self.folders.install if self.folders.install else self.folders.build
 
-        # yapf: disable
+        # fmt: off
         configure_cmd = [
             Path(self.folders.source, 'configure'),
             '--release-description', self.vendor_string,
@@ -61,7 +60,7 @@ class RustBuilder(Builder):
             '--disable-llvm-bitcode-linker',
             '--llvm-root', self.llvm_install_folder,
         ]
-        # yapf: enable
+        # fmt: on
 
         if self.debug:
             configure_cmd.append('--enable-debug')
@@ -85,12 +84,14 @@ class RustBuilder(Builder):
             raise RuntimeError('bin folder does not exist in installation folder, run build()?')
 
         tc_build.utils.print_header('Rust installation information')
-        install_info = (f"Toolchain is available at: {install_folder}\n\n"
-                        'To use, either run:\n\n'
-                        f"\t$ export PATH={bin_folder}:$PATH\n\n"
-                        'or add:\n\n'
-                        f"\tPATH={bin_folder}:$PATH\n\n"
-                        'before the command you want to use this toolchain.\n')
+        install_info = (
+            f"Toolchain is available at: {install_folder}\n\n"
+            'To use, either run:\n\n'
+            f"\t$ export PATH={bin_folder}:$PATH\n\n"
+            'or add:\n\n'
+            f"\tPATH={bin_folder}:$PATH\n\n"
+            'before the command you want to use this toolchain.\n'
+        )
         print(install_info)
 
         for tool in ['rustc', 'rustdoc', 'rustfmt', 'clippy-driver', 'cargo']:
@@ -101,7 +102,6 @@ class RustBuilder(Builder):
 
 
 class RustSourceManager(GitSourceManager):
-
     def __init__(self, repo):
         super().__init__(repo)
 

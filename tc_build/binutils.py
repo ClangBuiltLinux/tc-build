@@ -12,7 +12,6 @@ import tc_build.utils
 
 
 class BinutilsBuilder(Builder):
-
     def __init__(self):
         super().__init__()
 
@@ -57,8 +56,9 @@ class BinutilsBuilder(Builder):
         # .sframe generation" error by discarding .sframe altogether if
         # possible, as we may be linking against libraries with their own
         # .sframe sections and versions.
-        ld_help = subprocess.run(['ld', '--help'], capture_output=True, check=True,
-                                 text=True).stdout
+        ld_help = subprocess.run(
+            ['ld', '--help'], capture_output=True, check=True, text=True
+        ).stdout
         if '--discard-sframe' in ld_help:
             self.configure_vars['LDFLAGS'] = '-Wl,--discard-sframe'
 
@@ -87,7 +87,6 @@ class BinutilsBuilder(Builder):
 
 
 class StandardBinutilsBuilder(BinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -100,7 +99,6 @@ class StandardBinutilsBuilder(BinutilsBuilder):
 
 
 class NoMultilibBinutilsBuilder(BinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -112,7 +110,6 @@ class NoMultilibBinutilsBuilder(BinutilsBuilder):
 
 
 class ArmBinutilsBuilder(NoMultilibBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -121,7 +118,6 @@ class ArmBinutilsBuilder(NoMultilibBinutilsBuilder):
 
 
 class AArch64BinutilsBuilder(NoMultilibBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -130,7 +126,6 @@ class AArch64BinutilsBuilder(NoMultilibBinutilsBuilder):
 
 
 class LoongArchBinutilsBuilder(StandardBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -139,7 +134,6 @@ class LoongArchBinutilsBuilder(StandardBinutilsBuilder):
 
 
 class MipsBinutilsBuilder(StandardBinutilsBuilder):
-
     def __init__(self, endian_suffix=''):
         super().__init__()
 
@@ -152,13 +146,11 @@ class MipsBinutilsBuilder(StandardBinutilsBuilder):
 
 
 class MipselBinutilsBuilder(MipsBinutilsBuilder):
-
     def __init__(self):
         super().__init__('el')
 
 
 class PowerPCBinutilsBuilder(StandardBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -167,7 +159,6 @@ class PowerPCBinutilsBuilder(StandardBinutilsBuilder):
 
 
 class PowerPC64BinutilsBuilder(StandardBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -176,7 +167,6 @@ class PowerPC64BinutilsBuilder(StandardBinutilsBuilder):
 
 
 class PowerPC64LEBinutilsBuilder(StandardBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -185,7 +175,6 @@ class PowerPC64LEBinutilsBuilder(StandardBinutilsBuilder):
 
 
 class RISCV64BinutilsBuilder(StandardBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -194,7 +183,6 @@ class RISCV64BinutilsBuilder(StandardBinutilsBuilder):
 
 
 class S390XBinutilsBuilder(StandardBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -204,7 +192,6 @@ class S390XBinutilsBuilder(StandardBinutilsBuilder):
 
 
 class X8664BinutilsBuilder(StandardBinutilsBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -214,7 +201,6 @@ class X8664BinutilsBuilder(StandardBinutilsBuilder):
 
 
 class BinutilsSourceManager(SourceManager):
-
     def default_targets(self):
         targets = [
             'aarch64',
