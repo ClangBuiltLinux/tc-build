@@ -6,7 +6,6 @@ import subprocess
 
 
 class Folders:
-
     def __init__(self):
         self.build = None
         self.install = None
@@ -14,7 +13,6 @@ class Folders:
 
 
 class Builder:
-
     def __init__(self):
         self.folders = Folders()
         self.show_commands = False
@@ -43,11 +41,9 @@ class Builder:
             # Acts sort of like 'set -x' in bash
             print(f"$ {' '.join([shlex.quote(str(elem)) for elem in cmd])}", flush=True)
         try:
-            return subprocess.run(cmd,
-                                  capture_output=capture_output,
-                                  check=True,
-                                  cwd=cwd,
-                                  text=True)
+            return subprocess.run(
+                cmd, capture_output=capture_output, check=True, cwd=cwd, text=True
+            )
         except subprocess.CalledProcessError as err:
             if capture_output:
                 if err.stdout:

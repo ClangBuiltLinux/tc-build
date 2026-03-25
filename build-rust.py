@@ -16,17 +16,20 @@ GOOD_REVISION = '69b3959afec9b5468d5de15133b199553f6e55d2'
 parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
 clone_options = parser.add_mutually_exclusive_group()
 
-parser.add_argument('--debug',
-                    help=textwrap.dedent('''\
+parser.add_argument(
+    '--debug',
+    help=textwrap.dedent('''\
                     Build a debug compiler and standard library. This enables debug assertions,
                     debug logging, overflow checks and debug info. The debug assertions and overflow
                     checks can help catch issues when compiling.
 
                     '''),
-                    action='store_true')
-parser.add_argument('-b',
-                    '--build-folder',
-                    help=textwrap.dedent('''\
+    action='store_true',
+)
+parser.add_argument(
+    '-b',
+    '--build-folder',
+    help=textwrap.dedent('''\
                     By default, the script will create a "build/rust" folder in the same folder as this
                     script and build each requested stage within that containing folder. To change the
                     location of the containing build folder, pass it to this parameter. This can be either
@@ -34,10 +37,12 @@ parser.add_argument('-b',
                     needs to be provided as well to prevent mistakes.
 
                     '''),
-                    type=str)
-parser.add_argument('-c',
-                    '--configure-set-args',
-                    help=textwrap.dedent('''\
+    type=str,
+)
+parser.add_argument(
+    '-c',
+    '--configure-set-args',
+    help=textwrap.dedent('''\
                     Pass the provided values to configure via the '--set' argument.
 
                     For example:
@@ -51,28 +56,34 @@ parser.add_argument('-c',
                     to configure.
 
                     '''),
-                    nargs='+')
-parser.add_argument('-i',
-                    '--install-folder',
-                    help=textwrap.dedent('''\
+    nargs='+',
+)
+parser.add_argument(
+    '-i',
+    '--install-folder',
+    help=textwrap.dedent('''\
                     By default, the script will leave the toolchain in its build folder. To install it
                     outside the build folder for persistent use, pass the installation location that you
                     desire to this parameter. This can be either an absolute or relative path.
 
                     '''),
-                    type=str)
-parser.add_argument('-l',
-                    '--llvm-install-folder',
-                    help=textwrap.dedent('''\
+    type=str,
+)
+parser.add_argument(
+    '-l',
+    '--llvm-install-folder',
+    help=textwrap.dedent('''\
                     By default, the script will try to use a built LLVM by './build-llvm.py'. To use
                     another LLVM installation (perhaps from './build-llvm.py --install-folder'), pass
                     it to this parameter.
 
                     '''),
-                    type=str)
-parser.add_argument('-R',
-                    '--rust-folder',
-                    help=textwrap.dedent('''\
+    type=str,
+)
+parser.add_argument(
+    '-R',
+    '--rust-folder',
+    help=textwrap.dedent('''\
                     By default, the script will clone the Rust project into the tc-build repo. If you have
                     another Rust checkout that you would like to work out of, pass it to this parameter.
                     This can either be an absolute or relative path. Implies '--no-update'. When this
@@ -80,19 +91,23 @@ parser.add_argument('-R',
                     not manipulate a repository it does not own.
 
                     '''),
-                    type=str)
-parser.add_argument('-n',
-                    '--no-update',
-                    help=textwrap.dedent('''\
+    type=str,
+)
+parser.add_argument(
+    '-n',
+    '--no-update',
+    help=textwrap.dedent('''\
                     By default, the script always updates the Rust repo before building. This prevents
                     that, which can be helpful during something like bisecting or manually managing the
                     repo to pin it to a particular revision.
 
                     '''),
-                    action='store_true')
-parser.add_argument('-r',
-                    '--ref',
-                    help=textwrap.dedent('''\
+    action='store_true',
+)
+parser.add_argument(
+    '-r',
+    '--ref',
+    help=textwrap.dedent('''\
                     By default, the script builds the main branch (tip of tree) of Rust. If you would
                     like to build an older branch, use this parameter. This may be helpful in tracking
                     down an older bug to properly bisect. This value is just passed along to 'git checkout'
@@ -101,18 +116,22 @@ parser.add_argument('-r',
                     does not own.
 
                     '''),
-                    default='main',
-                    type=str)
-parser.add_argument('--show-build-commands',
-                    help=textwrap.dedent('''\
+    default='main',
+    type=str,
+)
+parser.add_argument(
+    '--show-build-commands',
+    help=textwrap.dedent('''\
                     By default, the script only shows the output of the comands it is running. When this option
                     is enabled, the invocations of the build tools will be shown to help with reproducing
                     issues outside of the script.
 
                     '''),
-                    action='store_true')
-clone_options.add_argument('--use-good-revision',
-                           help=textwrap.dedent('''\
+    action='store_true',
+)
+clone_options.add_argument(
+    '--use-good-revision',
+    help=textwrap.dedent('''\
                     By default, the script updates Rust to the latest tip of tree revision, which may at times be
                     broken or not work right. With this option, it will checkout a known good revision of Rust
                     that builds and works properly. If you use this option often, please remember to update the
@@ -120,11 +139,13 @@ clone_options.add_argument('--use-good-revision',
                     revision used to build LLVM by './build-llvm.py'.
 
                            '''),
-                           action='store_const',
-                           const=GOOD_REVISION,
-                           dest='ref')
-parser.add_argument('--vendor-string',
-                    help=textwrap.dedent('''\
+    action='store_const',
+    const=GOOD_REVISION,
+    dest='ref',
+)
+parser.add_argument(
+    '--vendor-string',
+    help=textwrap.dedent('''\
                     Add this value to the Rust version string (like "rustc ... (ClangBuiltLinux)"). Useful when
                     reverting or applying patches on top of upstream Rust to differentiate a toolchain built
                     with this script from upstream Rust or to distinguish a toolchain built with this script
@@ -132,8 +153,9 @@ parser.add_argument('--vendor-string',
                     override this and have no vendor in the version string.
 
                     '''),
-                    type=str,
-                    default='ClangBuiltLinux')
+    type=str,
+    default='ClangBuiltLinux',
+)
 args = parser.parse_args()
 
 # Start tracking time that the script takes

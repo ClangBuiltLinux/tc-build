@@ -11,51 +11,62 @@ import tc_build.utils
 LATEST_BINUTILS_RELEASE = (2, 46, 0)
 
 parser = ArgumentParser()
-parser.add_argument('-B',
-                    '--binutils-folder',
-                    help='''
+parser.add_argument(
+    '-B',
+    '--binutils-folder',
+    help='''
                     By default, the script will download a copy of the binutils source in the src folder within
                     the same folder as this script. If you have your own copy of the binutils source that you
                     would like to build from, pass it to this parameter. It can be either an absolute or
                     relative path.
                     ''',
-                    type=str)
-parser.add_argument('-b',
-                    '--build-folder',
-                    help='''
+    type=str,
+)
+parser.add_argument(
+    '-b',
+    '--build-folder',
+    help='''
                     By default, the script will create a "build/binutils" folder in the same folder as this
                     script then build each target in its own folder within that containing folder. If you
                     would like the containing build folder to be somewhere else, pass it to this parameter.
                     that done somewhere else, pass it to this parameter. It can be either an absolute or
                     relative path.
                     ''',
-                    type=str)
-parser.add_argument('-i',
-                    '--install-folder',
-                    help='''
+    type=str,
+)
+parser.add_argument(
+    '-i',
+    '--install-folder',
+    help='''
                     By default, the script will build binutils but stop before installing it. To install
                     them into a prefix, pass it to this parameter. This can be either an absolute or
                     relative path.
                     ''',
-                    type=str)
-parser.add_argument('-m',
-                    '--march',
-                    metavar='ARCH',
-                    help='''
+    type=str,
+)
+parser.add_argument(
+    '-m',
+    '--march',
+    metavar='ARCH',
+    help='''
                     Add -march=ARCH to CFLAGS to optimize the toolchain for the processor that it will be
                     running on.
                     ''',
-                    type=str)
-parser.add_argument('--show-build-commands',
-                    help='''
+    type=str,
+)
+parser.add_argument(
+    '--show-build-commands',
+    help='''
                     By default, the script only shows the output of the comands it is running. When this option
                     is enabled, the invocations of configure and make will be shown to help with reproducing
                     issues outside of the script.
                     ''',
-                    action='store_true')
-parser.add_argument('-t',
-                    '--targets',
-                    help='''
+    action='store_true',
+)
+parser.add_argument(
+    '-t',
+    '--targets',
+    help='''
                     The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
                     mips-linux-gnu, mipsel-linux-gnu, powerpc-linux-gnu, powerpc64-linux-gnu,
                     powerpc64le-linux-gnu, riscv64-linux-gnu, s390x-linux-gnu, and x86_64-linux-gnu.
@@ -64,7 +75,8 @@ parser.add_argument('-t',
                     specific targets only, pass them to this script. It can be either the full target
                     or just the first part (arm, aarch64, x86_64, etc).
                     ''',
-                    nargs='+')
+    nargs='+',
+)
 args = parser.parse_args()
 
 script_start = time.time()

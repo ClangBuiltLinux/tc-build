@@ -158,7 +158,7 @@ Run `./build-rust.py -h` for more options and information.
 
 This repository openly welcomes pull requests! There are a few presubmit checks that run to make sure the code stays consistently formatted and free of bugs.
 
-1. All Python files must be passed through [`ruff`](https://github.com/astral-sh/ruff) for linting and [`yapf`](https://github.com/google/yapf) for style.
+1. All Python files must be passed through [`ruff`](https://github.com/astral-sh/ruff) for linting and style via `ruff check .` and `ruff format .`.
 
 2. All shell files must be passed through [`shellcheck`](https://github.com/koalaman/shellcheck) for linting and [`shfmt`](https://github.com/mvdan/sh) (specifically `shfmt -ci -i 4 -w`) for style.
 

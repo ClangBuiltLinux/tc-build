@@ -29,19 +29,19 @@ def get_all_targets(llvm_folder, experimental=False):
             # Manually populate experimental targets based on list above
             possible_experimental_targets = ('ARC', 'CSKY', 'DirectX', 'M68k', 'SPIRV', 'Xtensa')
             targets += [
-                target for target in possible_experimental_targets
+                target
+                for target in possible_experimental_targets
                 if Path(llvm_folder, 'llvm/lib/Target', target).exists()
             ]
 
     for variable in variables:
-        if not (match := re.search(fr"set\({variable}([\w|\s]+)\)", contents)):
+        if not (match := re.search(rf"set\({variable}([\w|\s]+)\)", contents)):
             raise RuntimeError(f"Could not find {variables}?")
         targets += [val for target in match.group(1).splitlines() if (val := target.strip())]
     return targets
 
 
 class LLVMBuilder(Builder):
-
     def __init__(self):
         super().__init__()
 
@@ -141,13 +141,17 @@ class LLVMBuilder(Builder):
             # inspected.
             merge_fdata_log = Path(self.folders.build, 'merge-fdata.log')
 
-            with bolt_profile.open('w', encoding='utf-8') as out_file, \
-                 merge_fdata_log.open('w', encoding='utf-8') as err_file:
+            with (
+                bolt_profile.open('w', encoding='utf-8') as out_file,
+                merge_fdata_log.open('w', encoding='utf-8') as err_file,
+            ):
                 tc_build.utils.print_info('Merging .fdata files, this might take a while...')
-                subprocess.run([self.tools.merge_fdata, *list(fdata_files)],
-                               check=True,
-                               stderr=err_file,
-                               stdout=out_file)
+                subprocess.run(
+                    [self.tools.merge_fdata, *list(fdata_files)],
+                    check=True,
+                    stderr=err_file,
+                    stdout=out_file,
+                )
             for fdata_file in fdata_files:
                 fdata_file.unlink()
 
@@ -167,8 +171,9 @@ class LLVMBuilder(Builder):
         bolt_readme = Path(self.folders.source, 'bolt/README.md').read_text(encoding='utf-8')
         use_cache_plus = '-reorder-blocks=cache+' in bolt_readme
         use_sf_val = '-split-functions=2' in bolt_readme
-        if (bolt_cmd_ref := Path(self.folders.source,
-                                 'bolt/docs/CommandLineArgumentReference.md')).exists():
+        if (
+            bolt_cmd_ref := Path(self.folders.source, 'bolt/docs/CommandLineArgumentReference.md')
+        ).exists():
             bolt_cmd_ref_txt = bolt_cmd_ref.read_text(encoding='utf-8')
             # https://github.com/llvm/llvm-project/commit/3c357a49d61e4c81a1ac016502ee504521bc8dda
             icf_val = 'all' if '--icf=<value>' in bolt_cmd_ref_txt else '1'
@@ -237,7 +242,7 @@ class LLVMBuilder(Builder):
                     '--event', 'cycles:u',
                     '--output', '/dev/null',
                     '--', 'sleep', '1',
-                ]  # yapf: disable
+                ]  # fmt: off
                 subprocess.run(perf_cmd, capture_output=True, check=True)
             except subprocess.CalledProcessError:
                 pass  # Fallthrough to False below
@@ -267,7 +272,7 @@ class LLVMBuilder(Builder):
         self.validate_targets()
         self.set_llvm_major_version()
 
-        # yapf: disable
+        # fmt: off
         cmake_cmd = [
             'cmake',
             '-B', self.folders.build,
@@ -275,7 +280,7 @@ class LLVMBuilder(Builder):
             '-S', Path(self.folders.source, 'llvm'),
             '-Wno-dev',
         ]
-        # yapf: enable
+        # fmt: on
         if self.quiet_cmake:
             cmake_cmd.append('--log-level=NOTICE')
 
@@ -285,7 +290,8 @@ class LLVMBuilder(Builder):
                 self.cmake_defines['CMAKE_CXX_COMPILER_LAUNCHER'] = 'ccache'
             else:
                 tc_build.utils.print_warning(
-                    'ccache requested but could not be found on your system, ignoring...')
+                    'ccache requested but could not be found on your system, ignoring...'
+                )
 
         if self.tools.clang_tblgen:
             self.cmake_defines['CLANG_TABLEGEN'] = self.tools.clang_tblgen
@@ -306,7 +312,8 @@ class LLVMBuilder(Builder):
         # https://github.com/llvm/llvm-project/commit/b593110d89aea76b8b10152b24ece154bff3e4b5
         llvm_enable_projects = self.projects.copy()
         if self.llvm_major_version >= LLVM_VER_FOR_RUNTIMES and self.project_is_enabled(
-                'compiler-rt'):
+            'compiler-rt'
+        ):
             llvm_enable_projects.remove('compiler-rt')
             self.cmake_defines['LLVM_ENABLE_RUNTIMES'] = 'compiler-rt'
         self.cmake_defines['LLVM_ENABLE_PROJECTS'] = ';'.join(llvm_enable_projects)
@@ -350,7 +357,8 @@ class LLVMBuilder(Builder):
             self.cmake_defines['LLVM_TARGETS_TO_BUILD'] = ';'.join(standard_targets)
         if experimental_targets:
             self.cmake_defines['LLVM_EXPERIMENTAL_TARGETS_TO_BUILD'] = ';'.join(
-                experimental_targets)
+                experimental_targets
+            )
 
         # Clear Linux needs a different target to find all of the C++ header files, otherwise
         # stage 2+ compiles will fail without this
@@ -366,10 +374,9 @@ class LLVMBuilder(Builder):
         # toolchain, as this may not be portable. Since distribution is not a
         # primary goal of tc-build, this is not abstracted further.
         if shutil.which('clang') and not os.environ.get('DISTRIBUTING'):
-            default_target_triple = subprocess.run(['clang', '-print-target-triple'],
-                                                   capture_output=True,
-                                                   check=True,
-                                                   text=True).stdout.strip()
+            default_target_triple = subprocess.run(
+                ['clang', '-print-target-triple'], capture_output=True, check=True, text=True
+            ).stdout.strip()
             self.cmake_defines['LLVM_DEFAULT_TARGET_TRIPLE'] = default_target_triple
 
         self.handle_distribution_profile()
@@ -440,7 +447,8 @@ class LLVMBuilder(Builder):
             # binary.
             if self.multicall_is_enabled():
                 distribution_components += [
-                    item for item in self.llvm_driver_binaries('llvm')
+                    item
+                    for item in self.llvm_driver_binaries('llvm')
                     if item not in distribution_components
                 ]
         if self.project_is_enabled('bolt'):
@@ -449,7 +457,8 @@ class LLVMBuilder(Builder):
             distribution_components += ['clang', 'clang-resource-headers']
             if self.multicall_is_enabled():
                 distribution_components += [
-                    item for item in self.llvm_driver_binaries('clang')
+                    item
+                    for item in self.llvm_driver_binaries('clang')
                     if item not in distribution_components
                 ]
         if self.project_is_enabled('lld'):
@@ -472,7 +481,8 @@ class LLVMBuilder(Builder):
             self.cmake_defines['LLVM_DISTRIBUTION_COMPONENTS'] = ';'.join(distribution_components)
         if runtime_distribution_components:
             self.cmake_defines['LLVM_RUNTIME_DISTRIBUTION_COMPONENTS'] = ';'.join(
-                runtime_distribution_components)
+                runtime_distribution_components
+            )
 
     def host_target(self):
         uname_to_llvm = {
@@ -503,10 +513,12 @@ class LLVMBuilder(Builder):
         ]
         skip_tools = (
             # llvm-mt depends on libxml2, which we explicitly do not link against
-            'llvm-mt', )
+            'llvm-mt',
+        )
         # Return the values of the add_clang_tool() or add_llvm_tool() CMake macros
         return [
-            tool for cmakelists_txt in cmakelists_txts
+            tool
+            for cmakelists_txt in cmakelists_txts
             if (match := re.search(r"^add_(?:clang|llvm)_tool\((.*)$", cmakelists_txt, flags=re.M))
             and (tool := match.groups()[0]) not in skip_tools
         ]
@@ -522,12 +534,14 @@ class LLVMBuilder(Builder):
             return  # no need to set if already set
         if not self.folders.source:
             raise RuntimeError('No source folder set?')
-        if (llvmversion_cmake := Path(self.folders.source,
-                                      'cmake/Modules/LLVMVersion.cmake')).exists():
+        if (
+            llvmversion_cmake := Path(self.folders.source, 'cmake/Modules/LLVMVersion.cmake')
+        ).exists():
             text_to_search = llvmversion_cmake.read_text(encoding='utf-8')
         else:
-            text_to_search = Path(self.folders.source,
-                                  'llvm/CMakeLists.txt').read_text(encoding='utf-8')
+            text_to_search = Path(self.folders.source, 'llvm/CMakeLists.txt').read_text(
+                encoding='utf-8'
+            )
         if not (match := re.search(r'set\(LLVM_VERSION_MAJOR (\d+)\)', text_to_search)):
             raise RuntimeError('Could not find LLVM_VERSION_MAJOR in text?')
         self.llvm_major_version = int(match.group(1))
@@ -544,12 +558,14 @@ class LLVMBuilder(Builder):
             raise RuntimeError('bin folder does not exist in installation folder, run build()?')
 
         tc_build.utils.print_header('LLVM installation information')
-        install_info = (f"Toolchain is available at: {install_folder}\n\n"
-                        'To use, either run:\n\n'
-                        f"\t$ export PATH={bin_folder}:$PATH\n\n"
-                        'or add:\n\n'
-                        f"\tPATH={bin_folder}:$PATH\n\n"
-                        'before the command you want to use this toolchain.\n')
+        install_info = (
+            f"Toolchain is available at: {install_folder}\n\n"
+            'To use, either run:\n\n'
+            f"\t$ export PATH={bin_folder}:$PATH\n\n"
+            'or add:\n\n'
+            f"\tPATH={bin_folder}:$PATH\n\n"
+            'before the command you want to use this toolchain.\n'
+        )
         print(install_info)
 
         for tool in ['clang', 'ld.lld']:
@@ -579,14 +595,13 @@ class LLVMBuilder(Builder):
 
 
 class LLVMSlimBuilder(LLVMBuilder):
-
     def __init__(self):
         super().__init__()
 
         self.distribution_profile = 'kernel'
 
     def configure(self):
-        # yapf: disable
+        # fmt: off
         slim_clang_defines = {
             # We don't (currently) use the static analyzer and it saves cycles
             # according to Chromium OS:
@@ -628,7 +643,7 @@ class LLVMSlimBuilder(LLVMBuilder):
             'COMPILER_RT_BUILD_CRT': 'OFF',
             'COMPILER_RT_BUILD_XRAY': 'OFF',
         }
-        # yapf: enable
+        # fmt: on
 
         self.cmake_defines.update(slim_llvm_defines)
         if self.project_is_enabled('clang'):
@@ -644,7 +659,6 @@ class LLVMSlimBuilder(LLVMBuilder):
 
 
 class LLVMBootstrapBuilder(LLVMSlimBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -666,7 +680,6 @@ class LLVMBootstrapBuilder(LLVMSlimBuilder):
 
 
 class LLVMInstrumentedBuilder(LLVMBuilder):
-
     def __init__(self):
         super().__init__()
 
@@ -734,7 +747,6 @@ class LLVMSlimInstrumentedBuilder(LLVMInstrumentedBuilder, LLVMSlimBuilder):
 
 
 class LLVMSourceManager(GitSourceManager):
-
     def __init__(self, repo):
         super().__init__(repo)
 
@@ -747,8 +759,16 @@ class LLVMSourceManager(GitSourceManager):
     def default_targets(self):
         all_targets = get_all_targets(self.repo)
         targets = [
-            'AArch64', 'ARM', 'BPF', 'Hexagon', 'Mips', 'PowerPC', 'RISCV', 'Sparc', 'SystemZ',
-            'X86'
+            'AArch64',
+            'ARM',
+            'BPF',
+            'Hexagon',
+            'Mips',
+            'PowerPC',
+            'RISCV',
+            'Sparc',
+            'SystemZ',
+            'X86',
         ]
 
         if 'LoongArch' in all_targets:

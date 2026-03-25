@@ -11,7 +11,6 @@ import tc_build.utils
 
 
 class HostTools:
-
     def __init__(self):
         self.cc = self.find_host_cc()
         self.cc_is_clang = 'clang' in self.cc.name
@@ -46,7 +45,7 @@ class HostTools:
         # versioned LLVM binaries on Debian and Ubuntu. We do not want to
         # resolve a multicall binary though, as the symlink is how it works
         # properly.
-        if (cc := self.from_env('CC')):
+        if cc := self.from_env('CC'):
             return cc if self.cc_is_multicall(cc) else cc.resolve()
 
         # As a special case, see if the first clang command in PATH is a
@@ -60,7 +59,7 @@ class HostTools:
 
         possible_c_compilers = [*self.generate_versioned_binaries(), 'clang', 'gcc']
         for compiler in possible_c_compilers:
-            if (cc := shutil.which(compiler)):
+            if cc := shutil.which(compiler):
                 break
         else:
             raise RuntimeError('Neither clang nor gcc could be found on your system?')
@@ -68,7 +67,7 @@ class HostTools:
         return Path(cc).resolve()  # resolve() for Debian/Ubuntu variants
 
     def find_host_cxx(self):
-        if (cxx := self.from_env('CXX')):
+        if cxx := self.from_env('CXX'):
             return cxx
 
         possible_cxx_compiler = 'clang++' if self.cc_is_clang else 'g++'
@@ -79,12 +78,13 @@ class HostTools:
 
         if not (cxx := shutil.which(possible_cxx_compiler)):
             raise RuntimeError(
-                f"CXX ('{possible_cxx_compiler}') could not be found on your system?")
+                f"CXX ('{possible_cxx_compiler}') could not be found on your system?"
+            )
 
         return Path(cxx)
 
     def find_host_ld(self):
-        if (ld := self.from_env('LD')):
+        if ld := self.from_env('LD'):
             return ld
 
         if self.cc_is_clang:
@@ -96,7 +96,7 @@ class HostTools:
             # If not, try to find a suitable linker via PATH
             possible_linkers = ['lld', 'gold', 'bfd']
             for linker in possible_linkers:
-                if (ld := shutil.which(f"ld.{linker}")):
+                if ld := shutil.which(f"ld.{linker}"):
                     break
             if not ld:
                 return None
@@ -124,7 +124,8 @@ class HostTools:
 
         if not (tool := shutil.which(os.environ[key])):
             raise RuntimeError(
-                f"{key} value ('{os.environ[key]}') could not be found on your system?")
+                f"{key} value ('{os.environ[key]}') could not be found on your system?"
+            )
         return Path(tool)
 
     def generate_versioned_binaries(self):
@@ -158,22 +159,24 @@ class HostTools:
 
         cc_cmd = [self.cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-']
         try:
-            subprocess.run(cc_cmd,
-                           capture_output=True,
-                           check=True,
-                           input='int main(void) { return 0; }',
-                           text=True)
+            subprocess.run(
+                cc_cmd,
+                capture_output=True,
+                check=True,
+                input='int main(void) { return 0; }',
+                text=True,
+            )
         except subprocess.CalledProcessError:
             if warn:
                 tc_build.utils.print_warning(
-                    f"LD value ('{ld}') is not supported by CC ('{self.cc}'), ignoring it...")
+                    f"LD value ('{ld}') is not supported by CC ('{self.cc}'), ignoring it..."
+                )
             return None
 
         return ld
 
 
 class StageTools:
-
     def __init__(self, bin_folder):
         # Used by cmake
         self.ar = Path(bin_folder, 'llvm-ar')
