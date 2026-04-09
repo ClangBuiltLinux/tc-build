@@ -108,7 +108,7 @@ class GitSourceManager:
 
         tc_build.utils.print_header(f"Downloading {self._pretty_name}")
 
-        git_clone = ['git', 'clone']
+        git_clone: tc_build.utils.CmdList = ['git', 'clone']
         if shallow:
             git_clone.append('--depth=1')
             if ref != 'main':

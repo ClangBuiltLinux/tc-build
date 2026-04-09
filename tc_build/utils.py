@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from collections.abc import Sequence
+from os import PathLike
 from pathlib import Path
 import subprocess
 import sys
@@ -8,6 +10,9 @@ import time
 from typing import Optional, Union
 
 UNINIT_PATH = Path('/uninitialized')
+ValidCmdItem = Union[bytes, PathLike, str]
+ValidCmd = Sequence[ValidCmdItem]
+CmdList = list[ValidCmdItem]
 
 
 def cpu_is_apple_silicon() -> bool:
