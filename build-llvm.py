@@ -542,8 +542,8 @@ if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
         # version in mind. If the user supplied their own Linux source, make
         # sure it is recent enough that the kernel builder will work.
         if (linux_version := lsm.get_version()) < KernelBuilder.MINIMUM_SUPPORTED_VERSION:
-            found_version = '.'.join(map(str, linux_version))
-            minimum_version = '.'.join(map(str, KernelBuilder.MINIMUM_SUPPORTED_VERSION))
+            found_version = '.'.join(str(x) for x in linux_version)
+            minimum_version = '.'.join(str(x) for x in KernelBuilder.MINIMUM_SUPPORTED_VERSION)
             raise RuntimeError(
                 f"Supplied kernel source version ('{found_version}') is older than the minimum required version ('{minimum_version}'), provide a newer version!"
             )
