@@ -12,7 +12,7 @@ import tc_build.utils
 
 
 class Tools:
-    def __init__(self):
+    def __init__(self) -> None:
         self.cc: Path = tc_build.utils.UNINIT_PATH
         self.cc_is_clang: bool = False
 
@@ -30,7 +30,7 @@ class Tools:
 
 
 class HostTools(Tools):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
         self.cc = self.find_host_cc()
@@ -142,7 +142,7 @@ class HostTools(Tools):
             )
         return Path(tool)
 
-    def generate_versioned_binaries(self):
+    def generate_versioned_binaries(self) -> list[str]:
         try:
             cmakelists_txt = tc_build.utils.curl(
                 'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
@@ -156,7 +156,7 @@ class HostTools(Tools):
 
         return [f'clang-{num}' for num in range(llvm_tot_ver, 6, -1)]
 
-    def show_compiler_linker(self):
+    def show_compiler_linker(self) -> None:
         print(f"CC: {self.cc}")
         print(f"CXX: {self.cxx}")
         if self.ld:
@@ -188,7 +188,7 @@ class HostTools(Tools):
 
 
 class StageTools(Tools):
-    def __init__(self, bin_folder: Path):
+    def __init__(self, bin_folder: Path) -> None:
         super().__init__()
 
         # Used by cmake
