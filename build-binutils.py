@@ -112,7 +112,7 @@ if args.targets:
 else:
     targets = default_targets
 
-targets_to_builder = {
+targets_to_builder: dict[str, type[tc_build.binutils.BinutilsBuilder]] = {
     'arm': tc_build.binutils.ArmBinutilsBuilder,
     'aarch64': tc_build.binutils.AArch64BinutilsBuilder,
     'mips': tc_build.binutils.MipsBinutilsBuilder,
