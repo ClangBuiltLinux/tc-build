@@ -13,12 +13,12 @@ class RustBuilder(Builder):
     def __init__(self):
         super().__init__()
 
-        self.configure_set_args = []
+        self.configure_set_args: list[str] = []
         self.llvm_install_folder: Path = tc_build.utils.UNINIT_PATH
-        self.debug = False
-        self.vendor_string = ''
+        self.debug: bool = False
+        self.vendor_string: str = ''
 
-    def build(self):
+    def build(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set for build()?')
         if not Path(self.folders.build, 'bootstrap.toml').exists():
@@ -32,7 +32,7 @@ class RustBuilder(Builder):
         if tc_build.utils.path_is_set(self.folders.install):
             tc_build.utils.create_gitignore(self.folders.install)
 
-    def configure(self):
+    def configure(self) -> None:
         if not tc_build.utils.path_is_set(self.llvm_install_folder):
             raise RuntimeError('No LLVM install folder set?')
         if not tc_build.utils.path_is_set(self.folders.source):
@@ -76,7 +76,7 @@ class RustBuilder(Builder):
         self.make_build_folder()
         self.run_cmd(configure_cmd, cwd=self.folders.build)
 
-    def show_install_info(self):
+    def show_install_info(self) -> None:
         # Installation folder is optional, show build folder as the
         # installation location in that case.
         install_folder = (
@@ -110,7 +110,7 @@ class RustBuilder(Builder):
 
 
 class RustSourceManager(GitSourceManager):
-    def __init__(self, repo):
+    def __init__(self, repo: Path) -> None:
         super().__init__(repo)
 
         self._pretty_name = 'Rust'
