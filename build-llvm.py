@@ -6,6 +6,7 @@ from pathlib import Path
 import platform
 import textwrap
 import time
+from typing import Any
 
 import tc_build.utils
 
@@ -21,6 +22,7 @@ from tc_build.llvm import (
 from tc_build.kernel import KernelBuilder, LinuxSourceManager, LLVMKernelBuilder
 from tc_build.tools import HostTools, StageTools
 
+BOOL_ARGS: dict[str, Any]
 try:
     # pylint: disable-next=ungrouped-imports
     from argparse import BooleanOptionalAction
