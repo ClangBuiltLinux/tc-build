@@ -63,7 +63,7 @@ class Tarball:
             expected_checksum = match.groups()[0]
             if computed_checksum != expected_checksum:
                 raise RuntimeError(
-                    f"Computed checksum of {self.local_destination} ('{computed_checksum}') differs from expected checksum ('{expected_checksum}'), remove it and try again?"
+                    f"Computed checksum of {self.local_location} ('{computed_checksum}') differs from expected checksum ('{expected_checksum}'), remove it and try again?"
                 )
 
     def extract(self, extraction_location):
