@@ -679,7 +679,8 @@ if args.pgo:
     instrumented.build_targets = ['all' if args.full_toolchain else 'distribution']
     instrumented.cmake_defines.update(common_cmake_defines)
     # We run the tests on the instrumented stage if the LLVM benchmark was enabled
-    instrumented.check_targets = args.check_targets if 'llvm' in args.pgo else None
+    if 'llvm' in args.pgo:
+        instrumented.check_targets = args.check_targets
     instrumented.folders.build = Path(build_folder, 'instrumented')
     instrumented.folders.source = llvm_folder
     instrumented.projects = final.projects
