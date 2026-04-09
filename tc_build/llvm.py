@@ -10,6 +10,7 @@ import time
 from typing import TypedDict
 
 from tc_build.builder import Builder
+from tc_build.kernel import LLVMKernelBuilder
 from tc_build.source import GitSourceManager
 from tc_build.tools import Tools
 import tc_build.utils
@@ -105,7 +106,7 @@ class LLVMBuilder(Builder):
         super().__init__()
 
         self.bolt = False
-        self.bolt_builder = None
+        self.bolt_builder: LLVMKernelBuilder = LLVMKernelBuilder()
         self.build_targets = ['all']
         self.ccache = False
         self.check_targets = []
@@ -267,8 +268,8 @@ class LLVMBuilder(Builder):
             raise RuntimeError('No build folder set for build()?')
         if not Path(self.folders.build, 'build.ninja').exists():
             raise RuntimeError('No build.ninja in build folder, run configure()?')
-        if self.bolt and not self.bolt_builder:
-            raise RuntimeError('BOLT requested without a builder?')
+        if self.bolt and not self.bolt_builder.matrix:
+            raise RuntimeError('BOLT requested without a configured builder?')
 
         build_start = time.time()
         base_ninja_cmd = ['ninja', '-C', self.folders.build]

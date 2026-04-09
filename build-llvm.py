@@ -813,7 +813,6 @@ else:
 
 if args.bolt:
     final.bolt = True
-    final.bolt_builder = LLVMKernelBuilder()
     final.bolt_builder.folders.build = Path(build_folder, 'linux')
     final.bolt_builder.folders.source = lsm.location
     llvm_targets = [final.host_target()] if final.host_target_is_enabled() else final.targets[0:1]
