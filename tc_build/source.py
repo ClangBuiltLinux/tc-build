@@ -5,6 +5,7 @@ import hashlib
 from pathlib import Path
 import re
 import subprocess
+from typing import Optional
 
 import tc_build.utils
 
@@ -15,12 +16,12 @@ BYTES_TO_READ = 131072
 class Tarball:
     def __init__(self):
         self.base_download_url = None
-        self.local_location = None
+        self.local_location: Path = tc_build.utils.UNINIT_PATH
         self.remote_tarball_name = None
         self.remote_checksum_name = ''
 
     def download(self):
-        if not self.local_location:
+        if not tc_build.utils.path_is_set(self.local_location):
             raise RuntimeError('No local tarball location specified?')
         if self.local_location.exists():
             return  # Already downloaded
@@ -66,7 +67,7 @@ class Tarball:
                 )
 
     def extract(self, extraction_location):
-        if not self.local_location:
+        if not tc_build.utils.path_is_set(self.local_location):
             raise RuntimeError('No local tarball location specified?')
         if not self.local_location.exists():
             raise RuntimeError(
@@ -88,14 +89,14 @@ class Tarball:
 
 
 class SourceManager:
-    def __init__(self, location=None):
-        self.location = location
+    def __init__(self, location: Optional[Path] = None):
+        self.location: Path = location if location else tc_build.utils.UNINIT_PATH
         self.tarball = Tarball()
 
 
 class GitSourceManager:
-    def __init__(self, repo):
-        self.repo = repo
+    def __init__(self, repo: Path):
+        self.repo: Path = repo
 
         # Will be set by derived classes but used here
         self._pretty_name = ''

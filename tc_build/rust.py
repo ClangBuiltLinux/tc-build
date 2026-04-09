@@ -14,12 +14,12 @@ class RustBuilder(Builder):
         super().__init__()
 
         self.configure_set_args = []
-        self.llvm_install_folder = None
+        self.llvm_install_folder: Path = tc_build.utils.UNINIT_PATH
         self.debug = False
         self.vendor_string = ''
 
     def build(self):
-        if not self.folders.build:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set for build()?')
         if not Path(self.folders.build, 'bootstrap.toml').exists():
             raise RuntimeError('No bootstrap.toml in build folder, run configure()?')
@@ -29,21 +29,25 @@ class RustBuilder(Builder):
 
         tc_build.utils.print_info(f"Build duration: {tc_build.utils.get_duration(build_start)}")
 
-        if self.folders.install:
+        if tc_build.utils.path_is_set(self.folders.install):
             tc_build.utils.create_gitignore(self.folders.install)
 
     def configure(self):
-        if not self.llvm_install_folder:
+        if not tc_build.utils.path_is_set(self.llvm_install_folder):
             raise RuntimeError('No LLVM install folder set?')
-        if not self.folders.source:
+        if not tc_build.utils.path_is_set(self.folders.source):
             raise RuntimeError('No source folder set?')
-        if not self.folders.build:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set?')
 
         # Configure the build
         #
         # 'codegen-tests' requires '-DLLVM_INSTALL_UTILS=ON'.
-        install_folder = self.folders.install if self.folders.install else self.folders.build
+        install_folder = (
+            self.folders.install
+            if tc_build.utils.path_is_set(self.folders.install)
+            else self.folders.build
+        )
 
         # fmt: off
         configure_cmd = [
@@ -75,8 +79,12 @@ class RustBuilder(Builder):
     def show_install_info(self):
         # Installation folder is optional, show build folder as the
         # installation location in that case.
-        install_folder = self.folders.install if self.folders.install else self.folders.build
-        if not install_folder:
+        install_folder = (
+            self.folders.install
+            if tc_build.utils.path_is_set(self.folders.install)
+            else self.folders.build
+        )
+        if not tc_build.utils.path_is_set(install_folder):
             raise RuntimeError('Installation folder not set?')
         if not install_folder.exists():
             raise RuntimeError('Installation folder does not exist, run build()?')

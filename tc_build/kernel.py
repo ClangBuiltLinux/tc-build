@@ -6,6 +6,7 @@ import shutil
 import subprocess
 from tempfile import NamedTemporaryFile
 import time
+from typing import Optional
 
 from tc_build.builder import Builder
 from tc_build.source import SourceManager
@@ -22,7 +23,7 @@ class KernelBuilder(Builder):
         super().__init__()
 
         self.bolt_instrumentation = False
-        self.bolt_sampling_output = None
+        self.bolt_sampling_output: Path = tc_build.utils.UNINIT_PATH
         self.config_targets = []
         self.cross_compile = None
         self.lsm = None
@@ -32,7 +33,7 @@ class KernelBuilder(Builder):
             'KCFLAGS': '-Wno-error',
         }
         self.show_commands = True
-        self.toolchain_prefix = None
+        self.toolchain_prefix: Path = tc_build.utils.UNINIT_PATH
         self.toolchain_version = ()
 
     def build(self):
@@ -91,7 +92,7 @@ class KernelBuilder(Builder):
             self.make_variables['KCONFIG_ALLCONFIG'] = kconfig_allconfig.name
 
         make_cmd = []
-        if self.bolt_sampling_output:
+        if tc_build.utils.path_is_set(self.bolt_sampling_output):
             make_cmd += [
                 'perf', 'record',
                 '--branch-filter', 'any,u',
@@ -122,7 +123,7 @@ class KernelBuilder(Builder):
         if self.toolchain_version:
             return self.toolchain_version
 
-        if not self.toolchain_prefix:
+        if not tc_build.utils.path_is_set(self.toolchain_prefix):
             raise RuntimeError('get_toolchain_version(): No toolchain prefix set?')
         if not (clang := Path(self.toolchain_prefix, 'bin/clang')).exists():
             raise RuntimeError(f"clang could not be found in {self.toolchain_prefix}?")
@@ -381,9 +382,9 @@ class LLVMKernelBuilder(Builder):
         super().__init__()
 
         self.bolt_instrumentation = False
-        self.bolt_sampling_output = None
+        self.bolt_sampling_output: Path = tc_build.utils.UNINIT_PATH
         self.matrix = {}
-        self.toolchain_prefix = None
+        self.toolchain_prefix: Path = tc_build.utils.UNINIT_PATH
 
     def build(self):
         lsm = LinuxSourceManager()
@@ -458,7 +459,7 @@ class LLVMKernelBuilder(Builder):
 
 
 class LinuxSourceManager(SourceManager):
-    def __init__(self, location=None):
+    def __init__(self, location: Optional[Path] = None):
         super().__init__(location)
 
         self.patches = []

@@ -39,7 +39,7 @@ class BinutilsBuilder(Builder):
         self.target = ''
 
     def build(self):
-        if self.folders.install:
+        if tc_build.utils.path_is_set(self.folders.install):
             self.configure_flags.append(f"--prefix={self.folders.install}")
         if platform.machine() != self.native_arch:
             self.configure_flags += [
@@ -81,7 +81,7 @@ class BinutilsBuilder(Builder):
             make_cmd = ['make', '-C', self.folders.build, '-s', f"-j{os.cpu_count()}", 'V=0']
             self.run_cmd(make_cmd)
 
-            if self.folders.install:
+            if tc_build.utils.path_is_set(self.folders.install):
                 self.run_cmd([*make_cmd, 'install'])
                 tc_build.utils.create_gitignore(self.folders.install)
 
@@ -219,12 +219,12 @@ class BinutilsSourceManager(SourceManager):
         return targets
 
     def prepare(self):
-        if not self.location:
+        if not tc_build.utils.path_is_set(self.location):
             raise RuntimeError('No source location set?')
         if self.location.exists():
             return  # source already set up
 
-        if not self.tarball.local_location:
+        if not tc_build.utils.path_is_set(self.tarball.local_location):
             raise RuntimeError('No local tarball location set?')
         if not self.tarball.local_location.exists():
             self.tarball.download()

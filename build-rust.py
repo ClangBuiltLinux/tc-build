@@ -198,7 +198,8 @@ tc_build.utils.print_header('Building Rust')
 final = RustBuilder()
 final.folders.source = rust_folder
 final.folders.build = Path(build_folder, 'final')
-final.folders.install = Path(args.install_folder).resolve() if args.install_folder else None
+if args.install_folder:
+    final.folders.install = Path(args.install_folder).resolve()
 final.llvm_install_folder = llvm_install_folder
 if args.configure_set_args:
     final.configure_set_args += args.configure_set_args

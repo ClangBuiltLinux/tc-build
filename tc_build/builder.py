@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import shlex
 import shutil
 import subprocess
 
+import tc_build.utils
+
 
 class Folders:
     def __init__(self):
-        self.build = None
-        self.install = None
-        self.source = None
+        self.build: Path = tc_build.utils.UNINIT_PATH
+        self.install: Path = tc_build.utils.UNINIT_PATH
+        self.source: Path = tc_build.utils.UNINIT_PATH
 
 
 class Builder:
@@ -21,7 +24,7 @@ class Builder:
         raise NotImplementedError
 
     def clean_build_folder(self):
-        if not self.folders.build:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set?')
 
         if self.folders.build.exists():
@@ -31,7 +34,7 @@ class Builder:
                 self.folders.build.unlink()
 
     def make_build_folder(self):
-        if not self.folders.build:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set?')
 
         self.folders.build.mkdir(parents=True)

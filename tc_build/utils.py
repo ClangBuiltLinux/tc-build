@@ -7,6 +7,8 @@ import re
 import time
 from typing import Optional, Union
 
+UNINIT_PATH = Path('/uninitialized')
+
 
 def cpu_is_apple_silicon() -> bool:
     cpuinfo = Path('/proc/cpuinfo').read_text(encoding='utf-8')
@@ -66,6 +68,10 @@ def libc_is_musl() -> bool:
     # on.
     ldd_out = subprocess.run(['ldd', '--version'], capture_output=True, check=False, text=True)
     return 'musl' in (ldd_out.stderr if ldd_out.stderr else ldd_out.stdout)
+
+
+def path_is_set(path: Path) -> bool:
+    return path != UNINIT_PATH
 
 
 def print_color(color: str, string: str) -> None:

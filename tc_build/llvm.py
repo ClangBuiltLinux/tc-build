@@ -10,6 +10,7 @@ import time
 
 from tc_build.builder import Builder
 from tc_build.source import GitSourceManager
+from tc_build.tools import Tools
 import tc_build.utils
 
 LLVM_VER_FOR_RUNTIMES = 20
@@ -61,7 +62,7 @@ class LLVMBuilder(Builder):
         self.distribution_profile = 'none'
         self.install_targets = []
         self.llvm_major_version = 0
-        self.tools = None
+        self.tools: Tools = Tools()
         self.projects = []
         self.quiet_cmake = False
         self.targets = []
@@ -204,7 +205,7 @@ class LLVMBuilder(Builder):
             inst_binary.unlink()
 
     def build(self):
-        if not self.folders.build:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set for build()?')
         if not Path(self.folders.build, 'build.ninja').exists():
             raise RuntimeError('No build.ninja in build folder, run configure()?')
@@ -224,7 +225,7 @@ class LLVMBuilder(Builder):
         if self.bolt:
             self.bolt_clang()
 
-        if self.folders.install:
+        if tc_build.utils.path_is_set(self.folders.install):
             if self.install_targets:
                 install_targets = [f"install-{target}" for target in self.install_targets]
             else:
@@ -258,11 +259,11 @@ class LLVMBuilder(Builder):
                 raise RuntimeError(f"Dependency ('{dep}') could not be found!")
 
     def configure(self):
-        if not self.folders.build:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set?')
-        if not self.folders.source:
+        if not tc_build.utils.path_is_set(self.folders.source):
             raise RuntimeError('No source folder set?')
-        if not self.tools:
+        if not tc_build.utils.path_is_set(self.tools.cc):
             raise RuntimeError('No build tools set?')
         if not self.projects:
             raise RuntimeError('No projects set?')
@@ -293,12 +294,12 @@ class LLVMBuilder(Builder):
                     'ccache requested but could not be found on your system, ignoring...'
                 )
 
-        if self.tools.clang_tblgen:
+        if tc_build.utils.path_is_set(self.tools.clang_tblgen):
             self.cmake_defines['CLANG_TABLEGEN'] = self.tools.clang_tblgen
 
-        if self.tools.ar:
+        if tc_build.utils.path_is_set(self.tools.ar):
             self.cmake_defines['CMAKE_AR'] = self.tools.ar
-        if self.tools.ranlib:
+        if tc_build.utils.path_is_set(self.tools.ranlib):
             self.cmake_defines['CMAKE_RANLIB'] = self.tools.ranlib
         if 'CMAKE_BUILD_TYPE' not in self.cmake_defines:
             self.cmake_defines['CMAKE_BUILD_TYPE'] = 'Release'
@@ -306,7 +307,7 @@ class LLVMBuilder(Builder):
         self.cmake_defines['CMAKE_CXX_COMPILER'] = self.tools.cxx
         if self.bolt:
             self.cmake_defines['CMAKE_EXE_LINKER_FLAGS'] = '-Wl,--emit-relocs'
-        if self.folders.install:
+        if tc_build.utils.path_is_set(self.folders.install):
             self.cmake_defines['CMAKE_INSTALL_PREFIX'] = self.folders.install
 
         # https://github.com/llvm/llvm-project/commit/b593110d89aea76b8b10152b24ece154bff3e4b5
@@ -336,9 +337,9 @@ class LLVMBuilder(Builder):
             self.cmake_defines['COMPILER_RT_BUILD_GWP_ASAN'] = 'OFF'
         if self.cmake_defines['CMAKE_BUILD_TYPE'] == 'Release':
             self.cmake_defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
-        if self.tools.llvm_tblgen:
+        if tc_build.utils.path_is_set(self.tools.llvm_tblgen):
             self.cmake_defines['LLVM_TABLEGEN'] = self.tools.llvm_tblgen
-        if self.tools.ld:
+        if tc_build.utils.path_is_set(self.tools.ld):
             self.cmake_defines['LLVM_USE_LINKER'] = self.tools.ld
 
         # Separate "standard" targets from experimental targets. We know that
@@ -532,7 +533,7 @@ class LLVMBuilder(Builder):
     def set_llvm_major_version(self):
         if self.llvm_major_version:
             return  # no need to set if already set
-        if not self.folders.source:
+        if not tc_build.utils.path_is_set(self.folders.source):
             raise RuntimeError('No source folder set?')
         if (
             llvmversion_cmake := Path(self.folders.source, 'cmake/Modules/LLVMVersion.cmake')
@@ -549,8 +550,12 @@ class LLVMBuilder(Builder):
     def show_install_info(self):
         # Installation folder is optional, show build folder as the
         # installation location in that case.
-        install_folder = self.folders.install if self.folders.install else self.folders.build
-        if not install_folder:
+        install_folder = (
+            self.folders.install
+            if tc_build.utils.path_is_set(self.folders.install)
+            else self.folders.build
+        )
+        if not tc_build.utils.path_is_set(install_folder):
             raise RuntimeError('Installation folder not set?')
         if not install_folder.exists():
             raise RuntimeError('Installation folder does not exist, run build()?')
@@ -575,7 +580,7 @@ class LLVMBuilder(Builder):
         tc_build.utils.flush_std_err_out()
 
     def validate_targets(self):
-        if not self.folders.source:
+        if not tc_build.utils.path_is_set(self.folders.source):
             raise RuntimeError('No source folder set?')
         if not self.targets:
             raise RuntimeError('No targets set?')

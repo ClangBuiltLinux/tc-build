@@ -782,7 +782,8 @@ final.cmake_defines.update(common_cmake_defines)
 if args.distribution_profile:
     final.distribution_profile = args.distribution_profile
 final.folders.build = Path(build_folder, 'final')
-final.folders.install = Path(args.install_folder).resolve() if args.install_folder else None
+if args.install_folder:
+    final.folders.install = Path(args.install_folder).resolve()
 final.install_targets = args.install_targets
 final.quiet_cmake = args.quiet_cmake
 final.show_commands = args.show_build_commands
