@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import time
+from typing import TypedDict
 
 from tc_build.builder import Builder
 from tc_build.source import GitSourceManager
@@ -42,6 +43,63 @@ def get_all_targets(llvm_folder, experimental=False):
     return targets
 
 
+class CmakeVars(TypedDict, total=False):
+    CLANG_TABLEGEN: Path
+    CMAKE_AR: Path
+    CMAKE_C_COMPILER: Path
+    CMAKE_CXX_COMPILER: Path
+    CMAKE_INSTALL_PREFIX: Path
+    CMAKE_RANLIB: Path
+    LLVM_PROFDATA_FILE: Path
+    LLVM_TABLEGEN: Path
+    LLVM_USE_LINKER: Path
+
+    # While it would be nice not to list all potential values here, it is
+    # safest when using a TypedDict (at least until
+    # https://github.com/astral-sh/ty/issues/3096 is implemented). It only
+    # impacts internal typing usage, users are still able to assign whatever
+    # values they want via '--defines'. Keep sorted alphabetically.
+    CLANG_ENABLE_ARCMT: str
+    CLANG_ENABLE_STATIC_ANALYZER: str
+    CLANG_PLUGIN_SUPPORT: str
+    CMAKE_BUILD_TYPE: str
+    CMAKE_CXX_COMPILER_LAUNCHER: str
+    CMAKE_CXX_FLAGS: str
+    CMAKE_C_COMPILER_LAUNCHER: str
+    CMAKE_C_FLAGS: str
+    CMAKE_EXE_LINKER_FLAGS: str
+    COMPILER_RT_BUILD_CRT: str
+    COMPILER_RT_BUILD_GWP_ASAN: str
+    COMPILER_RT_BUILD_LIBFUZZER: str
+    COMPILER_RT_BUILD_SANITIZERS: str
+    COMPILER_RT_BUILD_XRAY: str
+    LLVM_BUILD_INSTRUMENTED: str
+    LLVM_BUILD_RUNTIME: str
+    LLVM_BUILD_UTILS: str
+    LLVM_DEFAULT_TARGET_TRIPLE: str
+    LLVM_DISTRIBUTION_COMPONENTS: str
+    LLVM_ENABLE_ASSERTIONS: str
+    LLVM_ENABLE_BACKTRACES: str
+    LLVM_ENABLE_BINDINGS: str
+    LLVM_ENABLE_LIBXML2: str
+    LLVM_ENABLE_LTO: str
+    LLVM_ENABLE_OCAMLDOC: str
+    LLVM_ENABLE_PROJECTS: str
+    LLVM_ENABLE_RUNTIMES: str
+    LLVM_ENABLE_TERMINFO: str
+    LLVM_ENABLE_WARNINGS: str
+    LLVM_EXPERIMENTAL_TARGETS_TO_BUILD: str
+    LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR: str
+    LLVM_HOST_TRIPLE: str
+    LLVM_INCLUDE_DOCS: str
+    LLVM_INCLUDE_EXAMPLES: str
+    LLVM_INCLUDE_TESTS: str
+    LLVM_LINK_LLVM_DYLIB: str
+    LLVM_RUNTIME_DISTRIBUTION_COMPONENTS: str
+    LLVM_TARGETS_TO_BUILD: str
+    LLVM_VP_COUNTERS_PER_SITE: str
+
+
 class LLVMBuilder(Builder):
     def __init__(self):
         super().__init__()
@@ -51,7 +109,7 @@ class LLVMBuilder(Builder):
         self.build_targets = ['all']
         self.ccache = False
         self.check_targets = []
-        self.cmake_defines = {
+        self.cmake_defines: CmakeVars = {
             # Reduce dynamic dependencies
             'LLVM_ENABLE_LIBXML2': 'OFF',
             # While this option reduces build resources and disk space, it
@@ -607,7 +665,7 @@ class LLVMSlimBuilder(LLVMBuilder):
 
     def configure(self):
         # fmt: off
-        slim_clang_defines = {
+        slim_clang_defines: CmakeVars = {
             # We don't (currently) use the static analyzer and it saves cycles
             # according to Chromium OS:
             # https://crrev.com/44702077cc9b5185fc21e99485ee4f0507722f82
@@ -627,7 +685,7 @@ class LLVMSlimBuilder(LLVMBuilder):
         if arcmt_cmakelists.exists():
             slim_clang_defines['CLANG_ENABLE_ARCMT'] = 'OFF'
 
-        slim_llvm_defines = {
+        slim_llvm_defines: CmakeVars = {
             # Don't build bindings; they are for other languages that the kernel does not use
             'LLVM_ENABLE_BINDINGS': 'OFF',
             # Don't build Ocaml documentation
@@ -640,7 +698,7 @@ class LLVMSlimBuilder(LLVMBuilder):
             'LLVM_INCLUDE_EXAMPLES': 'OFF',
         }
 
-        slim_compiler_rt_defines = {
+        slim_compiler_rt_defines: CmakeVars = {
             # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
             'COMPILER_RT_BUILD_LIBFUZZER': 'OFF',
             # We only use compiler-rt for the sanitizers, disable some extra stuff we don't need
