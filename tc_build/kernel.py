@@ -25,7 +25,7 @@ class KernelBuilder(Builder):
         self.bolt_instrumentation = False
         self.bolt_sampling_output: Path = tc_build.utils.UNINIT_PATH
         self.config_targets = []
-        self.cross_compile = None
+        self.cross_compile = ''
         self.lsm = None
         self.make_variables = {
             'ARCH': arch,
