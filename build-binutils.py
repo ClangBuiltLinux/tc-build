@@ -98,7 +98,7 @@ else:
     bsm.location = Path(tc_build_folder, 'src', folder_name)
     bsm.tarball.base_download_url = 'https://sourceware.org/pub/binutils/releases'
     bsm.tarball.local_location = bsm.location.with_name(f"{folder_name}.tar.xz")
-    bsm.tarball_remote_checksum_name = 'sha512.sum'
+    bsm.tarball.remote_checksum_name = 'sha512.sum'
     bsm.prepare()
 
 if args.build_folder:
