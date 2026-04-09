@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 
+from collections.abc import Sequence
+from os import PathLike
 from pathlib import Path
 import subprocess
 import sys
 import re
 import time
+from typing import Optional, Union
+
+UNINIT_PATH = Path('/uninitialized')
+ValidCmdItem = Union[bytes, PathLike, str]
+ValidCmd = Sequence[ValidCmdItem]
+CmdList = list[ValidCmdItem]
 
 
-def cpu_is_apple_silicon():
+def cpu_is_apple_silicon() -> bool:
     cpuinfo = Path('/proc/cpuinfo').read_text(encoding='utf-8')
     if match := re.search(r"implementer\s+:\s+(\w+)", cpuinfo):
         # https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/arch/arm64/include/asm/cputype.h?h=v6.17-rc4#n62
@@ -16,24 +24,29 @@ def cpu_is_apple_silicon():
     return False
 
 
-def create_gitignore(folder):
+def create_gitignore(folder: Path) -> None:
     folder.joinpath('.gitignore').write_text('*\n', encoding='utf-8')
 
 
-def curl(url, capture_output=True, destination=None, text=True):
-    curl_cmd = ['curl', '-fLSs']
+def curl(
+    url: str,
+    capture_output: bool = True,
+    destination: Optional[Union[str, Path]] = None,
+    text: Optional[bool] = True,
+) -> str:
+    curl_cmd: list[Union[Path, str]] = ['curl', '-fLSs']
     if destination:
         curl_cmd += ['-o', destination]
     curl_cmd.append(url)
     return subprocess.run(curl_cmd, capture_output=capture_output, check=True, text=text).stdout
 
 
-def flush_std_err_out():
+def flush_std_err_out() -> None:
     sys.stderr.flush()
     sys.stdout.flush()
 
 
-def get_duration(start_seconds, end_seconds=None):
+def get_duration(start_seconds: float, end_seconds: Optional[float] = None) -> str:
     if not end_seconds:
         end_seconds = time.time()
     seconds = int(end_seconds - start_seconds)
@@ -53,7 +66,7 @@ def get_duration(start_seconds, end_seconds=None):
     return ' '.join(parts)
 
 
-def libc_is_musl():
+def libc_is_musl() -> bool:
     # musl's ldd does not appear to support '--version' directly, as its return
     # code is 1 and it prints all text to stderr. However, it does print the
     # version information so it is good enough. Just 'check=False' it and move
@@ -62,22 +75,26 @@ def libc_is_musl():
     return 'musl' in (ldd_out.stderr if ldd_out.stderr else ldd_out.stdout)
 
 
-def print_color(color, string):
+def path_is_set(path: Path) -> bool:
+    return path != UNINIT_PATH
+
+
+def print_color(color: str, string: str) -> None:
     print(f"{color}{string}\033[0m", flush=True)
 
 
-def print_cyan(msg):
+def print_cyan(msg: str) -> None:
     print_color('\033[01;36m', msg)
 
 
-def print_header(string):
+def print_header(string: str) -> None:
     border = ''.join(["=" for _ in range(len(string) + 6)])
     print_cyan(f"\n{border}\n== {string} ==\n{border}\n")
 
 
-def print_info(msg):
+def print_info(msg: str) -> None:
     print(f"I: {msg}", flush=True)
 
 
-def print_warning(msg):
+def print_warning(msg: str) -> None:
     print_color('\033[01;33m', f"W: {msg}")

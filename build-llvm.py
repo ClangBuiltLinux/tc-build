@@ -6,10 +6,12 @@ from pathlib import Path
 import platform
 import textwrap
 import time
+from typing import Any
 
 import tc_build.utils
 
 from tc_build.llvm import (
+    CmakeVars,
     LLVMBootstrapBuilder,
     LLVMBuilder,
     LLVMInstrumentedBuilder,
@@ -21,6 +23,7 @@ from tc_build.llvm import (
 from tc_build.kernel import KernelBuilder, LinuxSourceManager, LLVMKernelBuilder
 from tc_build.tools import HostTools, StageTools
 
+BOOL_ARGS: dict[str, Any]
 try:
     # pylint: disable-next=ungrouped-imports
     from argparse import BooleanOptionalAction
@@ -540,8 +543,8 @@ if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
         # version in mind. If the user supplied their own Linux source, make
         # sure it is recent enough that the kernel builder will work.
         if (linux_version := lsm.get_version()) < KernelBuilder.MINIMUM_SUPPORTED_VERSION:
-            found_version = '.'.join(map(str, linux_version))
-            minimum_version = '.'.join(map(str, KernelBuilder.MINIMUM_SUPPORTED_VERSION))
+            found_version = '.'.join(str(x) for x in linux_version)
+            minimum_version = '.'.join(str(x) for x in KernelBuilder.MINIMUM_SUPPORTED_VERSION)
             raise RuntimeError(
                 f"Supplied kernel source version ('{found_version}') is older than the minimum required version ('{minimum_version}'), provide a newer version!"
             )
@@ -624,7 +627,7 @@ if args.bolt and not final.can_use_perf():
         time.sleep(5)
 
 # Figure out unconditional cmake defines from input
-common_cmake_defines = {}
+common_cmake_defines: CmakeVars = {}
 if args.assertions:
     common_cmake_defines['LLVM_ENABLE_ASSERTIONS'] = 'ON'
 if args.vendor_string:
@@ -661,10 +664,9 @@ if use_bootstrap := not args.build_stage1_only:
 # If the user did not specify CMAKE_C_FLAGS or CMAKE_CXX_FLAGS, add them as empty
 # to paste stage 2 to ensure there are no environment issues (since CFLAGS and CXXFLAGS
 # are taken into account by cmake)
-c_flag_defines = ['CMAKE_C_FLAGS', 'CMAKE_CXX_FLAGS']
-for define in c_flag_defines:
-    if define not in common_cmake_defines:
-        common_cmake_defines[define] = ''
+common_cmake_defines.setdefault('CMAKE_C_FLAGS', '')
+common_cmake_defines.setdefault('CMAKE_CXX_FLAGS', '')
+
 # The user's build type should be taken into account past the bootstrap compiler
 if args.build_type:
     common_cmake_defines['CMAKE_BUILD_TYPE'] = args.build_type
@@ -677,7 +679,8 @@ if args.pgo:
     instrumented.build_targets = ['all' if args.full_toolchain else 'distribution']
     instrumented.cmake_defines.update(common_cmake_defines)
     # We run the tests on the instrumented stage if the LLVM benchmark was enabled
-    instrumented.check_targets = args.check_targets if 'llvm' in args.pgo else None
+    if 'llvm' in args.pgo:
+        instrumented.check_targets = args.check_targets
     instrumented.folders.build = Path(build_folder, 'instrumented')
     instrumented.folders.source = llvm_folder
     instrumented.projects = final.projects
@@ -780,7 +783,8 @@ final.cmake_defines.update(common_cmake_defines)
 if args.distribution_profile:
     final.distribution_profile = args.distribution_profile
 final.folders.build = Path(build_folder, 'final')
-final.folders.install = Path(args.install_folder).resolve() if args.install_folder else None
+if args.install_folder:
+    final.folders.install = Path(args.install_folder).resolve()
 final.install_targets = args.install_targets
 final.quiet_cmake = args.quiet_cmake
 final.show_commands = args.show_build_commands
@@ -810,7 +814,6 @@ else:
 
 if args.bolt:
     final.bolt = True
-    final.bolt_builder = LLVMKernelBuilder()
     final.bolt_builder.folders.build = Path(build_folder, 'linux')
     final.bolt_builder.folders.source = lsm.location
     llvm_targets = [final.host_target()] if final.host_target_is_enabled() else final.targets[0:1]

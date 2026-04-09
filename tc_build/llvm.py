@@ -7,16 +7,19 @@ import re
 import shutil
 import subprocess
 import time
+from typing import TypedDict
 
 from tc_build.builder import Builder
+from tc_build.kernel import LLVMKernelBuilder
 from tc_build.source import GitSourceManager
+from tc_build.tools import Tools
 import tc_build.utils
 
 LLVM_VER_FOR_RUNTIMES = 20
 VALID_DISTRIBUTION_PROFILES = ('none', 'bootstrap', 'kernel', 'rust')
 
 
-def get_all_targets(llvm_folder, experimental=False):
+def get_all_targets(llvm_folder: Path, experimental: bool = False) -> list[str]:
     contents = Path(llvm_folder, 'llvm/CMakeLists.txt').read_text(encoding='utf-8')
     targets = []
 
@@ -41,16 +44,76 @@ def get_all_targets(llvm_folder, experimental=False):
     return targets
 
 
+class CmakeVars(TypedDict, total=False):
+    CLANG_TABLEGEN: Path
+    CMAKE_AR: Path
+    CMAKE_C_COMPILER: Path
+    CMAKE_CXX_COMPILER: Path
+    CMAKE_INSTALL_PREFIX: Path
+    CMAKE_RANLIB: Path
+    LLVM_PROFDATA_FILE: Path
+    LLVM_TABLEGEN: Path
+    LLVM_USE_LINKER: Path
+
+    # While it would be nice not to list all potential values here, it is
+    # safest when using a TypedDict (at least until
+    # https://github.com/astral-sh/ty/issues/3096 is implemented). It only
+    # impacts internal typing usage, users are still able to assign whatever
+    # values they want via '--defines'. Keep sorted alphabetically.
+    CLANG_ENABLE_ARCMT: str
+    CLANG_ENABLE_STATIC_ANALYZER: str
+    CLANG_PLUGIN_SUPPORT: str
+    CLANG_VENDOR: str
+    CMAKE_BUILD_TYPE: str
+    CMAKE_CXX_COMPILER_LAUNCHER: str
+    CMAKE_CXX_FLAGS: str
+    CMAKE_C_COMPILER_LAUNCHER: str
+    CMAKE_C_FLAGS: str
+    CMAKE_EXE_LINKER_FLAGS: str
+    COMPILER_RT_BUILD_CRT: str
+    COMPILER_RT_BUILD_GWP_ASAN: str
+    COMPILER_RT_BUILD_LIBFUZZER: str
+    COMPILER_RT_BUILD_SANITIZERS: str
+    COMPILER_RT_BUILD_XRAY: str
+    LLD_VENDOR: str
+    LLVM_BUILD_INSTRUMENTED: str
+    LLVM_BUILD_RUNTIME: str
+    LLVM_BUILD_UTILS: str
+    LLVM_DEFAULT_TARGET_TRIPLE: str
+    LLVM_DISTRIBUTION_COMPONENTS: str
+    LLVM_ENABLE_ASSERTIONS: str
+    LLVM_ENABLE_BACKTRACES: str
+    LLVM_ENABLE_BINDINGS: str
+    LLVM_ENABLE_LIBXML2: str
+    LLVM_ENABLE_LTO: str
+    LLVM_ENABLE_OCAMLDOC: str
+    LLVM_ENABLE_PROJECTS: str
+    LLVM_ENABLE_RUNTIMES: str
+    LLVM_ENABLE_TERMINFO: str
+    LLVM_ENABLE_WARNINGS: str
+    LLVM_EXPERIMENTAL_TARGETS_TO_BUILD: str
+    LLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR: str
+    LLVM_HOST_TRIPLE: str
+    LLVM_INCLUDE_DOCS: str
+    LLVM_INCLUDE_EXAMPLES: str
+    LLVM_INCLUDE_TESTS: str
+    LLVM_LINK_LLVM_DYLIB: str
+    LLVM_RUNTIME_DISTRIBUTION_COMPONENTS: str
+    LLVM_TARGETS_TO_BUILD: str
+    LLVM_TOOL_LLVM_DRIVER_BUILD: str
+    LLVM_VP_COUNTERS_PER_SITE: str
+
+
 class LLVMBuilder(Builder):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
 
-        self.bolt = False
-        self.bolt_builder = None
-        self.build_targets = ['all']
-        self.ccache = False
-        self.check_targets = []
-        self.cmake_defines = {
+        self.bolt: bool = False
+        self.bolt_builder: LLVMKernelBuilder = LLVMKernelBuilder()
+        self.build_targets: list[str] = ['all']
+        self.ccache: bool = False
+        self.check_targets: list[str] = []
+        self.cmake_defines: CmakeVars = {
             # Reduce dynamic dependencies
             'LLVM_ENABLE_LIBXML2': 'OFF',
             # While this option reduces build resources and disk space, it
@@ -58,15 +121,15 @@ class LLVMBuilder(Builder):
             # it and limits optimization opportunities for LTO, PGO, and BOLT.
             'LLVM_LINK_LLVM_DYLIB': 'OFF',
         }
-        self.distribution_profile = 'none'
-        self.install_targets = []
-        self.llvm_major_version = 0
-        self.tools = None
-        self.projects = []
-        self.quiet_cmake = False
-        self.targets = []
+        self.distribution_profile: str = 'none'
+        self.install_targets: list[str] = []
+        self.llvm_major_version: int = 0
+        self.tools: Tools = Tools()
+        self.projects: list[str] = []
+        self.quiet_cmake: bool = False
+        self.targets: list[str] = []
 
-    def bolt_clang(self):
+    def bolt_clang(self) -> None:
         # Default to instrumentation, as it should be universally available.
         mode = 'instrumentation'
         # If we can use perf for branch sampling, we switch to that mode, as
@@ -203,13 +266,13 @@ class LLVMBuilder(Builder):
         if mode == 'instrumentation':
             inst_binary.unlink()
 
-    def build(self):
-        if not self.folders.build:
+    def build(self) -> None:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set for build()?')
         if not Path(self.folders.build, 'build.ninja').exists():
             raise RuntimeError('No build.ninja in build folder, run configure()?')
-        if self.bolt and not self.bolt_builder:
-            raise RuntimeError('BOLT requested without a builder?')
+        if self.bolt and not self.bolt_builder.matrix:
+            raise RuntimeError('BOLT requested without a configured builder?')
 
         build_start = time.time()
         base_ninja_cmd = ['ninja', '-C', self.folders.build]
@@ -224,7 +287,7 @@ class LLVMBuilder(Builder):
         if self.bolt:
             self.bolt_clang()
 
-        if self.folders.install:
+        if tc_build.utils.path_is_set(self.folders.install):
             if self.install_targets:
                 install_targets = [f"install-{target}" for target in self.install_targets]
             else:
@@ -232,7 +295,7 @@ class LLVMBuilder(Builder):
             self.run_cmd([*base_ninja_cmd, *install_targets], capture_output=True)
             tc_build.utils.create_gitignore(self.folders.install)
 
-    def can_use_perf(self):
+    def can_use_perf(self) -> bool:
         # Make sure perf is in the environment
         if shutil.which('perf'):
             try:
@@ -251,18 +314,18 @@ class LLVMBuilder(Builder):
 
         return False
 
-    def check_dependencies(self):
+    def check_dependencies(self) -> None:
         deps = ['cmake', 'curl', 'git', 'ninja']
         for dep in deps:
             if not shutil.which(dep):
                 raise RuntimeError(f"Dependency ('{dep}') could not be found!")
 
-    def configure(self):
-        if not self.folders.build:
+    def configure(self) -> None:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set?')
-        if not self.folders.source:
+        if not tc_build.utils.path_is_set(self.folders.source):
             raise RuntimeError('No source folder set?')
-        if not self.tools:
+        if not tc_build.utils.path_is_set(self.tools.cc):
             raise RuntimeError('No build tools set?')
         if not self.projects:
             raise RuntimeError('No projects set?')
@@ -293,12 +356,12 @@ class LLVMBuilder(Builder):
                     'ccache requested but could not be found on your system, ignoring...'
                 )
 
-        if self.tools.clang_tblgen:
+        if tc_build.utils.path_is_set(self.tools.clang_tblgen):
             self.cmake_defines['CLANG_TABLEGEN'] = self.tools.clang_tblgen
 
-        if self.tools.ar:
+        if tc_build.utils.path_is_set(self.tools.ar):
             self.cmake_defines['CMAKE_AR'] = self.tools.ar
-        if self.tools.ranlib:
+        if tc_build.utils.path_is_set(self.tools.ranlib):
             self.cmake_defines['CMAKE_RANLIB'] = self.tools.ranlib
         if 'CMAKE_BUILD_TYPE' not in self.cmake_defines:
             self.cmake_defines['CMAKE_BUILD_TYPE'] = 'Release'
@@ -306,7 +369,7 @@ class LLVMBuilder(Builder):
         self.cmake_defines['CMAKE_CXX_COMPILER'] = self.tools.cxx
         if self.bolt:
             self.cmake_defines['CMAKE_EXE_LINKER_FLAGS'] = '-Wl,--emit-relocs'
-        if self.folders.install:
+        if tc_build.utils.path_is_set(self.folders.install):
             self.cmake_defines['CMAKE_INSTALL_PREFIX'] = self.folders.install
 
         # https://github.com/llvm/llvm-project/commit/b593110d89aea76b8b10152b24ece154bff3e4b5
@@ -336,9 +399,9 @@ class LLVMBuilder(Builder):
             self.cmake_defines['COMPILER_RT_BUILD_GWP_ASAN'] = 'OFF'
         if self.cmake_defines['CMAKE_BUILD_TYPE'] == 'Release':
             self.cmake_defines['LLVM_ENABLE_WARNINGS'] = 'OFF'
-        if self.tools.llvm_tblgen:
+        if tc_build.utils.path_is_set(self.tools.llvm_tblgen):
             self.cmake_defines['LLVM_TABLEGEN'] = self.tools.llvm_tblgen
-        if self.tools.ld:
+        if tc_build.utils.path_is_set(self.tools.ld):
             self.cmake_defines['LLVM_USE_LINKER'] = self.tools.ld
 
         # Separate "standard" targets from experimental targets. We know that
@@ -386,7 +449,7 @@ class LLVMBuilder(Builder):
         self.clean_build_folder()
         self.run_cmd(cmake_cmd)
 
-    def handle_distribution_profile(self):
+    def handle_distribution_profile(self) -> None:
         if self.distribution_profile == 'none':
             return
         if self.distribution_profile not in VALID_DISTRIBUTION_PROFILES:
@@ -398,8 +461,8 @@ class LLVMBuilder(Builder):
         build_compiler_rt = self.project_is_enabled('compiler-rt') and llvm_build_runtime
         llvm_build_tools = self.cmake_defines.get('LLVM_BUILD_TOOLS', 'ON') == 'ON'
 
-        distribution_components = []
-        runtime_distribution_components = []
+        distribution_components: list[str] = []
+        runtime_distribution_components: list[str] = []
 
         # There are two distribution profiles.
         # bootstrap: Used for stage one to build the rest of LLVM
@@ -484,8 +547,8 @@ class LLVMBuilder(Builder):
                 runtime_distribution_components
             )
 
-    def host_target(self):
-        uname_to_llvm = {
+    def host_target(self) -> str:
+        uname_to_llvm: dict[str, str] = {
             'aarch64': 'AArch64',
             'armv7l': 'ARM',
             'i386': 'X86',
@@ -499,12 +562,12 @@ class LLVMBuilder(Builder):
             's390x': 'SystemZ',
             'x86_64': 'X86',
         }
-        return uname_to_llvm.get(platform.machine())
+        return uname_to_llvm.get(platform.machine(), '')
 
-    def host_target_is_enabled(self):
+    def host_target_is_enabled(self) -> bool:
         return 'all' in self.targets or self.host_target() in self.targets
 
-    def llvm_driver_binaries(self, project):
+    def llvm_driver_binaries(self, project: str) -> list[str]:
         # Find all CMakeLists.txt for LLVM or clang tools that have multicall driver support
         cmakelists_txts = [
             cmakelists_txt
@@ -523,16 +586,16 @@ class LLVMBuilder(Builder):
             and (tool := match.groups()[0]) not in skip_tools
         ]
 
-    def multicall_is_enabled(self):
+    def multicall_is_enabled(self) -> bool:
         return self.cmake_defines.get('LLVM_TOOL_LLVM_DRIVER_BUILD', 'OFF') == 'ON'
 
-    def project_is_enabled(self, project):
+    def project_is_enabled(self, project: str) -> bool:
         return 'all' in self.projects or project in self.projects
 
-    def set_llvm_major_version(self):
+    def set_llvm_major_version(self) -> None:
         if self.llvm_major_version:
             return  # no need to set if already set
-        if not self.folders.source:
+        if not tc_build.utils.path_is_set(self.folders.source):
             raise RuntimeError('No source folder set?')
         if (
             llvmversion_cmake := Path(self.folders.source, 'cmake/Modules/LLVMVersion.cmake')
@@ -546,11 +609,15 @@ class LLVMBuilder(Builder):
             raise RuntimeError('Could not find LLVM_VERSION_MAJOR in text?')
         self.llvm_major_version = int(match.group(1))
 
-    def show_install_info(self):
+    def show_install_info(self) -> None:
         # Installation folder is optional, show build folder as the
         # installation location in that case.
-        install_folder = self.folders.install if self.folders.install else self.folders.build
-        if not install_folder:
+        install_folder = (
+            self.folders.install
+            if tc_build.utils.path_is_set(self.folders.install)
+            else self.folders.build
+        )
+        if not tc_build.utils.path_is_set(install_folder):
             raise RuntimeError('Installation folder not set?')
         if not install_folder.exists():
             raise RuntimeError('Installation folder does not exist, run build()?')
@@ -574,8 +641,8 @@ class LLVMBuilder(Builder):
                 print()
         tc_build.utils.flush_std_err_out()
 
-    def validate_targets(self):
-        if not self.folders.source:
+    def validate_targets(self) -> None:
+        if not tc_build.utils.path_is_set(self.folders.source):
             raise RuntimeError('No source folder set?')
         if not self.targets:
             raise RuntimeError('No targets set?')
@@ -602,7 +669,7 @@ class LLVMSlimBuilder(LLVMBuilder):
 
     def configure(self):
         # fmt: off
-        slim_clang_defines = {
+        slim_clang_defines: CmakeVars = {
             # We don't (currently) use the static analyzer and it saves cycles
             # according to Chromium OS:
             # https://crrev.com/44702077cc9b5185fc21e99485ee4f0507722f82
@@ -622,7 +689,7 @@ class LLVMSlimBuilder(LLVMBuilder):
         if arcmt_cmakelists.exists():
             slim_clang_defines['CLANG_ENABLE_ARCMT'] = 'OFF'
 
-        slim_llvm_defines = {
+        slim_llvm_defines: CmakeVars = {
             # Don't build bindings; they are for other languages that the kernel does not use
             'LLVM_ENABLE_BINDINGS': 'OFF',
             # Don't build Ocaml documentation
@@ -635,7 +702,7 @@ class LLVMSlimBuilder(LLVMBuilder):
             'LLVM_INCLUDE_EXAMPLES': 'OFF',
         }
 
-        slim_compiler_rt_defines = {
+        slim_compiler_rt_defines: CmakeVars = {
             # Don't build libfuzzer when compiler-rt is enabled, it invokes cmake again and we don't use it
             'COMPILER_RT_BUILD_LIBFUZZER': 'OFF',
             # We only use compiler-rt for the sanitizers, disable some extra stuff we don't need

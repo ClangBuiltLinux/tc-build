@@ -6,12 +6,33 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+from typing import Union
 
 import tc_build.utils
 
 
-class HostTools:
-    def __init__(self):
+class Tools:
+    def __init__(self) -> None:
+        self.cc: Path = tc_build.utils.UNINIT_PATH
+        self.cc_is_clang: bool = False
+
+        self.ar: Path = tc_build.utils.UNINIT_PATH
+        self.cxx: Path = tc_build.utils.UNINIT_PATH
+        self.ld: Path = tc_build.utils.UNINIT_PATH
+        self.ranlib: Path = tc_build.utils.UNINIT_PATH
+
+        self.clang_tblgen: Path = tc_build.utils.UNINIT_PATH
+        self.llvm_bolt: Path = tc_build.utils.UNINIT_PATH
+        self.llvm_profdata: Path = tc_build.utils.UNINIT_PATH
+        self.llvm_tblgen: Path = tc_build.utils.UNINIT_PATH
+        self.merge_fdata: Path = tc_build.utils.UNINIT_PATH
+        self.perf2bolt: Path = tc_build.utils.UNINIT_PATH
+
+
+class HostTools(Tools):
+    def __init__(self) -> None:
+        super().__init__()
+
         self.cc = self.find_host_cc()
         self.cc_is_clang = 'clang' in self.cc.name
 
@@ -20,32 +41,25 @@ class HostTools:
         self.ld = self.find_host_ld()
         self.ranlib = self.find_host_ranlib()
 
-        self.clang_tblgen = None
-        self.llvm_bolt = None
-        self.llvm_profdata = None
-        self.llvm_tblgen = None
-        self.merge_fdata = None
-        self.perf2bolt = None
-
-    def cc_is_multicall(self, cc):
+    def cc_is_multicall(self, cc: Union[Path, str]) -> bool:
         return Path(cc).resolve().name == 'llvm'
 
-    def find_host_ar(self):
+    def find_host_ar(self) -> Path:
         # GNU ar is the default, no need for llvm-ar if using GCC
         if not self.cc_is_clang:
-            return None
+            return tc_build.utils.UNINIT_PATH
 
         if (ar := Path(self.cc.parent, 'llvm-ar')).exists():
             return ar
 
-        return None
+        return tc_build.utils.UNINIT_PATH
 
-    def find_host_cc(self):
+    def find_host_cc(self) -> Path:
         # resolve() is called here and below to get /usr/lib/llvm-#/bin/... for
         # versioned LLVM binaries on Debian and Ubuntu. We do not want to
         # resolve a multicall binary though, as the symlink is how it works
         # properly.
-        if cc := self.from_env('CC'):
+        if tc_build.utils.path_is_set(cc := self.from_env('CC')):
             return cc if self.cc_is_multicall(cc) else cc.resolve()
 
         # As a special case, see if the first clang command in PATH is a
@@ -66,8 +80,8 @@ class HostTools:
 
         return Path(cc).resolve()  # resolve() for Debian/Ubuntu variants
 
-    def find_host_cxx(self):
-        if cxx := self.from_env('CXX'):
+    def find_host_cxx(self) -> Path:
+        if tc_build.utils.path_is_set(cxx := self.from_env('CXX')):
             return cxx
 
         possible_cxx_compiler = 'clang++' if self.cc_is_clang else 'g++'
@@ -83,8 +97,8 @@ class HostTools:
 
         return Path(cxx)
 
-    def find_host_ld(self):
-        if ld := self.from_env('LD'):
+    def find_host_ld(self) -> Path:
+        if tc_build.utils.path_is_set(ld := self.from_env('LD')):
             return ld
 
         if self.cc_is_clang:
@@ -99,25 +113,25 @@ class HostTools:
                 if ld := shutil.which(f"ld.{linker}"):
                     break
             if not ld:
-                return None
+                return tc_build.utils.UNINIT_PATH
             return self.validate_ld(Path(ld))
 
         # For GCC, it is only worth testing 'gold'
         return self.validate_ld('gold')
 
-    def find_host_ranlib(self):
+    def find_host_ranlib(self) -> Path:
         # GNU ranlib is the default, no need for llvm-ranlib if using GCC
         if not self.cc_is_clang:
-            return None
+            return tc_build.utils.UNINIT_PATH
 
         if (ranlib := Path(self.cc.parent, 'llvm-ranlib')).exists():
             return ranlib
 
-        return None
+        return tc_build.utils.UNINIT_PATH
 
-    def from_env(self, key):
+    def from_env(self, key: str) -> Path:
         if key not in os.environ:
-            return None
+            return tc_build.utils.UNINIT_PATH
 
         if key == 'LD':
             return self.validate_ld(os.environ[key], warn=True)
@@ -128,7 +142,7 @@ class HostTools:
             )
         return Path(tool)
 
-    def generate_versioned_binaries(self):
+    def generate_versioned_binaries(self) -> list[str]:
         try:
             cmakelists_txt = tc_build.utils.curl(
                 'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
@@ -142,7 +156,7 @@ class HostTools:
 
         return [f'clang-{num}' for num in range(llvm_tot_ver, 6, -1)]
 
-    def show_compiler_linker(self):
+    def show_compiler_linker(self) -> None:
         print(f"CC: {self.cc}")
         print(f"CXX: {self.cxx}")
         if self.ld:
@@ -153,10 +167,7 @@ class HostTools:
                 print(f"LD: {shutil.which(ld_to_print)}")
         tc_build.utils.flush_std_err_out()
 
-    def validate_ld(self, ld, warn=False):
-        if not ld:
-            return None
-
+    def validate_ld(self, ld: Union[Path, str], warn=False) -> Path:
         cc_cmd = [self.cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-']
         try:
             subprocess.run(
@@ -171,13 +182,15 @@ class HostTools:
                 tc_build.utils.print_warning(
                     f"LD value ('{ld}') is not supported by CC ('{self.cc}'), ignoring it..."
                 )
-            return None
+            return tc_build.utils.UNINIT_PATH
 
-        return ld
+        return Path(ld)
 
 
-class StageTools:
-    def __init__(self, bin_folder):
+class StageTools(Tools):
+    def __init__(self, bin_folder: Path) -> None:
+        super().__init__()
+
         # Used by cmake
         self.ar = Path(bin_folder, 'llvm-ar')
         self.cc = Path(bin_folder, 'clang')

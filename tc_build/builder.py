@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
 import shlex
 import shutil
 import subprocess
+from typing import Optional
+
+import tc_build.utils
 
 
 class Folders:
-    def __init__(self):
-        self.build = None
-        self.install = None
-        self.source = None
+    def __init__(self) -> None:
+        self.build: Path = tc_build.utils.UNINIT_PATH
+        self.install: Path = tc_build.utils.UNINIT_PATH
+        self.source: Path = tc_build.utils.UNINIT_PATH
 
 
 class Builder:
-    def __init__(self):
-        self.folders = Folders()
-        self.show_commands = False
+    def __init__(self) -> None:
+        self.folders: Folders = Folders()
+        self.show_commands: bool = False
 
-    def build(self):
+    def build(self) -> None:
         raise NotImplementedError
 
-    def clean_build_folder(self):
-        if not self.folders.build:
+    def clean_build_folder(self) -> None:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set?')
 
         if self.folders.build.exists():
@@ -30,13 +34,15 @@ class Builder:
             else:
                 self.folders.build.unlink()
 
-    def make_build_folder(self):
-        if not self.folders.build:
+    def make_build_folder(self) -> None:
+        if not tc_build.utils.path_is_set(self.folders.build):
             raise RuntimeError('No build folder set?')
 
         self.folders.build.mkdir(parents=True)
 
-    def run_cmd(self, cmd, capture_output=False, cwd=None):
+    def run_cmd(
+        self, cmd: tc_build.utils.ValidCmd, capture_output: bool = False, cwd: Optional[Path] = None
+    ) -> subprocess.CompletedProcess:
         if self.show_commands:
             # Acts sort of like 'set -x' in bash
             print(f"$ {' '.join([shlex.quote(str(elem)) for elem in cmd])}", flush=True)
