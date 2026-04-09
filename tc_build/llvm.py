@@ -63,6 +63,7 @@ class CmakeVars(TypedDict, total=False):
     CLANG_ENABLE_ARCMT: str
     CLANG_ENABLE_STATIC_ANALYZER: str
     CLANG_PLUGIN_SUPPORT: str
+    CLANG_VENDOR: str
     CMAKE_BUILD_TYPE: str
     CMAKE_CXX_COMPILER_LAUNCHER: str
     CMAKE_CXX_FLAGS: str
@@ -74,6 +75,7 @@ class CmakeVars(TypedDict, total=False):
     COMPILER_RT_BUILD_LIBFUZZER: str
     COMPILER_RT_BUILD_SANITIZERS: str
     COMPILER_RT_BUILD_XRAY: str
+    LLD_VENDOR: str
     LLVM_BUILD_INSTRUMENTED: str
     LLVM_BUILD_RUNTIME: str
     LLVM_BUILD_UTILS: str
@@ -98,6 +100,7 @@ class CmakeVars(TypedDict, total=False):
     LLVM_LINK_LLVM_DYLIB: str
     LLVM_RUNTIME_DISTRIBUTION_COMPONENTS: str
     LLVM_TARGETS_TO_BUILD: str
+    LLVM_TOOL_LLVM_DRIVER_BUILD: str
     LLVM_VP_COUNTERS_PER_SITE: str
 
 

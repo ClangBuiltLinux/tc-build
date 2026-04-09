@@ -11,6 +11,7 @@ from typing import Any
 import tc_build.utils
 
 from tc_build.llvm import (
+    CmakeVars,
     LLVMBootstrapBuilder,
     LLVMBuilder,
     LLVMInstrumentedBuilder,
@@ -626,7 +627,7 @@ if args.bolt and not final.can_use_perf():
         time.sleep(5)
 
 # Figure out unconditional cmake defines from input
-common_cmake_defines = {}
+common_cmake_defines: CmakeVars = {}
 if args.assertions:
     common_cmake_defines['LLVM_ENABLE_ASSERTIONS'] = 'ON'
 if args.vendor_string:
@@ -663,10 +664,9 @@ if use_bootstrap := not args.build_stage1_only:
 # If the user did not specify CMAKE_C_FLAGS or CMAKE_CXX_FLAGS, add them as empty
 # to paste stage 2 to ensure there are no environment issues (since CFLAGS and CXXFLAGS
 # are taken into account by cmake)
-c_flag_defines = ['CMAKE_C_FLAGS', 'CMAKE_CXX_FLAGS']
-for define in c_flag_defines:
-    if define not in common_cmake_defines:
-        common_cmake_defines[define] = ''
+common_cmake_defines.setdefault('CMAKE_C_FLAGS', '')
+common_cmake_defines.setdefault('CMAKE_CXX_FLAGS', '')
+
 # The user's build type should be taken into account past the bootstrap compiler
 if args.build_type:
     common_cmake_defines['CMAKE_BUILD_TYPE'] = args.build_type
