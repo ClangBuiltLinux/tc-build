@@ -392,7 +392,7 @@ class LLVMKernelBuilder(Builder):
 
         builders = []
 
-        allconfig_capable_builders = {
+        allconfig_capable_builders: dict[str, type] = {
             'AArch64': Arm64KernelBuilder,
             'ARM': ArmKernelBuilder,
             'Hexagon': HexagonKernelBuilder,
