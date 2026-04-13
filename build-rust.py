@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # pylint: disable=invalid-name
 
-from argparse import ArgumentParser, RawTextHelpFormatter
-from pathlib import Path
 import textwrap
 import time
+from argparse import ArgumentParser, RawTextHelpFormatter
+from pathlib import Path
 
 import tc_build.utils
-
 from tc_build.rust import RustBuilder, RustSourceManager
 
 # This is a known good revision of Rust for building the kernel

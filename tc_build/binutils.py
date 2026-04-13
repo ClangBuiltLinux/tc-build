@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
 import os
-from pathlib import Path
 import platform
 import subprocess
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import tc_build.utils
 from tc_build.builder import Builder
 from tc_build.source import SourceManager
-import tc_build.utils
 
 
 class BinutilsBuilder(Builder):

@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
 import os
-from pathlib import Path
 import shutil
 import subprocess
-from tempfile import NamedTemporaryFile
 import time
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Optional, TypedDict, Union
 
+import tc_build.utils
 from tc_build.builder import Builder
 from tc_build.source import SourceManager
-import tc_build.utils
 
 
 class MakeVars(TypedDict, total=False):

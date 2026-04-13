@@ -13,6 +13,7 @@ select = [
     'C4', # flake8-comprehensions
     'E', # pycodestyle
     'F', # pyflakes
+    'I', # isort
     'PIE', # flake8-pie
     'PL', # pylint
     'PTH', # flake8-use-pathlib

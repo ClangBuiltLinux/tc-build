@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
+import re
+import subprocess
+import sys
+import time
 from collections.abc import Sequence
 from os import PathLike
 from pathlib import Path
-import subprocess
-import sys
-import re
-import time
 from typing import Optional, Union
 
 UNINIT_PATH = Path('/uninitialized')

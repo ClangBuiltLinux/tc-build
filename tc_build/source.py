@@ -2,9 +2,9 @@
 
 import contextlib
 import hashlib
-from pathlib import Path
 import re
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 import tc_build.utils

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # pylint: disable=invalid-name
 
+import time
 from argparse import ArgumentParser
 from pathlib import Path
-import time
 
 import tc_build.binutils
 import tc_build.utils

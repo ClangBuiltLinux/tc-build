@@ -2,10 +2,10 @@
 # pylint: disable=invalid-name
 
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
+from pathlib import Path
 from typing import Union
 
 import tc_build.utils

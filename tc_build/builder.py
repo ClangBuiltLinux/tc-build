@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import shlex
 import shutil
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 import tc_build.utils
