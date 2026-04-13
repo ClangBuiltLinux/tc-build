@@ -90,7 +90,7 @@ class Tarball:
 
 class SourceManager:
     def __init__(self, location: Optional[Path] = None) -> None:
-        self.location: Path = location if location else tc_build.utils.UNINIT_PATH
+        self.location: Path = location or tc_build.utils.UNINIT_PATH
         self.tarball = Tarball()
 
 

@@ -72,7 +72,7 @@ def libc_is_musl() -> bool:
     # version information so it is good enough. Just 'check=False' it and move
     # on.
     ldd_out = subprocess.run(['ldd', '--version'], capture_output=True, check=False, text=True)
-    return 'musl' in (ldd_out.stderr if ldd_out.stderr else ldd_out.stdout)
+    return 'musl' in (ldd_out.stderr or ldd_out.stdout)
 
 
 def path_is_set(path: Path) -> bool:
