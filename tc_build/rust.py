@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from pathlib import Path
 import subprocess
 import time
+from pathlib import Path
 
+import tc_build.utils
 from tc_build.builder import Builder
 from tc_build.source import GitSourceManager
-import tc_build.utils
 
 
 class RustBuilder(Builder):

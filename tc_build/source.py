@@ -2,9 +2,9 @@
 
 import contextlib
 import hashlib
-from pathlib import Path
 import re
 import subprocess
+from pathlib import Path
 from typing import Optional
 
 import tc_build.utils
@@ -42,7 +42,7 @@ class Tarball:
             checksums = tc_build.utils.curl(f"{self.base_download_url}/{self.remote_checksum_name}")
             if not (
                 match := re.search(
-                    rf"([0-9a-f]+)\s+{self.remote_tarball_name}$", checksums, flags=re.M
+                    rf"([0-9a-f]+)\s+{self.remote_tarball_name}$", checksums, flags=re.MULTILINE
                 )
             ):
                 raise RuntimeError(f"Could not find checksum for {self.remote_tarball_name}?")
@@ -90,7 +90,7 @@ class Tarball:
 
 class SourceManager:
     def __init__(self, location: Optional[Path] = None) -> None:
-        self.location: Path = location if location else tc_build.utils.UNINIT_PATH
+        self.location: Path = location or tc_build.utils.UNINIT_PATH
         self.tarball = Tarball()
 
 

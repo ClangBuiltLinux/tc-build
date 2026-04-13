@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
 import os
-from pathlib import Path
 import platform
 import re
 import shutil
 import subprocess
 import time
+from pathlib import Path
 from typing import TypedDict
 
+import tc_build.utils
 from tc_build.builder import Builder
 from tc_build.kernel import LLVMKernelBuilder
 from tc_build.source import GitSourceManager
 from tc_build.tools import Tools
-import tc_build.utils
 
 LLVM_VER_FOR_RUNTIMES = 20
 VALID_DISTRIBUTION_PROFILES = ('none', 'bootstrap', 'kernel', 'rust')
@@ -582,7 +582,11 @@ class LLVMBuilder(Builder):
         return [
             tool
             for cmakelists_txt in cmakelists_txts
-            if (match := re.search(r"^add_(?:clang|llvm)_tool\((.*)$", cmakelists_txt, flags=re.M))
+            if (
+                match := re.search(
+                    r"^add_(?:clang|llvm)_tool\((.*)$", cmakelists_txt, flags=re.MULTILINE
+                )
+            )
             and (tool := match.groups()[0]) not in skip_tools
         ]
 

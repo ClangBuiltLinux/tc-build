@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 # pylint: disable=invalid-name
 
-from argparse import ArgumentParser, RawTextHelpFormatter
-from pathlib import Path
 import platform
 import textwrap
 import time
+from argparse import ArgumentParser, RawTextHelpFormatter
+from pathlib import Path
 from typing import Any
 
 import tc_build.utils
-
+from tc_build.kernel import KernelBuilder, LinuxSourceManager, LLVMKernelBuilder
 from tc_build.llvm import (
+    VALID_DISTRIBUTION_PROFILES,
     CmakeVars,
     LLVMBootstrapBuilder,
     LLVMBuilder,
@@ -18,9 +19,7 @@ from tc_build.llvm import (
     LLVMSlimBuilder,
     LLVMSlimInstrumentedBuilder,
     LLVMSourceManager,
-    VALID_DISTRIBUTION_PROFILES,
 )
-from tc_build.kernel import KernelBuilder, LinuxSourceManager, LLVMKernelBuilder
 from tc_build.tools import HostTools, StageTools
 
 BOOL_ARGS: dict[str, Any]
