@@ -549,12 +549,14 @@ if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
                 f"Supplied kernel source version ('{found_version}') is older than the minimum required version ('{minimum_version}'), provide a newer version!"
             )
     else:
-        # Turns (6, 2, 0) into 6.2 and (6, 2, 1) into 6.2.1 to follow tarball names
-        ver_str = '.'.join(str(x) for x in DEFAULT_KERNEL_FOR_PGO if x)
-        lsm.location = Path(src_folder, f"linux-{ver_str}")
+        # Turns (x, y, 0) into x.y and (x, y, 1) into x.y.1 to follow tarball names
+        ver_parts = [str(x) for x in DEFAULT_KERNEL_FOR_PGO if x]
+        if len(ver_parts) == 1:  # turn (x, ) into (x, 0) for x.0 release
+            ver_parts.append('0')
+        lsm.location = Path(src_folder, f"linux-{'.'.join(ver_parts)}")
         lsm.patches = list(src_folder.glob('*.patch'))
 
-        lsm.tarball.base_download_url = 'https://cdn.kernel.org/pub/linux/kernel/v6.x'
+        lsm.tarball.base_download_url = f"https://cdn.kernel.org/pub/linux/kernel/v{ver_parts[0]}.x"
         lsm.tarball.local_location = lsm.location.with_name(f"{lsm.location.name}.tar.xz")
         lsm.tarball.remote_checksum_name = 'sha256sums.asc'
 
