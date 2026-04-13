@@ -88,6 +88,7 @@ builder.folders.build = Path('$base/build/linux')
 builder.folders.source = Path('$linux')
 builder.matrix = {'defconfig': ['X86']}
 builder.toolchain_prefix = Path('$install')
+builder.silent = False
 
 builder.build()
 EOF

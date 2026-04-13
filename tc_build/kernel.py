@@ -49,6 +49,7 @@ class KernelBuilder(Builder):
             'KCFLAGS': '-Wno-error',
         }
         self.show_commands: bool = True
+        self.silent: bool = True
         self.toolchain_prefix: Path = tc_build.utils.UNINIT_PATH
         self.toolchain_version: tuple[int, ...] = ()
 
@@ -116,7 +117,10 @@ class KernelBuilder(Builder):
                 '--output', self.bolt_sampling_output,
                 '--',
             ]  # fmt: off
-        make_cmd += ['make', '-C', self.folders.source, f"-skj{os.cpu_count()}"]
+        make_flags = ['-C', self.folders.source, '-k', f"-j{os.cpu_count()}"]
+        if self.silent:
+            make_flags.append('-s')
+        make_cmd += ['make', *make_flags]
         make_cmd += [f"{key}={self.make_variables[key]}" for key in sorted(self.make_variables)]
         make_cmd += [*self.config_targets, 'all']
 
@@ -396,6 +400,7 @@ class LLVMKernelBuilder(Builder):
         self.bolt_instrumentation = False
         self.bolt_sampling_output: Path = tc_build.utils.UNINIT_PATH
         self.matrix = {}
+        self.silent: bool = True
         self.toolchain_prefix: Path = tc_build.utils.UNINIT_PATH
 
     def build(self) -> None:
@@ -466,6 +471,7 @@ class LLVMKernelBuilder(Builder):
             builder.folders.build = self.folders.build
             builder.folders.source = self.folders.source
             builder.lsm = lsm
+            builder.silent = self.silent
             builder.toolchain_prefix = self.toolchain_prefix
             builder.build()
 
