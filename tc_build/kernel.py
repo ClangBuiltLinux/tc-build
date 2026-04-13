@@ -530,7 +530,7 @@ class LinuxSourceManager(SourceManager):
                         f"{patch} has already been applied in {self.location}, consider removing it"
                     )
                 else:
-                    raise err
+                    raise
             else:
                 tc_build.utils.print_info(f"Applied {patch} to {self.location}")
         tc_build.utils.print_info(f"Source successfully prepared in {self.location}")

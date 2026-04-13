@@ -23,6 +23,7 @@ select = [
     'S', # flake8-bandit
     'SIM', # flake8-simplify
     'SLF', # flake8-self
+    'TRY', # tryceratops
     'UP', # pyupgrade
     'W', # pycodestyle
 ]
@@ -35,4 +36,5 @@ ignore = [
     'PLR2004', # magic-value-comparison
     'S603', # subprocess-without-shell-equals-true
     'S607', # start-process-with-partial-path
+    'TRY003', # raise-vanilla-args
 ]

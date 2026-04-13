@@ -56,4 +56,4 @@ class Builder:
                     print(err.stdout)
                 if err.stderr:
                     print(err.stderr)
-            raise err
+            raise
