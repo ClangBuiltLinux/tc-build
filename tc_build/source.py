@@ -42,7 +42,7 @@ class Tarball:
             checksums = tc_build.utils.curl(f"{self.base_download_url}/{self.remote_checksum_name}")
             if not (
                 match := re.search(
-                    rf"([0-9a-f]+)\s+{self.remote_tarball_name}$", checksums, flags=re.M
+                    rf"([0-9a-f]+)\s+{self.remote_tarball_name}$", checksums, flags=re.MULTILINE
                 )
             ):
                 raise RuntimeError(f"Could not find checksum for {self.remote_tarball_name}?")

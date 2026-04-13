@@ -582,7 +582,11 @@ class LLVMBuilder(Builder):
         return [
             tool
             for cmakelists_txt in cmakelists_txts
-            if (match := re.search(r"^add_(?:clang|llvm)_tool\((.*)$", cmakelists_txt, flags=re.M))
+            if (
+                match := re.search(
+                    r"^add_(?:clang|llvm)_tool\((.*)$", cmakelists_txt, flags=re.MULTILINE
+                )
+            )
             and (tool := match.groups()[0]) not in skip_tools
         ]
 
