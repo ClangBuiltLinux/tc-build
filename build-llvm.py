@@ -34,7 +34,7 @@ except ImportError:
     BOOL_ARGS = {'action': 'store_true'}
 
 # This is a known good revision of LLVM for building the kernel
-GOOD_REVISION = '2a2a394215b38631588d504d2b671df13370395b'
+GOOD_REVISION = 'a2c6b34193fbcaf76d48d2896c816adb9ee45ffe'
 
 # The version of the Linux kernel that the script downloads if necessary
 DEFAULT_KERNEL_FOR_PGO = (7, 0, 0)
