@@ -1,11 +1,12 @@
 # pylint: disable=invalid-name
 
+from __future__ import annotations
+
 import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Union
 
 import tc_build.utils
 
@@ -40,7 +41,7 @@ class HostTools(Tools):
         self.ld = self.find_host_ld()
         self.ranlib = self.find_host_ranlib()
 
-    def cc_is_multicall(self, cc: Union[Path, str]) -> bool:
+    def cc_is_multicall(self, cc: Path | str) -> bool:
         return Path(cc).resolve().name == 'llvm'
 
     def find_host_ar(self) -> Path:
@@ -166,7 +167,7 @@ class HostTools(Tools):
                 print(f"LD: {shutil.which(ld_to_print)}")
         tc_build.utils.flush_std_err_out()
 
-    def validate_ld(self, ld: Union[Path, str], warn=False) -> Path:
+    def validate_ld(self, ld: Path | str, warn=False) -> Path:
         cc_cmd = [self.cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-']
         try:
             subprocess.run(

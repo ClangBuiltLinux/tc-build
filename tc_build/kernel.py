@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import os
 import shutil
 import subprocess
 import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Optional, TypedDict, Union
+from typing import TypedDict
 
 import tc_build.utils
 from tc_build.builder import Builder
@@ -15,7 +17,7 @@ class MakeVars(TypedDict, total=False):
     ARCH: str
     CC: Path
     CROSS_COMPILE: str
-    HOSTCC: Union[Path, str]
+    HOSTCC: Path | str
     HOSTCXX: str
     HOSTLDFLAGS: str
     KCFLAGS: str
@@ -163,7 +165,7 @@ class KernelBuilder(Builder):
     def needs_binutils(self) -> bool:
         return not self.can_use_ias()
 
-    def _test_clang(self, args: Optional[Union[str, list]] = None) -> bool:
+    def _test_clang(self, args: str | list | None = None) -> bool:
         clang = Path(self.toolchain_prefix, 'bin/clang')
 
         clang_args = ['-x', 'c', '-o', '/dev/null', '-']
@@ -480,7 +482,7 @@ class LLVMKernelBuilder(Builder):
 
 
 class LinuxSourceManager(SourceManager):
-    def __init__(self, location: Optional[Path] = None) -> None:
+    def __init__(self, location: Path | None = None) -> None:
         super().__init__(location)
 
         self.patches: list[Path] = []

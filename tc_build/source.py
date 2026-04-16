@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import contextlib
 import hashlib
 import re
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 import tc_build.utils
 
@@ -88,7 +89,7 @@ class Tarball:
 
 
 class SourceManager:
-    def __init__(self, location: Optional[Path] = None) -> None:
+    def __init__(self, location: Path | None = None) -> None:
         self.location: Path = location or tc_build.utils.UNINIT_PATH
         self.tarball = Tarball()
 

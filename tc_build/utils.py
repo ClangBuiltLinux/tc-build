@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 import subprocess
 import sys
@@ -5,7 +7,7 @@ import time
 from collections.abc import Sequence
 from os import PathLike
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 
 UNINIT_PATH = Path('/uninitialized')
 ValidCmdItem = Union[bytes, PathLike, str]
@@ -29,10 +31,10 @@ def create_gitignore(folder: Path) -> None:
 def curl(
     url: str,
     capture_output: bool = True,
-    destination: Optional[Union[str, Path]] = None,
-    text: Optional[bool] = True,
+    destination: str | Path | None = None,
+    text: bool | None = True,
 ) -> str:
-    curl_cmd: list[Union[Path, str]] = ['curl', '-fLSs']
+    curl_cmd: list[Path | str] = ['curl', '-fLSs']
     if destination:
         curl_cmd += ['-o', destination]
     curl_cmd.append(url)
@@ -44,7 +46,7 @@ def flush_std_err_out() -> None:
     sys.stdout.flush()
 
 
-def get_duration(start_seconds: float, end_seconds: Optional[float] = None) -> str:
+def get_duration(start_seconds: float, end_seconds: float | None = None) -> str:
     if not end_seconds:
         end_seconds = time.time()
     seconds = int(end_seconds - start_seconds)
