@@ -558,7 +558,8 @@ class LLVMBuilder(Builder):
                 runtime_distribution_components
             )
 
-    def host_target(self) -> str:
+    @staticmethod
+    def host_target() -> str:
         uname_to_llvm: dict[str, str] = {
             'aarch64': 'AArch64',
             'armv7l': 'ARM',
