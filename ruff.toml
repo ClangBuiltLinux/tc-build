@@ -6,7 +6,7 @@ quote-style = 'preserve'
 
 # https://docs.astral.sh/ruff/rules/
 [lint]
-select = [
+extend-select = [
     'A', # flake8-builtins
     'ARG', # flake8-unused-arguments
     'B', # flake8-bugbear
