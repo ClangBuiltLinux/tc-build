@@ -144,9 +144,11 @@ class KernelBuilder(Builder):
             return self.toolchain_version
 
         if not tc_build.utils.path_is_set(self.toolchain_prefix):
-            raise RuntimeError('get_toolchain_version(): No toolchain prefix set?')
+            msg = 'get_toolchain_version(): No toolchain prefix set?'
+            raise RuntimeError(msg)
         if not (clang := Path(self.toolchain_prefix, 'bin/clang')).exists():
-            raise RuntimeError(f"clang could not be found in {self.toolchain_prefix}?")
+            msg = f"clang could not be found in {self.toolchain_prefix}?"
+            raise RuntimeError(msg)
 
         clang_cmd = [clang, '-E', '-P', '-x', 'c', '-']
         clang_input = '__clang_major__ __clang_minor__ __clang_patchlevel__'
@@ -173,7 +175,8 @@ class KernelBuilder(Builder):
             elif isinstance(args, list):
                 clang_args.extend(args)
             else:
-                raise ValueError(f"Invalid type for args: {args}")
+                msg = f"Invalid type for args: {args}"
+                raise ValueError(msg)
 
         prog = 'int main(void) { return 0; }'
 
@@ -211,7 +214,8 @@ class ArmV6KernelBuilder(ArmKernelBuilder):
 
     def build(self) -> None:
         if not tc_build.utils.path_is_set(self.lsm.location):
-            raise RuntimeError('build() called without configured LinuxSourceManager?')
+            msg = 'build() called without configured LinuxSourceManager?'
+            raise RuntimeError(msg)
 
         if self.get_toolchain_version() < (14, 0, 0) and self.lsm.get_version() >= (6, 14, 0):
             # https://github.com/ClangBuiltLinux/continuous-integration2/pull/807
@@ -381,7 +385,8 @@ class X8664KernelBuilder(KernelBuilder):
 
     def build(self) -> None:
         if not tc_build.utils.path_is_set(self.lsm.location):
-            raise RuntimeError('build() called without configured LinuxSourceManager?')
+            msg = 'build() called without configured LinuxSourceManager?'
+            raise RuntimeError(msg)
 
         if self.get_toolchain_version() < (15, 0, 0) and self.lsm.get_version() >= (6, 15, 0):
             # https://git.kernel.org/linus/7861640aac52bbbb3dc2cd40fb93dfb3b3d0f43c

@@ -220,12 +220,14 @@ class BinutilsSourceManager(SourceManager):
 
     def prepare(self) -> None:
         if not tc_build.utils.path_is_set(self.location):
-            raise RuntimeError('No source location set?')
+            msg = 'No source location set?'
+            raise RuntimeError(msg)
         if self.location.exists():
             return  # source already set up
 
         if not tc_build.utils.path_is_set(self.tarball.local_location):
-            raise RuntimeError('No local tarball location set?')
+            msg = 'No local tarball location set?'
+            raise RuntimeError(msg)
         if not self.tarball.local_location.exists():
             self.tarball.download()
 

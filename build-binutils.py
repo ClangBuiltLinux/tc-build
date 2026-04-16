@@ -87,7 +87,8 @@ bsm = tc_build.binutils.BinutilsSourceManager()
 if args.binutils_folder:
     bsm.location = Path(args.binutils_folder).resolve()
     if not bsm.location.exists():
-        raise RuntimeError(f"Provided binutils source ('{bsm.location}') does not exist?")
+        msg = f"Provided binutils source ('{bsm.location}') does not exist?"
+        raise RuntimeError(msg)
 else:
     # Turns (2, 40, 0) into 2.40 and (2, 40, 1) into 2.40.1 to follow tarball names
     # folder_name = 'binutils-' + '.'.join(str(x) for x in LATEST_BINUTILS_RELEASE if x)

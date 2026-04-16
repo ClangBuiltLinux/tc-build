@@ -13,6 +13,7 @@ extend-select = [
     'C4', # flake8-comprehensions
     'DTZ', # flake8-datetimez
     'E', # pycodestyle
+    'EM', # flake8-errmsg
     'F', # pyflakes
     'FURB', # refurb
     'I', # isort
@@ -40,5 +41,4 @@ ignore = [
     'PLR2004', # magic-value-comparison
     'S603', # subprocess-without-shell-equals-true
     'S607', # start-process-with-partial-path
-    'TRY003', # raise-vanilla-args
 ]

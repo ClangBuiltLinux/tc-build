@@ -76,7 +76,8 @@ class HostTools(Tools):
             if cc := shutil.which(compiler):
                 break
         else:
-            raise RuntimeError('Neither clang nor gcc could be found on your system?')
+            msg = 'Neither clang nor gcc could be found on your system?'
+            raise RuntimeError(msg)
 
         return Path(cc).resolve()  # resolve() for Debian/Ubuntu variants
 
@@ -91,9 +92,8 @@ class HostTools(Tools):
             return cxx
 
         if not (cxx := shutil.which(possible_cxx_compiler)):
-            raise RuntimeError(
-                f"CXX ('{possible_cxx_compiler}') could not be found on your system?"
-            )
+            msg = f"CXX ('{possible_cxx_compiler}') could not be found on your system?"
+            raise RuntimeError(msg)
 
         return Path(cxx)
 
@@ -137,9 +137,8 @@ class HostTools(Tools):
             return self.validate_ld(os.environ[key], warn=True)
 
         if not (tool := shutil.which(os.environ[key])):
-            raise RuntimeError(
-                f"{key} value ('{os.environ[key]}') could not be found on your system?"
-            )
+            msg = f"{key} value ('{os.environ[key]}') could not be found on your system?"
+            raise RuntimeError(msg)
         return Path(tool)
 
     def generate_versioned_binaries(self) -> list[str]:
@@ -151,7 +150,8 @@ class HostTools(Tools):
             llvm_tot_ver = 23
         else:
             if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
-                raise RuntimeError('Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?')
+                msg = 'Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?'
+                raise RuntimeError(msg)
             llvm_tot_ver = int(match.groups()[0])
 
         return [f'clang-{num}' for num in range(llvm_tot_ver, 6, -1)]

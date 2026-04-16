@@ -39,7 +39,8 @@ def get_all_targets(llvm_folder: Path, experimental: bool = False) -> list[str]:
 
     for variable in variables:
         if not (match := re.search(rf"set\({variable}([\w|\s]+)\)", contents)):
-            raise RuntimeError(f"Could not find {variables}?")
+            msg = f"Could not find {variables}?"
+            raise RuntimeError(msg)
         targets += [val for target in match.group(1).splitlines() if (val := target.strip())]
     return targets
 
@@ -268,11 +269,14 @@ class LLVMBuilder(Builder):
 
     def build(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.build):
-            raise RuntimeError('No build folder set for build()?')
+            msg = 'No build folder set for build()?'
+            raise RuntimeError(msg)
         if not Path(self.folders.build, 'build.ninja').exists():
-            raise RuntimeError('No build.ninja in build folder, run configure()?')
+            msg = 'No build.ninja in build folder, run configure()?'
+            raise RuntimeError(msg)
         if self.bolt and not self.bolt_builder.matrix:
-            raise RuntimeError('BOLT requested without a configured builder?')
+            msg = 'BOLT requested without a configured builder?'
+            raise RuntimeError(msg)
 
         build_start = time.time()
         base_ninja_cmd = ['ninja', '-C', self.folders.build]
@@ -318,19 +322,25 @@ class LLVMBuilder(Builder):
         deps = ['cmake', 'curl', 'git', 'ninja']
         for dep in deps:
             if not shutil.which(dep):
-                raise RuntimeError(f"Dependency ('{dep}') could not be found!")
+                msg = f"Dependency ('{dep}') could not be found!"
+                raise RuntimeError(msg)
 
     def configure(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.build):
-            raise RuntimeError('No build folder set?')
+            msg = 'No build folder set?'
+            raise RuntimeError(msg)
         if not tc_build.utils.path_is_set(self.folders.source):
-            raise RuntimeError('No source folder set?')
+            msg = 'No source folder set?'
+            raise RuntimeError(msg)
         if not tc_build.utils.path_is_set(self.tools.cc):
-            raise RuntimeError('No build tools set?')
+            msg = 'No build tools set?'
+            raise RuntimeError(msg)
         if not self.projects:
-            raise RuntimeError('No projects set?')
+            msg = 'No projects set?'
+            raise RuntimeError(msg)
         if not self.targets:
-            raise RuntimeError('No targets set?')
+            msg = 'No targets set?'
+            raise RuntimeError(msg)
 
         self.validate_targets()
         self.set_llvm_major_version()
@@ -453,7 +463,8 @@ class LLVMBuilder(Builder):
         if self.distribution_profile == 'none':
             return
         if self.distribution_profile not in VALID_DISTRIBUTION_PROFILES:
-            raise RuntimeError(f"Unknown distribution profile: {self.distribution_profile}")
+            msg = f"Unknown distribution profile: {self.distribution_profile}"
+            raise RuntimeError(msg)
 
         self.set_llvm_major_version()
 
@@ -600,7 +611,8 @@ class LLVMBuilder(Builder):
         if self.llvm_major_version:
             return  # no need to set if already set
         if not tc_build.utils.path_is_set(self.folders.source):
-            raise RuntimeError('No source folder set?')
+            msg = 'No source folder set?'
+            raise RuntimeError(msg)
         if (
             llvmversion_cmake := Path(self.folders.source, 'cmake/Modules/LLVMVersion.cmake')
         ).exists():
@@ -610,7 +622,8 @@ class LLVMBuilder(Builder):
                 encoding='utf-8'
             )
         if not (match := re.search(r'set\(LLVM_VERSION_MAJOR (\d+)\)', text_to_search)):
-            raise RuntimeError('Could not find LLVM_VERSION_MAJOR in text?')
+            msg = 'Could not find LLVM_VERSION_MAJOR in text?'
+            raise RuntimeError(msg)
         self.llvm_major_version = int(match.group(1))
 
     def show_install_info(self) -> None:
@@ -622,11 +635,14 @@ class LLVMBuilder(Builder):
             else self.folders.build
         )
         if not tc_build.utils.path_is_set(install_folder):
-            raise RuntimeError('Installation folder not set?')
+            msg = 'Installation folder not set?'
+            raise RuntimeError(msg)
         if not install_folder.exists():
-            raise RuntimeError('Installation folder does not exist, run build()?')
+            msg = 'Installation folder does not exist, run build()?'
+            raise RuntimeError(msg)
         if not (bin_folder := Path(install_folder, 'bin')).exists():
-            raise RuntimeError('bin folder does not exist in installation folder, run build()?')
+            msg = 'bin folder does not exist in installation folder, run build()?'
+            raise RuntimeError(msg)
 
         tc_build.utils.print_header('LLVM installation information')
         install_info = (
@@ -647,9 +663,11 @@ class LLVMBuilder(Builder):
 
     def validate_targets(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.source):
-            raise RuntimeError('No source folder set?')
+            msg = 'No source folder set?'
+            raise RuntimeError(msg)
         if not self.targets:
-            raise RuntimeError('No targets set?')
+            msg = 'No targets set?'
+            raise RuntimeError(msg)
 
         all_targets = get_all_targets(self.folders.source, experimental=True)
 
@@ -660,9 +678,8 @@ class LLVMBuilder(Builder):
             if target not in all_targets:
                 # tuple() for shorter pretty printing versus instead of
                 # ('{"', '".join(all_targets)}')
-                raise RuntimeError(
-                    f"Requested target ('{target}') was not found in LLVM_ALL_TARGETS or LLVM_ALL_EXPERIMENTAL_TARGETS {tuple(all_targets)}, check spelling?"
-                )
+                msg = f"Requested target ('{target}') was not found in LLVM_ALL_TARGETS or LLVM_ALL_EXPERIMENTAL_TARGETS {tuple(all_targets)}, check spelling?"
+                raise RuntimeError(msg)
 
 
 class LLVMSlimBuilder(LLVMBuilder):
@@ -801,7 +818,8 @@ class LLVMInstrumentedBuilder(LLVMBuilder):
 
     def generate_profdata(self):
         if not (profiles := list(self.folders.build.joinpath('profiles').glob('*.profraw'))):
-            raise RuntimeError('No profiles generated?')
+            msg = 'No profiles generated?'
+            raise RuntimeError(msg)
 
         llvm_prof_data_cmd = [
             self.tools.llvm_profdata,

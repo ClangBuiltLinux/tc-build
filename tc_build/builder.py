@@ -26,7 +26,8 @@ class Builder:
 
     def clean_build_folder(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.build):
-            raise RuntimeError('No build folder set?')
+            msg = 'No build folder set?'
+            raise RuntimeError(msg)
 
         if self.folders.build.exists():
             if self.folders.build.is_dir():
@@ -36,7 +37,8 @@ class Builder:
 
     def make_build_folder(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.build):
-            raise RuntimeError('No build folder set?')
+            msg = 'No build folder set?'
+            raise RuntimeError(msg)
 
         self.folders.build.mkdir(parents=True)
 
