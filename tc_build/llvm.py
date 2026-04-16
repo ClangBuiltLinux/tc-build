@@ -317,7 +317,8 @@ class LLVMBuilder(Builder):
 
         return False
 
-    def check_dependencies(self) -> None:
+    @staticmethod
+    def check_dependencies() -> None:
         deps = ['cmake', 'curl', 'git', 'ninja']
         for dep in deps:
             if not shutil.which(dep):
