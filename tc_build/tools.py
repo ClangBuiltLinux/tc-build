@@ -11,6 +11,10 @@ from pathlib import Path
 import tc_build.utils
 
 
+def cc_is_multicall(cc: Path | str) -> bool:
+    return Path(cc).resolve().name == 'llvm'
+
+
 def generate_versioned_binaries() -> list[str]:
     try:
         cmakelists_txt = tc_build.utils.curl(
@@ -57,9 +61,6 @@ class HostTools(Tools):
         self.ld = self.find_host_ld()
         self.ranlib = self.find_host_ranlib()
 
-    def cc_is_multicall(self, cc: Path | str) -> bool:
-        return Path(cc).resolve().name == 'llvm'
-
     def find_host_ar(self) -> Path:
         # GNU ar is the default, no need for llvm-ar if using GCC
         if not self.cc_is_clang:
@@ -76,7 +77,7 @@ class HostTools(Tools):
         # resolve a multicall binary though, as the symlink is how it works
         # properly.
         if tc_build.utils.path_is_set(cc := self.from_env('CC')):
-            return cc if self.cc_is_multicall(cc) else cc.resolve()
+            return cc if cc_is_multicall(cc) else cc.resolve()
 
         # As a special case, see if the first clang command in PATH is a
         # multicall binary, as there will be no clang-<ver> binary or symlink,
@@ -84,7 +85,7 @@ class HostTools(Tools):
         # binary from PATH "overriding" the clang symlink to llvm. We generally
         # want clang-<ver> to override clang though because clang-<ver> may be
         # newer than a plain clang binary (such as when using apt.llvm.org).
-        if (clang := shutil.which('clang')) and self.cc_is_multicall(clang):
+        if (clang := shutil.which('clang')) and cc_is_multicall(clang):
             return Path(clang)
 
         possible_c_compilers = [*generate_versioned_binaries(), 'clang', 'gcc']
