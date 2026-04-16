@@ -840,7 +840,8 @@ class LLVMSourceManager(GitSourceManager):
         self._pretty_name = 'LLVM'
         self._repo_url = 'https://github.com/llvm/llvm-project.git'
 
-    def default_projects(self):
+    @staticmethod
+    def default_projects():
         return ['clang', 'compiler-rt', 'lld', 'polly']
 
     def default_targets(self):
