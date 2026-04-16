@@ -491,7 +491,7 @@ class LLVMBuilder(Builder):
                 'llvm-ar',
                 'llvm-ranlib',
             ]
-            if self.distribution_profile in ('kernel', 'rust'):
+            if self.distribution_profile in {'kernel', 'rust'}:
                 distribution_components += [
                     'llvm-nm',
                     'llvm-objcopy',
@@ -536,7 +536,7 @@ class LLVMBuilder(Builder):
         if self.project_is_enabled('lld'):
             distribution_components.append('lld')
 
-        if self.distribution_profile in ('bootstrap', 'rust'):
+        if self.distribution_profile in {'bootstrap', 'rust'}:
             distribution_components.append('llvm-profdata')
 
         if self.distribution_profile == 'bootstrap' and build_compiler_rt:
@@ -670,7 +670,7 @@ class LLVMBuilder(Builder):
         all_targets = get_all_targets(self.folders.source, experimental=True)
 
         for target in self.targets:
-            if target in ('all', 'host'):
+            if target in {'all', 'host'}:
                 continue
 
             if target not in all_targets:
