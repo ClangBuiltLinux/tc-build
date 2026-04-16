@@ -297,7 +297,8 @@ class LLVMBuilder(Builder):
             self.run_cmd([*base_ninja_cmd, *install_targets], capture_output=True)
             tc_build.utils.create_gitignore(self.folders.install)
 
-    def can_use_perf(self) -> bool:
+    @staticmethod
+    def can_use_perf() -> bool:
         # Make sure perf is in the environment
         if shutil.which('perf'):
             try:
