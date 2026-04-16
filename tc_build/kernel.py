@@ -48,10 +48,12 @@ class KernelBuilder(Builder):
             # We do not want warnings to cause build failures when profiling.
             'KCFLAGS': '-Wno-error',
         }
+        self.needs_binutils: bool = False
         self.show_commands: bool = True
         self.silent: bool = True
         self.toolchain_prefix: Path = tc_build.utils.UNINIT_PATH
         self.toolchain_version: tuple[int, ...] = ()
+        self.use_ias: bool = True
 
     def build(self) -> None:
         bin_folder = Path(self.toolchain_prefix, 'bin')
@@ -67,7 +69,7 @@ class KernelBuilder(Builder):
         else:
             self.make_variables['HOSTCC'] = 'gcc'
             self.make_variables['HOSTCXX'] = 'g++'
-        if self.needs_binutils():
+        if self.needs_binutils or not self.use_ias:
             if not shutil.which(f"{self.cross_compile}elfedit"):
                 tc_build.utils.print_warning(
                     f"binutils for {self.make_variables['ARCH']} ('{self.cross_compile}') could not be found, skipping kernel build..."
@@ -75,7 +77,7 @@ class KernelBuilder(Builder):
                 return
             self.make_variables['CROSS_COMPILE'] = self.cross_compile
         self.make_variables['LLVM'] = f"{bin_folder}/"
-        if not self.can_use_ias():
+        if not self.use_ias:
             self.make_variables['LLVM_IAS'] = '0'
         self.make_variables['O'] = self.folders.build
 
@@ -136,9 +138,6 @@ class KernelBuilder(Builder):
                 kconfig_allconfig.close()
         tc_build.utils.print_info(f"Build duration: {tc_build.utils.get_duration(build_start)}")
 
-    def can_use_ias(self) -> bool:
-        return True
-
     def get_toolchain_version(self) -> tuple[int, ...]:
         if self.toolchain_version:
             return self.toolchain_version
@@ -161,9 +160,6 @@ class KernelBuilder(Builder):
 
     def can_use_clang_as_hostcc(self) -> bool:
         return self._test_clang('-c')
-
-    def needs_binutils(self) -> bool:
-        return not self.can_use_ias()
 
     def _test_clang(self, args: str | list | None = None) -> bool:
         clang = Path(self.toolchain_prefix, 'bin/clang')
@@ -195,8 +191,10 @@ class ArmKernelBuilder(KernelBuilder):
 
         self.cross_compile = 'arm-linux-gnueabi-'
 
-    def can_use_ias(self) -> bool:
-        return self.get_toolchain_version() >= (13, 0, 0)
+    def build(self) -> None:
+        self.use_ias = self.get_toolchain_version() >= (13, 0, 0)
+
+        super().build()
 
 
 class ArmV5KernelBuilder(ArmKernelBuilder):
@@ -270,8 +268,7 @@ class PowerPCKernelBuilder(KernelBuilder):
     def __init__(self) -> None:
         super().__init__('powerpc')
 
-    def can_use_ias(self) -> bool:
-        return False
+        self.use_ias = False
 
 
 class PowerPC32KernelBuilder(PowerPCKernelBuilder):
@@ -288,14 +285,14 @@ class PowerPC64KernelBuilder(PowerPCKernelBuilder):
 
         self.config_targets = ['ppc64_guest_defconfig', 'disable-werror.config']
         self.cross_compile = 'powerpc64-linux-gnu-'
+        # https://github.com/ClangBuiltLinux/linux/issues/1601
+        self.needs_binutils = True
 
-    # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
-    def can_use_ias(self) -> bool:
-        return self.get_toolchain_version() >= (14, 0, 2)
+    def build(self) -> None:
+        # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
+        self.use_ias = self.get_toolchain_version() >= (14, 0, 2)
 
-    # https://github.com/ClangBuiltLinux/linux/issues/1601
-    def needs_binutils(self) -> bool:
-        return True
+        super().build()
 
 
 class PowerPC64LEKernelBuilder(PowerPC64KernelBuilder):
@@ -319,9 +316,11 @@ class RISCVKernelBuilder(KernelBuilder):
 
         self.cross_compile = 'riscv64-linux-gnu-'
 
-    # https://github.com/llvm/llvm-project/commit/bbea64250f65480d787e1c5ff45c4de3ec2dcda8
-    def can_use_ias(self) -> bool:
-        return self.get_toolchain_version() >= (13, 0, 0)
+    def build(self) -> None:
+        # https://github.com/llvm/llvm-project/commit/bbea64250f65480d787e1c5ff45c4de3ec2dcda8
+        self.use_ias = self.get_toolchain_version() >= (13, 0, 0)
+
+        super().build()
 
 
 class S390KernelBuilder(KernelBuilder):
@@ -370,13 +369,9 @@ class S390KernelBuilder(KernelBuilder):
         if 'error: invalid output format:' in objcopy_res.stderr:
             self.make_variables['OBJCOPY'] = f"{self.cross_compile}objcopy"
 
+        self.needs_binutils = 'LD' in self.make_variables or 'OBJCOPY' in self.make_variables
+
         super().build()
-
-    def can_use_ias(self) -> bool:
-        return True
-
-    def needs_binutils(self) -> bool:
-        return 'LD' in self.make_variables or 'OBJCOPY' in self.make_variables
 
 
 class X8664KernelBuilder(KernelBuilder):
