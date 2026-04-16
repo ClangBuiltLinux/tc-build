@@ -11,6 +11,22 @@ from pathlib import Path
 import tc_build.utils
 
 
+def generate_versioned_binaries() -> list[str]:
+    try:
+        cmakelists_txt = tc_build.utils.curl(
+            'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
+        )
+    except subprocess.CalledProcessError:
+        llvm_tot_ver = 23
+    else:
+        if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
+            msg = 'Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?'
+            raise RuntimeError(msg)
+        llvm_tot_ver = int(match.groups()[0])
+
+    return [f'clang-{num}' for num in range(llvm_tot_ver, 6, -1)]
+
+
 class Tools:
     def __init__(self) -> None:
         self.cc: Path = tc_build.utils.UNINIT_PATH
@@ -71,7 +87,7 @@ class HostTools(Tools):
         if (clang := shutil.which('clang')) and self.cc_is_multicall(clang):
             return Path(clang)
 
-        possible_c_compilers = [*self.generate_versioned_binaries(), 'clang', 'gcc']
+        possible_c_compilers = [*generate_versioned_binaries(), 'clang', 'gcc']
         for compiler in possible_c_compilers:
             if cc := shutil.which(compiler):
                 break
@@ -140,21 +156,6 @@ class HostTools(Tools):
             msg = f"{key} value ('{os.environ[key]}') could not be found on your system?"
             raise RuntimeError(msg)
         return Path(tool)
-
-    def generate_versioned_binaries(self) -> list[str]:
-        try:
-            cmakelists_txt = tc_build.utils.curl(
-                'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
-            )
-        except subprocess.CalledProcessError:
-            llvm_tot_ver = 23
-        else:
-            if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
-                msg = 'Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?'
-                raise RuntimeError(msg)
-            llvm_tot_ver = int(match.groups()[0])
-
-        return [f'clang-{num}' for num in range(llvm_tot_ver, 6, -1)]
 
     def show_compiler_linker(self) -> None:
         print(f"CC: {self.cc}")
