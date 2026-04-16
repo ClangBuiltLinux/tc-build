@@ -719,7 +719,7 @@ if args.pgo:
     # If the user specified both a full and slim build of the same type, remove
     # the full build and warn them.
     pgo_targets = [s.replace('kernel-', '') for s in args.pgo if 'kernel-' in s]
-    for pgo_target in pgo_targets:
+    for pgo_target in set(pgo_targets):
         if 'slim' not in pgo_target:
             continue
         config_target = pgo_target.split('-')[0]
