@@ -1,14 +1,34 @@
-#!/usr/bin/env python3
 # pylint: disable=invalid-name
+
+from __future__ import annotations
 
 import os
 import re
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Union
 
 import tc_build.utils
+
+
+def cc_is_multicall(cc: Path | str) -> bool:
+    return Path(cc).resolve().name == 'llvm'
+
+
+def generate_versioned_binaries() -> list[str]:
+    try:
+        cmakelists_txt = tc_build.utils.curl(
+            'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
+        )
+    except subprocess.CalledProcessError:
+        llvm_tot_ver = 23
+    else:
+        if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
+            msg = 'Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?'
+            raise RuntimeError(msg)
+        llvm_tot_ver = int(match.groups()[0])
+
+    return [f'clang-{num}' for num in range(llvm_tot_ver, 6, -1)]
 
 
 class Tools:
@@ -41,9 +61,6 @@ class HostTools(Tools):
         self.ld = self.find_host_ld()
         self.ranlib = self.find_host_ranlib()
 
-    def cc_is_multicall(self, cc: Union[Path, str]) -> bool:
-        return Path(cc).resolve().name == 'llvm'
-
     def find_host_ar(self) -> Path:
         # GNU ar is the default, no need for llvm-ar if using GCC
         if not self.cc_is_clang:
@@ -60,7 +77,7 @@ class HostTools(Tools):
         # resolve a multicall binary though, as the symlink is how it works
         # properly.
         if tc_build.utils.path_is_set(cc := self.from_env('CC')):
-            return cc if self.cc_is_multicall(cc) else cc.resolve()
+            return cc if cc_is_multicall(cc) else cc.resolve()
 
         # As a special case, see if the first clang command in PATH is a
         # multicall binary, as there will be no clang-<ver> binary or symlink,
@@ -68,15 +85,16 @@ class HostTools(Tools):
         # binary from PATH "overriding" the clang symlink to llvm. We generally
         # want clang-<ver> to override clang though because clang-<ver> may be
         # newer than a plain clang binary (such as when using apt.llvm.org).
-        if (clang := shutil.which('clang')) and self.cc_is_multicall(clang):
+        if (clang := shutil.which('clang')) and cc_is_multicall(clang):
             return Path(clang)
 
-        possible_c_compilers = [*self.generate_versioned_binaries(), 'clang', 'gcc']
+        possible_c_compilers = [*generate_versioned_binaries(), 'clang', 'gcc']
         for compiler in possible_c_compilers:
             if cc := shutil.which(compiler):
                 break
         else:
-            raise RuntimeError('Neither clang nor gcc could be found on your system?')
+            msg = 'Neither clang nor gcc could be found on your system?'
+            raise RuntimeError(msg)
 
         return Path(cc).resolve()  # resolve() for Debian/Ubuntu variants
 
@@ -91,9 +109,8 @@ class HostTools(Tools):
             return cxx
 
         if not (cxx := shutil.which(possible_cxx_compiler)):
-            raise RuntimeError(
-                f"CXX ('{possible_cxx_compiler}') could not be found on your system?"
-            )
+            msg = f"CXX ('{possible_cxx_compiler}') could not be found on your system?"
+            raise RuntimeError(msg)
 
         return Path(cxx)
 
@@ -137,24 +154,9 @@ class HostTools(Tools):
             return self.validate_ld(os.environ[key], warn=True)
 
         if not (tool := shutil.which(os.environ[key])):
-            raise RuntimeError(
-                f"{key} value ('{os.environ[key]}') could not be found on your system?"
-            )
+            msg = f"{key} value ('{os.environ[key]}') could not be found on your system?"
+            raise RuntimeError(msg)
         return Path(tool)
-
-    def generate_versioned_binaries(self) -> list[str]:
-        try:
-            cmakelists_txt = tc_build.utils.curl(
-                'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
-            )
-        except subprocess.CalledProcessError:
-            llvm_tot_ver = 23
-        else:
-            if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
-                raise RuntimeError('Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?')
-            llvm_tot_ver = int(match.groups()[0])
-
-        return [f'clang-{num}' for num in range(llvm_tot_ver, 6, -1)]
 
     def show_compiler_linker(self) -> None:
         print(f"CC: {self.cc}")
@@ -167,7 +169,7 @@ class HostTools(Tools):
                 print(f"LD: {shutil.which(ld_to_print)}")
         tc_build.utils.flush_std_err_out()
 
-    def validate_ld(self, ld: Union[Path, str], warn=False) -> Path:
+    def validate_ld(self, ld: Path | str, warn=False) -> Path:
         cc_cmd = [self.cc, f'-fuse-ld={ld}', '-o', '/dev/null', '-x', 'c', '-']
         try:
             subprocess.run(

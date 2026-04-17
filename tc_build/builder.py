@@ -1,12 +1,14 @@
-#!/usr/bin/env python3
+from __future__ import annotations
 
 import shlex
 import shutil
 import subprocess
-from pathlib import Path
-from typing import Optional
+from typing import TYPE_CHECKING
 
 import tc_build.utils
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class Folders:
@@ -26,7 +28,8 @@ class Builder:
 
     def clean_build_folder(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.build):
-            raise RuntimeError('No build folder set?')
+            msg = 'No build folder set?'
+            raise RuntimeError(msg)
 
         if self.folders.build.exists():
             if self.folders.build.is_dir():
@@ -36,12 +39,13 @@ class Builder:
 
     def make_build_folder(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.build):
-            raise RuntimeError('No build folder set?')
+            msg = 'No build folder set?'
+            raise RuntimeError(msg)
 
         self.folders.build.mkdir(parents=True)
 
     def run_cmd(
-        self, cmd: tc_build.utils.ValidCmd, capture_output: bool = False, cwd: Optional[Path] = None
+        self, cmd: tc_build.utils.ValidCmd, capture_output: bool = False, cwd: Path | None = None
     ) -> subprocess.CompletedProcess:
         if self.show_commands:
             # Acts sort of like 'set -x' in bash

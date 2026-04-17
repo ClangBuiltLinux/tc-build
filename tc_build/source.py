@@ -1,11 +1,10 @@
-#!/usr/bin/env python3
+from __future__ import annotations
 
 import contextlib
 import hashlib
 import re
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 import tc_build.utils
 
@@ -22,12 +21,14 @@ class Tarball:
 
     def download(self) -> None:
         if not tc_build.utils.path_is_set(self.local_location):
-            raise RuntimeError('No local tarball location specified?')
+            msg = 'No local tarball location specified?'
+            raise RuntimeError(msg)
         if self.local_location.exists():
             return  # Already downloaded
 
         if not self.base_download_url:
-            raise RuntimeError('No tarball download URL specified?')
+            msg = 'No tarball download URL specified?'
+            raise RuntimeError(msg)
         if not self.remote_tarball_name:
             self.remote_tarball_name = self.local_location.name
 
@@ -45,16 +46,16 @@ class Tarball:
                     rf"([0-9a-f]+)\s+{self.remote_tarball_name}$", checksums, flags=re.MULTILINE
                 )
             ):
-                raise RuntimeError(f"Could not find checksum for {self.remote_tarball_name}?")
+                msg = f"Could not find checksum for {self.remote_tarball_name}?"
+                raise RuntimeError(msg)
 
             if 'sha256' in self.remote_checksum_name:
                 file_hash = hashlib.sha256()
             elif 'sha512' in self.remote_checksum_name:
                 file_hash = hashlib.sha512()
             else:
-                raise RuntimeError(
-                    f"No supported hashlib for {self.remote_checksum_name}, add support for it?"
-                )
+                msg = f"No supported hashlib for {self.remote_checksum_name}, add support for it?"
+                raise RuntimeError(msg)
             with self.local_location.open('rb') as file:
                 while data := file.read(BYTES_TO_READ):
                     file_hash.update(data)
@@ -62,17 +63,16 @@ class Tarball:
             computed_checksum = file_hash.hexdigest()
             expected_checksum = match.groups()[0]
             if computed_checksum != expected_checksum:
-                raise RuntimeError(
-                    f"Computed checksum of {self.local_location} ('{computed_checksum}') differs from expected checksum ('{expected_checksum}'), remove it and try again?"
-                )
+                msg = f"Computed checksum of {self.local_location} ('{computed_checksum}') differs from expected checksum ('{expected_checksum}'), remove it and try again?"
+                raise RuntimeError(msg)
 
     def extract(self, extraction_location: Path) -> None:
         if not tc_build.utils.path_is_set(self.local_location):
-            raise RuntimeError('No local tarball location specified?')
+            msg = 'No local tarball location specified?'
+            raise RuntimeError(msg)
         if not self.local_location.exists():
-            raise RuntimeError(
-                f"Local tarball ('{self.local_location}') could not be found, download it first?"
-            )
+            msg = f"Local tarball ('{self.local_location}') could not be found, download it first?"
+            raise RuntimeError(msg)
 
         extraction_location.mkdir(exist_ok=True, parents=True)
         tar_cmd = [
@@ -89,7 +89,7 @@ class Tarball:
 
 
 class SourceManager:
-    def __init__(self, location: Optional[Path] = None) -> None:
+    def __init__(self, location: Path | None = None) -> None:
         self.location: Path = location or tc_build.utils.UNINIT_PATH
         self.tarball = Tarball()
 
@@ -146,7 +146,8 @@ class GitSourceManager:
         self.git(['fetch', 'origin'])
 
         if self.is_shallow() and not self.ref_exists(ref):
-            raise RuntimeError(f"Repo is shallow and supplied ref ('{ref}') does not exist!")
+            msg = f"Repo is shallow and supplied ref ('{ref}') does not exist!"
+            raise RuntimeError(msg)
 
         self.git(['checkout', ref])
 

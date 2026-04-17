@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import subprocess
 import time
 from pathlib import Path
@@ -20,9 +18,11 @@ class RustBuilder(Builder):
 
     def build(self) -> None:
         if not tc_build.utils.path_is_set(self.folders.build):
-            raise RuntimeError('No build folder set for build()?')
+            msg = 'No build folder set for build()?'
+            raise RuntimeError(msg)
         if not Path(self.folders.build, 'bootstrap.toml').exists():
-            raise RuntimeError('No bootstrap.toml in build folder, run configure()?')
+            msg = 'No bootstrap.toml in build folder, run configure()?'
+            raise RuntimeError(msg)
 
         build_start = time.time()
         self.run_cmd([Path(self.folders.source, 'x.py'), 'install'], cwd=self.folders.build)
@@ -34,11 +34,14 @@ class RustBuilder(Builder):
 
     def configure(self) -> None:
         if not tc_build.utils.path_is_set(self.llvm_install_folder):
-            raise RuntimeError('No LLVM install folder set?')
+            msg = 'No LLVM install folder set?'
+            raise RuntimeError(msg)
         if not tc_build.utils.path_is_set(self.folders.source):
-            raise RuntimeError('No source folder set?')
+            msg = 'No source folder set?'
+            raise RuntimeError(msg)
         if not tc_build.utils.path_is_set(self.folders.build):
-            raise RuntimeError('No build folder set?')
+            msg = 'No build folder set?'
+            raise RuntimeError(msg)
 
         # Configure the build
         #
@@ -85,11 +88,14 @@ class RustBuilder(Builder):
             else self.folders.build
         )
         if not tc_build.utils.path_is_set(install_folder):
-            raise RuntimeError('Installation folder not set?')
+            msg = 'Installation folder not set?'
+            raise RuntimeError(msg)
         if not install_folder.exists():
-            raise RuntimeError('Installation folder does not exist, run build()?')
+            msg = 'Installation folder does not exist, run build()?'
+            raise RuntimeError(msg)
         if not (bin_folder := Path(install_folder, 'bin')).exists():
-            raise RuntimeError('bin folder does not exist in installation folder, run build()?')
+            msg = 'bin folder does not exist in installation folder, run build()?'
+            raise RuntimeError(msg)
 
         tc_build.utils.print_header('Rust installation information')
         install_info = (

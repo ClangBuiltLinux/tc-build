@@ -6,13 +6,14 @@ quote-style = 'preserve'
 
 # https://docs.astral.sh/ruff/rules/
 [lint]
-select = [
+extend-select = [
     'A', # flake8-builtins
     'ARG', # flake8-unused-arguments
     'B', # flake8-bugbear
     'C4', # flake8-comprehensions
-    'DTZ', # flake8-datetimes
+    'DTZ', # flake8-datetimez
     'E', # pycodestyle
+    'EM', # flake8-errmsg
     'F', # pyflakes
     'FURB', # refurb
     'I', # isort
@@ -36,9 +37,11 @@ ignore = [
     'PLR0911', # too-many-return-statments
     'PLR0912', # too-many-branches
     'PLR0913', # too-many-arguments
+    'PLR0914', # too-many-locals
     'PLR0915', # too-many-statements
     'PLR2004', # magic-value-comparison
+    'S404', # suspicious-subprocess-import
     'S603', # subprocess-without-shell-equals-true
     'S607', # start-process-with-partial-path
-    'TRY003', # raise-vanilla-args
 ]
+preview = true

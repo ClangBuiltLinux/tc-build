@@ -168,9 +168,8 @@ if args.build_folder:
     build_folder = Path(args.build_folder).resolve()
 
     if not args.llvm_install_folder:
-        raise RuntimeError(
-            'Build folder customized, but no custom LLVM install folder provided -- this is likely a mistake. Provide both if you want to build in a custom folder?'
-        )
+        msg = 'Build folder customized, but no custom LLVM install folder provided -- this is likely a mistake. Provide both if you want to build in a custom folder?'
+        raise RuntimeError(msg)
 else:
     build_folder = Path(tc_build_folder, 'build/rust')
 
@@ -182,7 +181,8 @@ else:
 # Validate and configure Rust source
 if args.rust_folder:
     if not (rust_folder := Path(args.rust_folder).resolve()).exists():
-        raise RuntimeError(f"Provided Rust folder ('{args.rust_folder}') does not exist?")
+        msg = f"Provided Rust folder ('{args.rust_folder}') does not exist?"
+        raise RuntimeError(msg)
 else:
     rust_folder = Path(src_folder, 'rust')
 rust_source = RustSourceManager(rust_folder)

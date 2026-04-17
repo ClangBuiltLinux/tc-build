@@ -530,11 +530,11 @@ if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
     lsm = LinuxSourceManager()
     if args.linux_folder:
         if not (linux_folder := Path(args.linux_folder).resolve()).exists():
-            raise RuntimeError(f"Provided Linux folder ('{args.linux_folder}') does not exist?")
+            msg = f"Provided Linux folder ('{args.linux_folder}') does not exist?"
+            raise RuntimeError(msg)
         if not Path(linux_folder, 'Makefile').exists():
-            raise RuntimeError(
-                f"Provided Linux folder ('{args.linux_folder}') does not appear to be a Linux kernel tree?"
-            )
+            msg = f"Provided Linux folder ('{args.linux_folder}') does not appear to be a Linux kernel tree?"
+            raise RuntimeError(msg)
 
         lsm.location = linux_folder
 
@@ -544,9 +544,8 @@ if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
         if (linux_version := lsm.get_version()) < KernelBuilder.MINIMUM_SUPPORTED_VERSION:
             found_version = '.'.join(str(x) for x in linux_version)
             minimum_version = '.'.join(str(x) for x in KernelBuilder.MINIMUM_SUPPORTED_VERSION)
-            raise RuntimeError(
-                f"Supplied kernel source version ('{found_version}') is older than the minimum required version ('{minimum_version}'), provide a newer version!"
-            )
+            msg = f"Supplied kernel source version ('{found_version}') is older than the minimum required version ('{minimum_version}'), provide a newer version!"
+            raise RuntimeError(msg)
     else:
         # Turns (x, y, 0) into x.y and (x, y, 1) into x.y.1 to follow tarball names
         ver_parts = [str(x) for x in DEFAULT_KERNEL_FOR_PGO if x]
@@ -565,7 +564,8 @@ if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
 # Validate and configure LLVM source
 if args.llvm_folder:
     if not (llvm_folder := Path(args.llvm_folder).resolve()).exists():
-        raise RuntimeError(f"Provided LLVM folder ('{args.llvm_folder}') does not exist?")
+        msg = f"Provided LLVM folder ('{args.llvm_folder}') does not exist?"
+        raise RuntimeError(msg)
 else:
     llvm_folder = Path(src_folder, 'llvm-project')
 llvm_source = LLVMSourceManager(llvm_folder)
@@ -719,7 +719,7 @@ if args.pgo:
     # If the user specified both a full and slim build of the same type, remove
     # the full build and warn them.
     pgo_targets = [s.replace('kernel-', '') for s in args.pgo if 'kernel-' in s]
-    for pgo_target in pgo_targets:
+    for pgo_target in set(pgo_targets):
         if 'slim' not in pgo_target:
             continue
         config_target = pgo_target.split('-')[0]
