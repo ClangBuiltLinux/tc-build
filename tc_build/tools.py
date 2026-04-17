@@ -17,14 +17,15 @@ def cc_is_multicall(cc: Path | str) -> bool:
 
 def generate_versioned_binaries() -> list[str]:
     try:
-        cmakelists_txt = tc_build.utils.curl(
-            'https://raw.githubusercontent.com/llvm/llvm-project/main/cmake/Modules/LLVMVersion.cmake'
+        llvmversion_cmake = 'cmake/Modules/LLVMVersion.cmake'
+        llvmversion_cmake_txt = tc_build.utils.curl(
+            f"https://raw.githubusercontent.com/llvm/llvm-project/main/{llvmversion_cmake}"
         )
     except subprocess.CalledProcessError:
         llvm_tot_ver = 23
     else:
-        if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', cmakelists_txt)):
-            msg = 'Could not find LLVM_VERSION_MAJOR in CMakeLists.txt?'
+        if not (match := re.search(r'set\(LLVM_VERSION_MAJOR\s+(\d+)', llvmversion_cmake_txt)):
+            msg = f"Could not find LLVM_VERSION_MAJOR in {llvmversion_cmake}"
             raise RuntimeError(msg)
         llvm_tot_ver = int(match.groups()[0])
 
