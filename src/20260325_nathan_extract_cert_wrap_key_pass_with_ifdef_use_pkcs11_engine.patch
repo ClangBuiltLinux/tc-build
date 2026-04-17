@@ -1,0 +1,76 @@
+From git@z Thu Jan  1 00:00:00 1970
+Subject: [PATCH] extract-cert: Wrap key_pass with '#ifdef
+ USE_PKCS11_ENGINE'
+From: Nathan Chancellor <nathan@kernel.org>
+Date: Wed, 25 Mar 2026 18:19:15 -0700
+Message-Id: <20260325-certs-extract-cert-key_pass-unused-but-set-global-v1-1-ecf94326d532@kernel.org>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+A recent strengthening of -Wunused-but-set-variable (enabled with -Wall)
+in clang under a new subwarning, -Wunused-but-set-global, points out an
+unused static global variable in certs/extract-cert.c:
+
+  certs/extract-cert.c:46:20: error: variable 'key_pass' set but not used [-Werror,-Wunused-but-set-global]
+     46 | static const char *key_pass;
+        |                    ^
+
+After commit 558bdc45dfb2 ("sign-file,extract-cert: use pkcs11 provider
+for OPENSSL MAJOR >= 3"), key_pass is only used with the OpenSSL engine
+API, not the new provider API. Wrap key_pass's declaration and
+assignment with '#ifdef USE_PKCS11_ENGINE' so that it is only included
+with its use to clear up the warning. While this is a little uglier than
+just marking key_pass with the unused attribute, this will make it
+easier to clean up all code associated with the use of the engine API if
+it were ever removed in the future. While in the area, use a tab for
+the key_pass assignment line to match the rest of the file.
+
+Cc: stable@vger.kernel.org
+Fixes: 558bdc45dfb2 ("sign-file,extract-cert: use pkcs11 provider for OPENSSL MAJOR >= 3")
+Reviewed-by: Nick Desaulniers <ndesaulniers@google.com>
+Tested-by: Nick Desaulniers <ndesaulniers@google.com>
+Link: https://patch.msgid.link/20260325-certs-extract-cert-key_pass-unused-but-set-global-v1-1-ecf94326d532@kernel.org
+Signed-off-by: Nathan Chancellor <nathan@kernel.org>
+---
+I am taking a fix for a similar warning in modpost through the kbuild
+tree so I don't mind picking this up with an appropriate Ack or it can
+just go through the keyring tree, does not matter to me.
+---
+ certs/extract-cert.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/certs/extract-cert.c b/certs/extract-cert.c
+index 7d6d468ed612..54ecd1024274 100644
+--- a/certs/extract-cert.c
++++ b/certs/extract-cert.c
+@@ -43,7 +43,9 @@ void format(void)
+ 	exit(2);
+ }
+ 
++#ifdef USE_PKCS11_ENGINE
+ static const char *key_pass;
++#endif
+ static BIO *wb;
+ static char *cert_dst;
+ static bool verbose;
+@@ -135,7 +137,9 @@ int main(int argc, char **argv)
+ 	if (verbose_env && strchr(verbose_env, '1'))
+ 		verbose = true;
+ 
+-        key_pass = getenv("KBUILD_SIGN_PIN");
++#ifdef USE_PKCS11_ENGINE
++	key_pass = getenv("KBUILD_SIGN_PIN");
++#endif
+ 
+ 	if (argc != 3)
+ 		format();
+
+---
+base-commit: d2a43e7f89da55d6f0f96aaadaa243f35557291e
+change-id: 20260325-certs-extract-cert-key_pass-unused-but-set-global-23007ecfadf9
+
+Best regards,
+--  
+Nathan Chancellor <nathan@kernel.org>
+
