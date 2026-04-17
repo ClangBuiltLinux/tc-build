@@ -270,13 +270,38 @@ class PowerPCKernelBuilder(KernelBuilder):
 
         self.use_ias = False
 
+        self.possible_cross_compile_vals: tuple[str, str, str] = (
+            'powerpc-linux-gnu-',
+            'powerpc64-linux-gnu-',
+            'powerpc64le-linux-gnu-',
+        )
+
+    def find_cross_compile(self) -> None:
+        if self.cross_compile:  # already run
+            return
+
+        # Most powerpc binutils support both types of endianness and word
+        # sizes. Look for whatever one is available.
+        for cross_compile in self.possible_cross_compile_vals:
+            if shutil.which(f"{cross_compile}elfedit"):
+                self.cross_compile = cross_compile
+                return
+
+        # No binutils found. Set cross compile to the first value in the tuple,
+        # as that will be the "most compatible" one to report back to the user.
+        self.cross_compile = self.possible_cross_compile_vals[0]
+
+    def build(self) -> None:
+        self.find_cross_compile()
+
+        super().build()
+
 
 class PowerPC32KernelBuilder(PowerPCKernelBuilder):
     def __init__(self) -> None:
         super().__init__()
 
         self.config_targets = ['pmac32_defconfig', 'disable-werror.config']
-        self.cross_compile = 'powerpc-linux-gnu-'
 
 
 class PowerPC64KernelBuilder(PowerPCKernelBuilder):
@@ -284,9 +309,13 @@ class PowerPC64KernelBuilder(PowerPCKernelBuilder):
         super().__init__()
 
         self.config_targets = ['ppc64_guest_defconfig', 'disable-werror.config']
-        self.cross_compile = 'powerpc64-linux-gnu-'
         # https://github.com/ClangBuiltLinux/linux/issues/1601
         self.needs_binutils = True
+        self.possible_cross_compile_vals = (
+            'powerpc64-linux-gnu-',
+            'powerpc64le-linux-gnu-',
+            'powerpc-linux-gnu-',
+        )
 
     def build(self) -> None:
         # https://github.com/llvm/llvm-project/commit/33504b3bbe10d5d4caae13efcb99bd159c126070
@@ -300,9 +329,15 @@ class PowerPC64LEKernelBuilder(PowerPC64KernelBuilder):
         super().__init__()
 
         self.config_targets = ['powernv_defconfig', 'disable-werror.config']
-        self.cross_compile = 'powerpc64le-linux-gnu-'
+        self.possible_cross_compile_vals = (
+            'powerpc64le-linux-gnu-',
+            'powerpc64-linux-gnu-',
+            'powerpc-linux-gnu-',
+        )
 
     def build(self) -> None:
+        self.find_cross_compile()
+
         # https://github.com/ClangBuiltLinux/linux/issues/1260
         if self.get_toolchain_version() < (12, 0, 0):
             self.make_variables['LD'] = self.cross_compile + 'ld'
