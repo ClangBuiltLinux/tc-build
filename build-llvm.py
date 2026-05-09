@@ -548,9 +548,9 @@ if args.bolt or (args.pgo and [x for x in args.pgo if 'kernel' in x]):
             raise RuntimeError(msg)
     else:
         # Turns (x, y, 0) into x.y and (x, y, 1) into x.y.1 to follow tarball names
-        ver_parts = [str(x) for x in DEFAULT_KERNEL_FOR_PGO if x]
-        if len(ver_parts) == 1:  # turn (x, ) into (x, 0) for x.0 release
-            ver_parts.append('0')
+        ver_parts = [str(x) for x in DEFAULT_KERNEL_FOR_PGO]
+        if ver_parts[1] == '0' and ver_parts[2] == '0':
+            ver_parts.remove('0')
         lsm.location = Path(src_folder, f"linux-{'.'.join(ver_parts)}")
         lsm.patches = list(src_folder.glob('*.patch'))
 
