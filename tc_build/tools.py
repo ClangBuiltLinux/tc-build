@@ -162,12 +162,12 @@ class HostTools(Tools):
     def show_compiler_linker(self) -> None:
         print(f"CC: {self.cc}")
         print(f"CXX: {self.cxx}")
-        if self.ld:
-            if isinstance(self.ld, Path):
-                print(f"LD: {self.ld}")
+        if tc_build.utils.path_is_set(self.ld):
+            if self.ld.is_absolute():
+                ld_to_print = self.ld
             else:
-                ld_to_print = self.ld if 'ld.' in self.ld else f"ld.{self.ld}"
-                print(f"LD: {shutil.which(ld_to_print)}")
+                ld_to_print = shutil.which(self.ld if 'ld.' in self.ld.name else f"ld.{self.ld}")
+            print(f"LD: {ld_to_print}")
         tc_build.utils.flush_std_err_out()
 
     def validate_ld(self, ld: Path | str, warn=False) -> Path:
