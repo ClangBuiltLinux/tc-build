@@ -454,7 +454,13 @@ class LLVMBuilder(Builder):
 
         self.handle_distribution_profile()
 
-        cmake_cmd += [f'-D{key}={self.cmake_defines[key]}' for key in sorted(self.cmake_defines)]
+        # The invalid-key warning is not technically wrong that TypedDicts
+        # should be subscripted by string literals but:
+        # 1. The alphabetical sorting is much easier to read and process
+        # 2. All other accesses to cmake_defines interally use string literals
+        # 3. If there is an unknown value in cmake_defines, it comes from the user,
+        #    which is just being passed along to cmake, so we don't care about it
+        cmake_cmd += [f'-D{key}={self.cmake_defines[key]}' for key in sorted(self.cmake_defines)]  # ty: ignore[invalid-key]
 
         self.clean_build_folder()
         self.run_cmd(cmake_cmd)
