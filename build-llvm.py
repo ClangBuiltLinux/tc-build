@@ -772,7 +772,8 @@ if args.pgo:
     for pgo_builder in pgo_builders:
         if hasattr(pgo_builder, 'configure') and callable(pgo_builder.configure):
             tc_build.utils.print_info('Building LLVM for profiling...')
-            pgo_builder.configure()
+            # We know this is safe to call with no arguments
+            pgo_builder.configure()  # ty: ignore[call-top-callable]
         pgo_builder.build()
 
     instrumented.generate_profdata()
