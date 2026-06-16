@@ -638,7 +638,7 @@ if args.multicall:
     common_cmake_defines['LLVM_TOOL_LLVM_DRIVER_BUILD'] = 'ON'
 if args.defines:
     defines = dict(define.split('=', 1) for define in args.defines)
-    common_cmake_defines.update(defines)
+    common_cmake_defines.update(defines)  # ty: ignore[invalid-argument-type]
 
 # Build bootstrap compiler if user did not request a single stage build
 if use_bootstrap := not args.build_stage1_only:
