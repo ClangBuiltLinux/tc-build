@@ -345,13 +345,21 @@ class LLVMBuilder(Builder):
         self.validate_targets()
         self.set_llvm_major_version()
 
+        cmake_version_str = subprocess.run(
+            ['cmake', '--version'], capture_output=True, check=True, text=True
+        ).stdout.splitlines()[0]
+        if not (match := re.search(r"cmake version ([0-9.]+)", cmake_version_str)):
+            msg = f"Could not parse 'cmake --version' ('{cmake_version_str}')?"
+            raise RuntimeError(msg)
+        cmake_version = tuple(int(x) for x in match.groups()[0].split('.'))
+
         # fmt: off
         cmake_cmd = [
             'cmake',
             '-B', self.folders.build,
             '-G', 'Ninja',
             '-S', Path(self.folders.source, 'llvm'),
-            '-Wno-dev',
+            '-Wno-author' if cmake_version >= (4, 4, 0) else '-Wno-dev',
         ]
         # fmt: on
         if self.quiet_cmake:
