@@ -25,7 +25,7 @@ class MakeVars(TypedDict, total=False):
     LD: str
     LLVM: str
     LLVM_IAS: str
-    O: Path  # noqa: E741
+    O: Path  # ruff:ignore[ambiguous-variable-name]
     OBJCOPY: str
 
 
@@ -99,7 +99,7 @@ class KernelBuilder(Builder):
             # try: ... finally: ... statement to ensure that this file is
             # always cleaned up.
             # pylint: disable-next=consider-using-with
-            kconfig_allconfig = NamedTemporaryFile(dir=self.folders.build)  # noqa: SIM115
+            kconfig_allconfig = NamedTemporaryFile(dir=self.folders.build)  # ruff:ignore[open-file-with-context-handler]
 
             configs_to_disable = ['DRM_WERROR', 'WERROR']
             kconfig_allconfig_text = ''.join(
