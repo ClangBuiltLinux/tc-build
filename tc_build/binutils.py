@@ -184,7 +184,6 @@ class S390XBinutilsBuilder(StandardBinutilsBuilder):
     def __init__(self) -> None:
         super().__init__()
 
-        self.extra_targets.append('s390-linux-gnu')
         self.native_arch = 's390x'
         self.target = 's390x-linux-gnu'
 
