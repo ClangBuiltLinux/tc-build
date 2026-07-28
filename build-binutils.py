@@ -8,7 +8,7 @@ from pathlib import Path
 import tc_build.binutils
 import tc_build.utils
 
-LATEST_BINUTILS_RELEASE = (2, 46, 1)
+LATEST_BINUTILS_RELEASE = (2, 47, 0)
 
 parser = ArgumentParser()
 parser.add_argument(
