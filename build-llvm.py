@@ -448,8 +448,8 @@ clone_options.add_argument(
 
                     1. This cannot be used with '--use-good-revision'.
 
-                    2. When no '--branch' is specified, only main is fetched. To work with other branches,
-                       a branch other than main needs to be specified when the repo is first cloned.
+                    2. Only the ref specified by '--ref' (main by default) is fetched. To work with a
+                       different ref, the repo has to be cloned again with that ref.
 
                            '''),
     action='store_true',
