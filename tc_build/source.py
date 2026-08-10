@@ -112,7 +112,7 @@ class GitSourceManager:
         if shallow:
             git_clone.append('--depth=1')
             if ref != 'main':
-                git_clone.append('--no-single-branch')
+                git_clone.append(f"--branch={ref}")
         git_clone += [self._repo_url, self.repo]
 
         subprocess.run(git_clone, check=True)
