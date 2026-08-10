@@ -108,7 +108,7 @@ function do_llvm() {
         --install-target distribution \
         --projects clang lld \
         --quiet-cmake \
-        --ref release/22.x \
+        --ref release/23.x \
         --shallow-clone \
         --show-build-commands \
         --targets X86 \
