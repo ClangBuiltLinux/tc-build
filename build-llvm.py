@@ -588,7 +588,7 @@ def_llvm_builder_cls = LLVMBuilder if args.full_toolchain else LLVMSlimBuilder
 final = def_llvm_builder_cls()
 final.folders.source = llvm_folder
 if args.targets:
-    final.targets = args.targets
+    final.targets = sorted(set(args.targets))
     final.validate_targets()
 else:
     final.targets = ['all'] if args.full_toolchain else llvm_source.default_targets()
