@@ -69,7 +69,8 @@ parser.add_argument(
     help='''
                     The script can build binutils targeting arm-linux-gnueabi, aarch64-linux-gnu,
                     mips-linux-gnu, mipsel-linux-gnu, powerpc-linux-gnu, powerpc64-linux-gnu,
-                    powerpc64le-linux-gnu, riscv64-linux-gnu, s390x-linux-gnu, and x86_64-linux-gnu.
+                    powerpc64le-linux-gnu, riscv64-linux-gnu, s390x-linux-gnu, sparc64-linux-gnu,
+                    and x86_64-linux-gnu.
 
                     By default, it builds all supported targets ("all"). If you would like to build
                     specific targets only, pass them to this script. It can be either the full target
@@ -120,6 +121,7 @@ targets_to_builder: dict[str, type[tc_build.binutils.BinutilsBuilder]] = {
     'powerpc64le': tc_build.binutils.PowerPC64LEBinutilsBuilder,
     'riscv64': tc_build.binutils.RISCV64BinutilsBuilder,
     's390x': tc_build.binutils.S390XBinutilsBuilder,
+    'sparc64': tc_build.binutils.Sparc64BinutilsBuilder,
     'x86_64': tc_build.binutils.X8664BinutilsBuilder,
 }
 if 'loongarch64' in default_targets:
