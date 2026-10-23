@@ -33,10 +33,10 @@ except ImportError:
     BOOL_ARGS = {'action': 'store_true'}
 
 # This is a known good revision of LLVM for building the kernel
-GOOD_REVISION = 'c31c334e11186d2c0b6a68a9f5619a4050cb87b7'
+GOOD_REVISION = '71122e716c7f507cb98df69961dbce21a187aa91'
 
 # The version of the Linux kernel that the script downloads if necessary
-DEFAULT_KERNEL_FOR_PGO = (7, 2, 0)
+DEFAULT_KERNEL_FOR_PGO = (7, 3, 0)
 
 parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
 clone_options = parser.add_mutually_exclusive_group()
