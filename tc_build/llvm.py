@@ -549,6 +549,8 @@ class LLVMBuilder(Builder):
                     for item in self.llvm_driver_binaries('clang')
                     if item not in distribution_components
                 ]
+            if self.distribution_profile in {'kernel', 'rust'}:
+                distribution_components.append('libclang')
         if self.project_is_enabled('lld'):
             distribution_components.append('lld')
 
