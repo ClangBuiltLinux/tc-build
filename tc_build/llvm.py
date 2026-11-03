@@ -485,6 +485,7 @@ class LLVMBuilder(Builder):
         llvm_build_runtime = self.cmake_defines.get('LLVM_BUILD_RUNTIME', 'ON') == 'ON'
         build_compiler_rt = self.project_is_enabled('compiler-rt') and llvm_build_runtime
         llvm_build_tools = self.cmake_defines.get('LLVM_BUILD_TOOLS', 'ON') == 'ON'
+        llvm_link_dylib = self.cmake_defines.get('LLVM_LINK_LLVM_DYLIB') == 'ON'
 
         distribution_components: list[str] = []
         runtime_distribution_components: list[str] = []
@@ -551,6 +552,13 @@ class LLVMBuilder(Builder):
                 ]
             if self.distribution_profile in {'kernel', 'rust'}:
                 distribution_components.append('libclang')
+                # With LLVM_LINK_LLVM_DYLIB=ON, omitting this results in:
+                #
+                # clang/cmake/modules/CMakeLists.txt:
+                #   install(EXPORT "ClangTargets" ...) includes target "libclang" which
+                #   requires target "LLVM" that is not in any export set.
+                if llvm_link_dylib:
+                    distribution_components.append('LLVM')
         if self.project_is_enabled('lld'):
             distribution_components.append('lld')
 
