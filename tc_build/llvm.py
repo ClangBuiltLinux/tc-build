@@ -468,7 +468,7 @@ class LLVMBuilder(Builder):
         # 2. All other accesses to cmake_defines interally use string literals
         # 3. If there is an unknown value in cmake_defines, it comes from the user,
         #    which is just being passed along to cmake, so we don't care about it
-        cmake_cmd += [f'-D{key}={self.cmake_defines[key]}' for key in sorted(self.cmake_defines)]  # ty: ignore[invalid-key]
+        cmake_cmd += [f'-D{key}={self.cmake_defines[key]}' for key in sorted(self.cmake_defines)]  # ty: ignore[non-literal-typed-dict-key]
 
         self.clean_build_folder()
         self.run_cmd(cmake_cmd)

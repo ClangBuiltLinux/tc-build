@@ -127,7 +127,7 @@ class KernelBuilder(Builder):
         # should be subscripted by string literals but the alphabetical sorting
         # is much easier to read and process and all other accesses to
         # make_variables use string literals.
-        make_cmd += [f"{key}={self.make_variables[key]}" for key in sorted(self.make_variables)]  # ty: ignore[invalid-key]
+        make_cmd += [f"{key}={self.make_variables[key]}" for key in sorted(self.make_variables)]  # ty: ignore[non-literal-typed-dict-key]
         make_cmd += [*self.config_targets, 'all']
 
         # If the user has any CFLAGS in their environment, they can cause issues when building tools.
